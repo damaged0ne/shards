@@ -877,7 +877,7 @@ func mongoConfigurationHints(report *model.AuditReport, app *model.Application) 
 		}
 		report.ConfigurationHint = &model.ConfigurationHint{
 			Message:      msg,
-			ReadMoreLink: "https://docs.coroot.com/databases/mongodb",
+			ReadMoreLink: "https://damaged0ne.github.io/shards/databases/mongodb",
 		}
 	}
 }

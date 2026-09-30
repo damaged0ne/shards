@@ -25,7 +25,7 @@ import (
 	"k8s.io/klog"
 )
 
-const MCPInstructions = `Coroot is a production observability platform. Reach for it when the user asks about live behavior of a running system: why a service is slow or erroring, what changed, what alerts are firing, what depends on what, recent incidents, capacity, deploys. It is NOT for source-code questions, generic ML/ops advice, or anything that doesn't map to a running cluster.
+const MCPInstructions = `shards is a production observability and alerting center. Reach for it when the user asks about live behavior of a running system: why a service is slow or erroring, what changed, what alerts are firing, what depends on what, recent incidents, capacity, deploys. It is also where operators — humans and AI agents — coordinate on incidents and alerts: every incident, alert and alerting rule has a shared timeline of comments and recorded actions. It is NOT for source-code questions, generic ML/ops advice, or anything that doesn't map to a running cluster.
 
 Multiple projects (clusters) may be available. Always start with list_projects + select_project; the selection persists for the session. Application ids are 4-part 'cluster_id:namespace:Kind:name' — pass them through as returned (don't strip the cluster_id even if the project looks single-cluster). Node ids are 'cluster_id:name' (the name itself may contain ':', e.g. 'hwvop6p7:rds:db1'). Short forms are rejected.
 
@@ -42,9 +42,16 @@ Pick a tool by intent, cheapest first:
   • slow tail → traces_outliers (flamegraph diff: traces in [dur_from..dur_to] vs the rest; default dur_from=1s).
   • full trace → get_trace trace_id=… (full span tree with attributes/events; use trace_ids from traces_errors / traces_summary samples).
 - "Show me logs" → query_logs: app-scoped or project-wide, with severity / search / time range. Sorted newest-first.
-- "What does this metric look like?" / "Why is Coroot saying X?" → query_metrics for raw PromQL with labels and sparklines; list_metric_names to discover metric names.
-- Incident detail → get_incident_details.
-- Acting on alerts → resolve_alerts (only after the underlying cause is fixed; alerts whose conditions still hold will re-fire).
+- "What does this metric look like?" / "Why is shards saying X?" → query_metrics for raw PromQL with labels and sparklines; list_metric_names to discover metric names.
+- Incident / alert detail → get_incident_details, get_alert (both include the timeline).
+- Alerting rules → list_alerting_rules, get_alerting_rule, create_alerting_rule, update_alerting_rule (partial: enabled, severity, promql_expression, for/keep_firing_for, selector, notification_category, description/runbook, ...), delete_alerting_rule. Builtin rules can be tuned or disabled but not deleted; readonly rules are managed by config and can't be changed.
+
+Operator workflow for incidents and alerts (humans read the same timeline in the UI):
+1. Triage: list_alerts / list_incidents, then get_alert / get_incident_details. Read the timeline first — someone (human or agent) may already be on it.
+2. Comment: add_comment with what you found (evidence, suspected root cause, links to traces/logs) and what you are going to do. Keep comments concise markdown.
+3. Fix: investigate with the read tools; apply the fix with whatever tools you have outside shards. If an alert is noise, tune its rule (update_alerting_rule) and say why in the comment argument.
+4. Resolve: resolve_alerts with a comment summarising the fix, only after confirming the underlying issue is gone — alerts whose conditions still hold will re-fire on the next evaluation. Use suppress_alerts for known/accepted issues that should not re-fire, reopen_alerts if a fix didn't hold.
+Every action (resolve / suppress / reopen, rule create / update / enable / disable / delete) is recorded in the timeline with your agent identity, so always explain non-obvious actions.
 
 Time arguments accept epoch ms or relative strings like 'now-1h', 'now-15m'. Default windows are short (the server's configured default time range, 1h unless overridden) — widen explicitly when looking at historical patterns.`
 
@@ -65,7 +72,7 @@ func (api *Api) SetupMCP(instructions string) *MCPHandler {
 	h := &MCPHandler{
 		Api: api,
 		Server: mcpserver.NewMCPServer(
-			"coroot",
+			"shards",
 			"1.0.0",
 			mcpserver.WithToolCapabilities(false),
 			mcpserver.WithRecovery(),
@@ -90,7 +97,7 @@ func (h *MCPHandler) HTTPHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if h.Api.MCPUserFromBearer(r) == nil {
 			resourceMeta := h.Api.GetAbsoluteUrl(r, "/.well-known/oauth-protected-resource").String()
-			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer realm="coroot", resource_metadata="%s"`, resourceMeta))
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer realm="shards", resource_metadata="%s"`, resourceMeta))
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -145,7 +152,7 @@ func (h *MCPHandler) AddTool(tool mcp.Tool, handler mcpserver.ToolHandlerFunc) {
 func (h *MCPHandler) registerTools() {
 	h.AddTool(
 		mcp.NewTool("list_projects",
-			mcp.WithDescription("List Coroot projects (clusters) the current user can access. Returns a {name: id} map. Call before select_project (which takes the id)."),
+			mcp.WithDescription("List shards projects (clusters) the current user can access. Returns a {name: id} map. Call before select_project (which takes the id)."),
 			mcp.WithReadOnlyHintAnnotation(true),
 			mcp.WithDestructiveHintAnnotation(false),
 			mcp.WithIdempotentHintAnnotation(true),
@@ -209,12 +216,13 @@ func (h *MCPHandler) registerTools() {
 	)
 	h.AddTool(
 		mcp.NewTool("resolve_alerts",
-			mcp.WithDescription("Manually resolve one or more alerts. Triggers configured downstream notifications (Slack, PagerDuty, ...). Use only after confirming the underlying issue is fixed — alerts whose conditions still hold will re-fire on the next evaluation cycle."),
+			mcp.WithDescription("Manually resolve one or more alerts. Triggers configured downstream notifications (Slack, PagerDuty, ...). Use only after confirming the underlying issue is fixed — alerts whose conditions still hold will re-fire on the next evaluation cycle. The action is recorded in each alert's timeline; pass a comment explaining the fix."),
 			mcp.WithArray("ids",
 				mcp.Required(),
 				mcp.Description("Alert ids from list_alerts."),
 				mcp.WithStringItems(),
 			),
+			mcp.WithString("comment", mcp.Description("Optional markdown note (what was wrong, what was fixed) recorded with the action in each alert's timeline.")),
 			mcp.WithReadOnlyHintAnnotation(false),
 			mcp.WithDestructiveHintAnnotation(false),
 			mcp.WithIdempotentHintAnnotation(true),
@@ -224,7 +232,7 @@ func (h *MCPHandler) registerTools() {
 	)
 	h.AddTool(
 		mcp.NewTool("get_incident_details",
-			mcp.WithDescription("Get full incident: summary + RCA (root cause, fixes) + propagation map showing how the failure spread across applications."),
+			mcp.WithDescription("Get full incident: summary + RCA (root cause, fixes) + propagation map showing how the failure spread across applications + the timeline (comments and actions by humans and agents)."),
 			mcp.WithString("key", mcp.Required(), mcp.Description("Incident key from list_incidents.")),
 			mcp.WithReadOnlyHintAnnotation(true),
 			mcp.WithDestructiveHintAnnotation(false),
@@ -340,7 +348,7 @@ func (h *MCPHandler) registerTools() {
 	)
 	h.AddTool(
 		mcp.NewTool("query_metrics",
-			mcp.WithDescription("Run a PromQL range query against the project's metrics backend. Returns time series with their labels and a value summary (last/min/max/avg + sparkline). Use this to inspect raw metric values, label distributions, or to verify Coroot's detection/aggregation logic. Discover metric names with list_metric_names first."),
+			mcp.WithDescription("Run a PromQL range query against the project's metrics backend. Returns time series with their labels and a value summary (last/min/max/avg + sparkline). Use this to inspect raw metric values, label distributions, or to verify shards' detection/aggregation logic. Discover metric names with list_metric_names first."),
 			mcp.WithString("query", mcp.Required(), mcp.Description("PromQL expression. Examples: 'up', 'rate(container_net_tcp_active_connections[1m])', 'group by (instance) ({__name__=\"redis_up\"})'.")),
 			mcp.WithString("from", mcp.Description("Start time. Either epoch milliseconds, or a relative string like 'now-1h', 'now-15m'. Default: the server's configured default time range (1h unless overridden).")),
 			mcp.WithString("to", mcp.Description("End time, same format as `from`. Default: 'now'.")),
@@ -375,6 +383,7 @@ func (h *MCPHandler) registerTools() {
 		),
 		h.toolQueryLogs,
 	)
+	h.registerAgentTools()
 }
 
 func (h *MCPHandler) toolListProjects(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1093,30 +1102,17 @@ func (h *MCPHandler) fetchIncidents(projectId db.ProjectId, hours int, state str
 }
 
 func (h *MCPHandler) toolResolveAlerts(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	user, project, errResult := h.RequireUserAndProject(ctx)
+	user, project, ids, comment, errResult := h.alertIdsAndComment(ctx, req)
 	if errResult != nil {
 		return errResult, nil
 	}
-	if !h.Api.IsAllowed(user, rbac.Actions.Project(string(project.Id)).Alerts().Edit()) {
-		return mcp.NewToolResultError("forbidden: no permission to edit alerts in this project"), nil
-	}
-	ids, err := req.RequireStringSlice("ids")
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-	if len(ids) == 0 {
-		return mcp.NewToolResultError("ids must be a non-empty array"), nil
-	}
-	resolvedBy := user.Name
-	if resolvedBy == "" {
-		resolvedBy = user.Email
-	}
-	resolvedBy += " (via MCP)"
-	notified, err := h.Api.resolveAlerts(project, ids, resolvedBy)
+	a := newActor(user, viaMCP)
+	notified, err := h.Api.resolveAlerts(project, ids, a.name+" (via MCP)")
 	if err != nil {
 		klog.Errorln("mcp: resolve_alerts:", err)
 		return mcp.NewToolResultError("failed to resolve alerts"), nil
 	}
+	h.Api.recordAlertActions(a, project.Id, ids, actionAlertResolved, comment)
 	return MCPJSON(map[string]any{"resolved": len(ids), "notified": notified})
 }
 
@@ -1152,7 +1148,14 @@ func (h *MCPHandler) toolGetIncidentDetails(ctx context.Context, req mcp.CallToo
 		ic.RCA = &rca
 		i = &ic
 	}
-	return MCPJSON(i)
+	comments, err := h.Api.getTimeline(user, &commentTarget{typ: db.CommentTargetIncident, id: i.Key}, project.Id)
+	if err != nil {
+		klog.Errorln("mcp: get_incident_details:", err)
+	}
+	return MCPJSON(struct {
+		*model.ApplicationIncident
+		Timeline []mcpTimelineEntry `json:"timeline"`
+	}{ApplicationIncident: i, Timeline: mcpTimeline(comments)})
 }
 
 const (

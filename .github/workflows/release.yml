@@ -1,4 +1,4 @@
-name: Release
+name: shards release
 
 on:
   release:
@@ -26,12 +26,8 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
-          registry-url: 'https://npm.pkg.github.com'
       - run: npm ci
       - run: npm version ${{ env.VERSION }}
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run build-prod
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -99,7 +95,7 @@ jobs:
         run: |
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }} &&
           docker create --name ${{ matrix.arch }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }} &&
-          docker cp ${{ matrix.arch }}:/usr/bin/coroot /tmp/coroot-${{ matrix.arch }}
+          docker cp ${{ matrix.arch }}:/usr/bin/shards /tmp/shards-${{ matrix.arch }}
 
       - name: upload digest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -112,7 +108,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: binary-${{ matrix.arch }}
-          path: /tmp/coroot-${{ matrix.arch }}
+          path: /tmp/shards-${{ matrix.arch }}
           retention-days: 1
 
   release:
@@ -156,8 +152,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: /tmp/artifacts/binary-amd64/coroot-amd64
-          asset_name: coroot-amd64
+          asset_path: /tmp/artifacts/binary-amd64/shards-amd64
+          asset_name: shards-amd64
           asset_content_type: application/octet-stream
 
       - name: upload arm64 binary
@@ -166,8 +162,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: /tmp/artifacts/binary-arm64/coroot-arm64
-          asset_name: coroot-arm64
+          asset_path: /tmp/artifacts/binary-arm64/shards-arm64
+          asset_name: shards-arm64
           asset_content_type: application/octet-stream
 
       - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0

@@ -13,7 +13,6 @@ import (
 
 	"github.com/coroot/coroot/api"
 	"github.com/coroot/coroot/cache"
-	"github.com/coroot/coroot/cloud"
 	cloud_pricing "github.com/coroot/coroot/cloud-pricing"
 	"github.com/coroot/coroot/collector"
 	"github.com/coroot/coroot/config"
@@ -30,7 +29,8 @@ import (
 	"k8s.io/klog"
 )
 
-const Edition = "Community"
+// Edition is exposed to the UI via index.html; shards has a single, fully open (Apache-2.0) edition.
+const Edition = "OSS"
 
 var version = "unknown"
 
@@ -38,7 +38,7 @@ var version = "unknown"
 var static embed.FS
 
 func main() {
-	kingpin.Command("run", "Run Coroot server").Default()
+	kingpin.Command("run", "Run shards server").Default()
 	cmdSetAdminPassword := kingpin.Command("set-admin-password", "Set password for the default Admin user")
 
 	cmd := kingpin.Parse()
@@ -136,13 +136,13 @@ func main() {
 
 	statsCollector := stats.NewCollector(cfg.DisableUsageStatistics, instanceUuid, version, Edition, database, promCache, pricing, globalClickhouse)
 
-	a := api.NewApi(cfg, promCache, database, coll, statsCollector, pricing, rbac.NewStaticRoleManager(), nil, globalClickhouse, globalPrometheus, deploymentUuid, instanceUuid, nil)
+	a := api.NewApi(cfg, promCache, database, coll, statsCollector, pricing, rbac.NewStaticRoleManager(), globalClickhouse, globalPrometheus, deploymentUuid, instanceUuid, nil)
 	err = a.AuthInit(cfg.Auth.AnonymousRole, cfg.Auth.BootstrapAdminPassword)
 	if err != nil {
 		klog.Exitln(err)
 	}
 
-	incidents := watchers.NewIncidents(database, a.IncidentRCA)
+	incidents := watchers.NewIncidents(database, nil)
 
 	watchers.Start(database, promCache, pricing, incidents, !cfg.DoNotCheckForDeployments, globalClickhouse, globalPrometheus, cfg.ClickHouseSpaceManager, nil, nil)
 
@@ -175,7 +175,6 @@ func main() {
 	r.HandleFunc("/api/roles", a.Auth(a.Roles)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/sso", a.Auth(a.SSO)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/ai", a.Auth(a.AI)).Methods(http.MethodGet, http.MethodPost)
-	r.HandleFunc("/api/cloud", a.Auth(a.Cloud)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/", a.Auth(a.Project)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}", a.Auth(a.Project)).Methods(http.MethodGet, http.MethodPost, http.MethodDelete)
 	r.HandleFunc("/api/project/{project}/status", a.Auth(a.Status)).Methods(http.MethodGet)
@@ -188,6 +187,8 @@ func main() {
 	r.HandleFunc("/api/project/{project}/alerts/suppress", a.Auth(a.SuppressAlerts)).Methods(http.MethodPost)
 	r.HandleFunc("/api/project/{project}/alerts/{alert}", a.Auth(a.Alert)).Methods(http.MethodGet)
 	r.HandleFunc("/api/project/{project}/alerts/reopen", a.Auth(a.ReopenAlerts)).Methods(http.MethodPost)
+	r.HandleFunc("/api/project/{project}/comments", a.Auth(a.Comments)).Methods(http.MethodGet, http.MethodPost)
+	r.HandleFunc("/api/project/{project}/comments/{id}", a.Auth(a.Comment)).Methods(http.MethodPut, http.MethodDelete)
 	r.HandleFunc("/api/project/{project}/alerting-rules", a.Auth(a.AlertingRules)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/alerting-rules/export", a.Auth(a.AlertingRulesExport)).Methods(http.MethodGet)
 	r.HandleFunc("/api/project/{project}/alerting-rules/{rule}", a.Auth(a.AlertingRule)).Methods(http.MethodGet, http.MethodPut, http.MethodDelete)
@@ -201,7 +202,6 @@ func main() {
 	r.HandleFunc("/api/project/{project}/integrations", a.Auth(a.Integrations)).Methods(http.MethodGet, http.MethodPut)
 	r.HandleFunc("/api/project/{project}/integrations/{type}", a.Auth(a.Integration)).Methods(http.MethodGet, http.MethodPut, http.MethodDelete, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/app/{app}", a.Auth(a.Application)).Methods(http.MethodGet)
-	r.HandleFunc("/api/project/{project}/app/{app}/rca", a.Auth(a.RCA)).Methods(http.MethodGet)
 	r.HandleFunc("/api/project/{project}/app/{app}/inspection/{type}/config", a.Auth(a.Inspection)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/app/{app}/instrumentation/{type}", a.Auth(a.Instrumentation)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/app/{app}/profiling", a.Auth(a.Profiling)).Methods(http.MethodGet, http.MethodPost)
@@ -247,7 +247,10 @@ func main() {
 		r.PathPrefix("/static/").Handler(http.StripPrefix(cfg.UrlBasePath, http.FileServer(utils.NewStaticFSWrapper(static))))
 	}
 
-	indexHtml := readIndexHtml(cfg.UrlBasePath, version, instanceUuid, !cfg.DoNotCheckForUpdates, cfg.DefaultTimeRange, cfg.DeveloperMode)
+	// shards does not phone home: the UI's update check (which called the vendor's cloud) is always off.
+	indexHtml := readIndexHtml(cfg.UrlBasePath, version, instanceUuid, false, cfg.DefaultTimeRange, cfg.DeveloperMode)
+	// unknown API paths (e.g. removed endpoints) must fail cleanly instead of returning the SPA page
+	r.PathPrefix("/api/").HandlerFunc(http.NotFound)
 	r.PathPrefix("").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(indexHtml)
 	})
@@ -302,7 +305,7 @@ func readIndexHtml(basePath, version, instanceUuid string, checkForUpdates bool,
 		InstanceUUID:     instanceUuid,
 		CheckForUpdates:  checkForUpdates,
 		Edition:          Edition,
-		CloudURL:         cloud.URL,
+		CloudURL:         "", // kept (empty) for template compatibility; there is no cloud service
 		DefaultTimeRange: defaultTimeRange.ShortString(),
 	})
 	if err != nil {

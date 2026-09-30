@@ -315,6 +315,22 @@ export default class Api {
         this.post(this.projectPath(`alerts/reopen`), { ids }, cb);
     }
 
+    getComments(targetType, targetId, cb) {
+        this.get(this.projectPath('comments'), { target_type: targetType, target_id: targetId }, cb);
+    }
+
+    addComment(targetType, targetId, body, cb) {
+        this.post(this.projectPath('comments'), { target_type: targetType, target_id: targetId, body }, cb);
+    }
+
+    updateComment(id, body, cb) {
+        this.put(this.projectPath(`comments/${id}`), { body }, cb);
+    }
+
+    deleteComment(id, cb) {
+        this.del(this.projectPath(`comments/${id}`), cb);
+    }
+
     getRCA(appId, withSummary, cb) {
         const { from, to, incident, alert } = this.router.currentRoute.query;
         const params = { withSummary, from, to, incident, alert };

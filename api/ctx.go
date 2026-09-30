@@ -25,7 +25,6 @@ type Context struct {
 	Alerts         map[string]int                    `json:"alerts"`
 	Fluxcd         *GitOpsStatus                     `json:"fluxcd"`
 	Argocd         *GitOpsStatus                     `json:"argocd"`
-	License        *License                          `json:"license,omitempty"`
 	Multicluster   bool                              `json:"multicluster"`
 	MemberProjects []string                          `json:"member_projects,omitempty"`
 }
@@ -81,15 +80,6 @@ type Node struct {
 	ClusterId string `json:"cluster_id"`
 }
 
-type License struct {
-	Invalid bool   `json:"invalid"`
-	Message string `json:"message"`
-}
-
-type LicenseManager interface {
-	CheckLicense() *License
-}
-
 func (api *Api) WithContext(p *db.Project, cacheStatus *cache.Status, w *model.World, data any) DataWithContext {
 	if p == nil {
 		return DataWithContext{}
@@ -110,14 +100,6 @@ func (api *Api) WithContext(p *db.Project, cacheStatus *cache.Status, w *model.W
 			MemberProjects: p.Settings.MemberProjects,
 		},
 		Data: data,
-	}
-	if lm := api.licenseMgr; lm != nil {
-		if l := lm.CheckLicense(); l != nil {
-			res.Context.License = l
-			if l.Invalid {
-				res.Data = nil
-			}
-		}
 	}
 	return res
 }

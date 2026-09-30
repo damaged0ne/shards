@@ -313,6 +313,8 @@ type IntegrationWebhook struct {
 	IncidentTemplate   string            `json:"incident_template" yaml:"incidentTemplate"`
 	DeploymentTemplate string            `json:"deployment_template" yaml:"deploymentTemplate"`
 	AlertTemplate      string            `json:"alert_template" yaml:"alertTemplate"`
+	// CommentTemplate, when set, forwards human/agent comments on incidents and alerts to the webhook.
+	CommentTemplate string `json:"comment_template,omitempty" yaml:"commentTemplate,omitempty"`
 }
 
 func (i *IntegrationWebhook) Validate() error {

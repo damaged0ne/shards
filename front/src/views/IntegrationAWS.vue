@@ -1,11 +1,11 @@
 <template>
     <div>
         <p style="max-width: 800px">
-            This integration enables Coroot to discover RDS and ElastiCache instances and collect their telemetry data: instance status, OS metrics
+            This integration enables shards to discover RDS and ElastiCache instances and collect their telemetry data: instance status, OS metrics
             from Enhanced Monitoring, and database logs. The recommended setup lets the cluster-agent use the IAM role of its pod (EKS Pod Identity or
-            IRSA) and declares the integration and the database credentials in the Coroot custom resource, see the
-            <a href="https://docs.coroot.com/configuration/aws" target="_blank">AWS integration</a> page and the
-            <a href="https://docs.coroot.com/guides/aws-eks-rds" target="_blank">Monitoring Amazon RDS and ElastiCache from EKS</a> guide.
+            IRSA) and declares the integration and the database credentials in the operator's custom resource, see the
+            <a :href="$utils.docsUrl('configuration/aws')" target="_blank">AWS integration</a> page and the
+            <a :href="$utils.docsUrl('guides/aws-eks-rds')" target="_blank">Monitoring Amazon RDS and ElastiCache from EKS</a> guide.
         </p>
         <p style="max-width: 800px">
             Alternatively, the integration can be configured here with the keys of an IAM user:
@@ -67,7 +67,7 @@
             </p>
             <div class="subtitle-1 mt-3">Region</div>
             <div class="caption">
-                Coroot only discovers RDS and ElastiCache instances within the specified region, e.g. <var>us-west-1</var>. Leave it empty to use the
+                shards only discovers RDS and ElastiCache instances within the specified region, e.g. <var>us-west-1</var>. Leave it empty to use the
                 region the cluster-agent runs in.
             </div>
             <v-text-field v-model="form.region" outlined dense hide-details single-line clearable />

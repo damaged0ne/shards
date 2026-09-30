@@ -1,11 +1,11 @@
 <template>
     <div>
         <p style="max-width: 800px">
-            This integration enables Coroot to discover Cloud SQL and Memorystore instances and collect their telemetry data: instance status, OS
+            This integration enables shards to discover Cloud SQL and Memorystore instances and collect their telemetry data: instance status, OS
             metrics from Cloud Monitoring, and database logs from Cloud Logging. The cluster-agent authenticates through GKE Workload Identity, so
-            nothing is configured here: declare the integration and the database credentials in the Coroot custom resource or in the cluster-agent
-            configuration file, see the <a href="https://docs.coroot.com/configuration/gcp" target="_blank">GCP integration</a> page and the
-            <a href="https://docs.coroot.com/guides/gcp-gke-cloudsql" target="_blank">Monitoring Cloud SQL and Memorystore from GKE</a> guide.
+            nothing is configured here: declare the integration and the database credentials in the operator's custom resource or in the cluster-agent
+            configuration file, see the <a :href="$utils.docsUrl('configuration/gcp')" target="_blank">GCP integration</a> page and the
+            <a :href="$utils.docsUrl('guides/gcp-gke-cloudsql')" target="_blank">Monitoring Cloud SQL and Memorystore from GKE</a> guide.
         </p>
         <v-alert v-if="error" color="red" icon="mdi-alert-octagon-outline" outlined text class="mt-3" style="max-width: 800px">
             {{ error }}

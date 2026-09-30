@@ -1,5 +1,21 @@
 const emptyJson = JSON.stringify({});
 
+export const repoUrl = 'https://github.com/damaged0ne/shards';
+const docsSections = ['costs', 'dashboards', 'gitops', 'logs', 'mcp', 'profiling', 'risks', 'tracing', 'inspections'];
+
+// docsUrl maps a docs path (e.g. 'configuration/prometheus#remote-write') to the markdown source in the repository.
+export function docsUrl(path) {
+    let [p, hash] = (path || '').split('#');
+    p = p.replace(/^\/+|\/+$/g, '');
+    if (!p) {
+        return `${repoUrl}/tree/main/docs/docs`;
+    }
+    if (docsSections.includes(p)) {
+        p += '/overview';
+    }
+    return `${repoUrl}/blob/main/docs/docs/${p}.md${hash ? '#' + hash : ''}`;
+}
+
 export default class Utils {
     router = null;
 
@@ -45,6 +61,10 @@ export default class Utils {
             cluster: id.substring(0, i),
             name: id.substring(i + 1),
         };
+    }
+
+    docsUrl(path) {
+        return docsUrl(path);
     }
 
     contextQuery() {

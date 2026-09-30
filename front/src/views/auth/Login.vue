@@ -1,10 +1,10 @@
 <template>
     <div class="form">
         <div class="text-center">
-            <img :src="`${$coroot.base_path}static/icon.svg`" alt=":~#" height="80" />
+            <img :src="`${$coroot.base_path}static/brand/icon.svg`" alt=":~#" height="80" />
         </div>
 
-        <h2 class="text-h4 my-5 text-center">Welcome to Coroot</h2>
+        <h2 class="text-h4 my-5 text-center">Welcome to shards</h2>
 
         <v-btn v-if="sso_enabled && (sso_forced || !set_admin_password)" block large color="primary" class="mb-4" :href="ssoLoginUrl">
             <v-icon left>mdi-shield-key-outline</v-icon>
@@ -58,7 +58,7 @@
 
         <div v-if="sso_forced" class="caption grey--text text-center mt-10">Password login is disabled. Please use SSO to sign in.</div>
         <div v-if="!sso_forced && !set_admin_password" class="caption grey--text text-center mt-10">
-            Contact your Coroot administrator if you forgot your email or password.
+            Contact your shards administrator if you forgot your email or password.
         </div>
     </div>
 </template>

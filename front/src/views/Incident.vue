@@ -67,7 +67,7 @@
                         <span v-else class="grey--text">&mdash;</span>
                         <v-btn icon small @click="refresh_rca()" :loading="loading"><v-icon small>mdi-refresh</v-icon></v-btn>
 
-                        <a href="https://docs.coroot.com/ai/overview" target="_blank" class="ml-1">
+                        <a :href="$utils.docsUrl('ai/overview')" target="_blank" class="ml-1">
                             <v-icon small>mdi-information-outline</v-icon>
                         </a>
                     </div>
@@ -81,7 +81,7 @@
                             <th>Compliance</th>
                             <th>
                                 Error budget burn rate
-                                <a href="https://docs.coroot.com/alerting/slo-monitoring" target="_blank" class="ml-1"
+                                <a :href="$utils.docsUrl('alerting/slo-monitoring')" target="_blank" class="ml-1"
                                     ><v-icon small>mdi-information-outline</v-icon></a
                                 >
                             </th>

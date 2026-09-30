@@ -14,7 +14,7 @@
         <v-card class="pa-5">
             <div class="d-flex align-center font-weight-medium mb-4">
                 Configure {{ types[type].name }} integration
-                <a :href="`https://docs.coroot.com/databases/${type}`" target="_blank" class="ml-2">
+                <a :href="$utils.docsUrl(`databases/${type}`)" target="_blank" class="ml-2">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
                 <v-progress-circular v-if="loading" indeterminate color="green" size="24" class="ml-2" />
@@ -24,7 +24,7 @@
 
             <template v-if="type === 'postgres'">
                 <p>
-                    This integration allows Coroot to collect Postgres-specific metrics. It requires a database user with the
+                    This integration allows shards to collect Postgres-specific metrics. It requires a database user with the
                     <var>pg_monitor</var> role and the <var>pg_stat_statements</var> extension enabled.
                 </p>
                 <Code>
@@ -53,7 +53,7 @@ select pg_reload_conf();
             </template>
 
             <template v-if="type === 'mysql'">
-                <p>This integration allows Coroot to collect Mysql-specific metrics. It requires a Mysql user with the following permissions:</p>
+                <p>This integration allows shards to collect Mysql-specific metrics. It requires a Mysql user with the following permissions:</p>
                 <Code>
                     <pre>
 CREATE USER 'coroot'@'%' IDENTIFIED BY '&lt;PASSWORD&gt;';
@@ -63,12 +63,12 @@ GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO 'coroot'@'%';
             </template>
 
             <template v-if="type === 'redis'">
-                <p>This integration allows Coroot to collect Redis-specific metrics.</p>
+                <p>This integration allows shards to collect Redis-specific metrics.</p>
             </template>
 
             <template v-if="type === 'mongodb'">
                 <p>
-                    This integration allows Coroot to collect MongoDB-specific metrics, including per-query statistics, replication and oplog status.
+                    This integration allows shards to collect MongoDB-specific metrics, including per-query statistics, replication and oplog status.
                 </p>
                 <p>
                     The agent connects to every <var>mongod</var> instance directly and requires a monitoring user with the
@@ -100,7 +100,7 @@ operationProfiling:
             </template>
 
             <template v-if="type === 'memcached'">
-                <p>This integration allows Coroot to collect Memcached-specific metrics.</p>
+                <p>This integration allows shards to collect Memcached-specific metrics.</p>
             </template>
 
             <p>To enable metric collection for this database, add Kubernetes annotations or manually enter credentials using the form below.</p>
@@ -113,11 +113,11 @@ operationProfiling:
             <v-tabs-items v-model="tab">
                 <v-tab-item transition="none">
                     <p>
-                        Coroot-cluster-agent automatically discovers and collects metrics from pods annotated with
+                        The cluster agent automatically discovers and collects metrics from pods annotated with
                         <var>coroot.com/{{ type }}-scrape</var> annotations.
                     </p>
                     <v-alert color="primary" outlined text>
-                        Note that Coroot checks only <b>Pod</b> annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
+                        Note that shards checks only <b>Pod</b> annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
                     </v-alert>
                     <Code>
                         <pre v-if="type === 'postgres'">

@@ -1,6 +1,6 @@
 <template>
     <v-alert color="red" elevation="2" border="left" colored-border class="mx-auto mt-5 pr-8" min-width="60%">
-        <a href="https://docs.coroot.com/configuration/authentication" target="_blank" class="doc-link">
+        <a :href="$utils.docsUrl('configuration/authentication')" target="_blank" class="doc-link">
             <v-icon>mdi-information-outline</v-icon>
         </a>
         <div v-if="error === 'configuration'">

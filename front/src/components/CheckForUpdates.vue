@@ -6,7 +6,7 @@
         <div class="text-center">
             Coroot {{ latestVersion }} is available &#127881;
             <a href="https://github.com/coroot/coroot/releases" target="_blank" class="ml-2 mr-1 link">Changelog</a>
-            (<a href="https://docs.coroot.com/" target="_blank" class="link">how to upgrade</a>).
+            (<a :href="$utils.docsUrl('')" target="_blank" class="link">how to upgrade</a>).
         </div>
     </v-alert>
 </template>

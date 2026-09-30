@@ -7,7 +7,7 @@
         <v-card class="pa-5">
             <div class="d-flex align-center font-weight-medium mb-4">
                 Configure custom cloud pricing
-                <a href="https://docs.coroot.com/costs/" target="_blank" class="ml-2">
+                <a :href="$utils.docsUrl('costs/')" target="_blank" class="ml-2">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
                 <v-progress-circular v-if="loading" indeterminate color="green" size="24" class="ml-2" />
@@ -15,7 +15,7 @@
                 <v-btn icon @click="dialog = false"><v-icon>mdi-close</v-icon></v-btn>
             </div>
 
-            <p>If not overridden, Coroot uses GCP pricing for C4 machine family instances in the <i>us-central1</i> region</p>
+            <p>If not overridden, shards uses GCP pricing for C4 machine family instances in the <i>us-central1</i> region</p>
 
             <v-form v-if="form" v-model="valid" ref="form">
                 <div class="subtitle-1 mt-3">vCPU ($ per vCPU per hour)</div>

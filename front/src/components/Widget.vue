@@ -61,7 +61,7 @@ export default {
             if (!l) {
                 return null;
             }
-            return `https://docs.coroot.com/${l.group}/${l.item}${l.hash ? '#' + l.hash : ''}`;
+            return this.$utils.docsUrl(`${l.group}/${l.item}${l.hash ? '#' + l.hash : ''}`);
         },
         fgUnit() {
             const fg = this.w.flamegraph;

@@ -159,20 +159,12 @@
                             </v-list-item>
                         </template>
                         <v-list dense class="pa-0">
-                            <v-list-item href="https://docs.coroot.com/" target="_blank">
+                            <v-list-item :href="$utils.docsUrl('')" target="_blank">
                                 <v-icon small class="mr-1">mdi-book-open-outline</v-icon>Documentation</v-list-item
                             >
-                            <v-list-item href="https://github.com/coroot/coroot" target="_blank">
-                                <v-icon small class="mr-1">mdi-github</v-icon>GitHub
-                            </v-list-item>
-                            <v-list-item href="https://coroot.com/join-slack-community/" target="_blank">
-                                <v-icon small class="mr-1">mdi-slack</v-icon>Slack chat
-                            </v-list-item>
+                            <v-list-item :href="repoUrl" target="_blank"> <v-icon small class="mr-1">mdi-github</v-icon>GitHub </v-list-item>
                             <v-divider />
-                            <v-list-item> Coroot Edition: {{ $coroot.edition }} </v-list-item>
-                            <v-list-item href="https://github.com/coroot/coroot/releases" target="_blank">
-                                Version: {{ $coroot.version }}
-                            </v-list-item>
+                            <v-list-item :href="`${repoUrl}/releases`" target="_blank"> Version: {{ $coroot.version }} </v-list-item>
                         </v-list>
                     </v-menu>
 
@@ -220,7 +212,7 @@
                         </template>
                         <template v-else-if="status.node_agent.status !== 'ok'">
                             <div class="flex-grow-1 mb-3 mb-sm-0">
-                                No metrics found. If you just installed Coroot and node-agent, please wait a couple minutes for it to collect data.
+                                No metrics found. If you just installed shards and node-agent, please wait a couple minutes for it to collect data.
                                 <br />
                                 If you haven't installed node-agent, please do so now.
                             </div>
@@ -228,7 +220,7 @@
                         </template>
                         <template v-else-if="status.kube_state_metrics && status.kube_state_metrics.status !== 'ok'">
                             <div class="flex-grow-1 mb-3 mb-sm-0">
-                                It looks like you use Kubernetes, so Coroot requires <b>kube-state-metrics</b>
+                                It looks like you use Kubernetes, so shards requires <b>kube-state-metrics</b>
                                 to combine individual containers into applications.
                             </div>
                             <v-btn outlined :to="{ name: 'project_settings' }">Install kube-state-metrics</v-btn>
@@ -266,6 +258,7 @@ import ApiKeys from './views/auth/ApiKeys.vue';
 import CloudPromoDialog from './components/CloudPromoDialog.vue';
 import LicenseCheck from './components/LicenseCheck.vue';
 import { views } from '@/views/Views.vue';
+import { repoUrl } from '@/utils/utils';
 import './app.css';
 
 export default {
@@ -323,14 +316,11 @@ export default {
         views() {
             return views;
         },
+        repoUrl() {
+            return repoUrl;
+        },
         logo() {
-            if (this.menuCollapsed) {
-                return 'icon.svg';
-            }
-            if (this.ee) {
-                return 'logo-ee.svg';
-            }
-            return 'logo.svg';
+            return 'brand/icon.svg';
         },
         ee() {
             return this.$coroot.edition === 'Enterprise';

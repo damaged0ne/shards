@@ -37,7 +37,7 @@
             <template #header.rca>
                 <div class="d-flex align-center gap-1">
                     Root Cause
-                    <a href="https://docs.coroot.com/ai/overview" target="_blank">
+                    <a :href="$utils.docsUrl('ai/overview')" target="_blank">
                         <v-icon small>mdi-information-outline</v-icon>
                     </a>
                 </div>

@@ -11,7 +11,7 @@
                 </template>
                 <v-card class="pa-3">
                     <div class="body-2">
-                        Inspections are automated checks that Coroot runs against your applications to detect potential issues. Each inspection has a
+                        Inspections are automated checks that shards runs against your applications to detect potential issues. Each inspection has a
                         default threshold that triggers a warning when exceeded. You can customize thresholds at the project level (applies to all
                         applications) or override them for specific applications.
                     </div>

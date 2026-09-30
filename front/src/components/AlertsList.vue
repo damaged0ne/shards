@@ -583,7 +583,7 @@ export default {
 }
 
 .log-sample {
-    font-family: monospace, monospace;
+    font-family: var(--mono);
     font-size: 12px;
     background-color: var(--background-color-hi);
     filter: brightness(var(--brightness));

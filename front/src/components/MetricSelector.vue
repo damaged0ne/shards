@@ -23,7 +23,7 @@ const themeSpec = {
     },
     '.cm-scroller': {
         overflow: 'hidden',
-        fontFamily: '"Roboto", sans-serif',
+        fontFamily: 'var(--font)',
     },
     '.cm-completionIcon': {
         display: 'none',

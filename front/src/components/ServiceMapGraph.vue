@@ -567,12 +567,12 @@ export default {
                 const sub = [this.multicluster && n.app.cluster, ns && 'ns:' + ns].filter(Boolean).join(' / ');
                 n.label = truncate(n.name, sizes.maxLabel);
                 n.sub = truncate(sub, sizes.maxSubLabel);
-                ctx.font = `${sizes.labelFont}px Roboto, sans-serif`;
+                ctx.font = `${sizes.labelFont}px Inter, Roboto, sans-serif`;
                 n.labelW = ctx.measureText(n.label).width;
-                ctx.font = `${sizes.labelFont * 0.85}px Roboto, sans-serif`;
+                ctx.font = `${sizes.labelFont * 0.85}px Inter, Roboto, sans-serif`;
                 n.subW = n.sub ? ctx.measureText(n.sub).width : 0;
             });
-            ctx.font = `${sizes.statsFont}px Roboto, sans-serif`;
+            ctx.font = `${sizes.statsFont}px Inter, Roboto, sans-serif`;
             this.links.forEach((l) => (l.statsW = max(l.stats.map((st) => ctx.measureText(st).width))));
             this.redraw();
         },
@@ -676,7 +676,7 @@ export default {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
 
-                ctx.font = `${fs}px Roboto, sans-serif`;
+                ctx.font = `${fs}px Inter, Roboto, sans-serif`;
                 ctx.fillStyle = onLabel ? c.selected : c.text;
                 ctx.fillText(n.label, n.x, y);
                 const w = n.labelW * k;
@@ -690,7 +690,7 @@ export default {
                     const sfs = fs * 0.85;
                     const sy = y + fs * 1.25;
                     const sw = n.subW * k;
-                    ctx.font = `${sfs}px Roboto, sans-serif`;
+                    ctx.font = `${sfs}px Inter, Roboto, sans-serif`;
                     ctx.fillStyle = onLabel ? c.selected : c.textDimmed;
                     ctx.fillText(n.sub, n.x, sy);
                     if (onLabel) {
@@ -774,7 +774,7 @@ export default {
             const fs = sizes.statsFont / scale;
             const lh = fs * 1.25;
             const pad = fs * 0.35;
-            ctx.font = `${fs}px Roboto, sans-serif`;
+            ctx.font = `${fs}px Inter, Roboto, sans-serif`;
             ctx.fillStyle = this.withAlpha(c.bg, 0.92);
             ctx.strokeStyle = l.status === 'critical' || l.status === 'warning' ? c[l.status] : c.border;
             ctx.lineWidth = 1 / scale;

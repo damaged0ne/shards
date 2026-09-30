@@ -1,110 +1,534 @@
+/*
+ * Global styles: legacy variables mapped onto the design tokens (src/styles/tokens.css) and
+ * Vuetify overrides that give every page the same rounded, soft look in light and dark themes.
+ * Selectors are prefixed with .v-application to win over Vuetify's own component styles.
+ */
+
+/* ---------- legacy variables used by components ---------- */
 :root {
-    --text-light: rgba(0, 0, 0, 0.87);
-    --text-light-dimmed: rgba(0, 0, 0, 0.6);
+    --text-light: var(--text-1);
+    --text-light-dimmed: var(--text-2);
     --text-dark: rgba(255, 255, 255, 0.87);
     --text-dark-dimmed: rgba(255, 255, 255, 0.6);
-    --background-light: white;
-    --background-light-hi: #eeeeee;
-    --background-dark: #121212;
-    --background-dark-hi: #424242;
-    --brightness-dimmed: 80%;
-    --border-light: rgba(0, 0, 0, 0.3);
-    --border-light-dimmed: rgba(0, 0, 0, 0.12);
-    --border-dark: rgba(255, 255, 255, 0.3);
-    --border-dark-dimmed: rgba(255, 255, 255, 0.12);
-    --tooltip-light: white;
-    --tooltip-dark: #424242;
+    --background-light: var(--surface);
+    --background-light-hi: var(--gray-4);
+    --background-dark: var(--gray-2);
+    --background-dark-hi: var(--gray-5);
+    --brightness-dimmed: 90%;
+    --border-light: var(--border-strong);
+    --border-light-dimmed: var(--border);
+    --border-dark: var(--border-strong);
+    --border-dark-dimmed: var(--border);
+    --tooltip-light: var(--surface);
+    --tooltip-dark: var(--surface);
 
-    --status-unknown: grey;
-    --status-ok: #23d160;
-    --status-warning: #ffdd57;
-    --status-critical: #f44034;
+    --status-unknown: var(--gray-8);
+    --status-ok: var(--success-9);
+    --status-warning: var(--warning-9);
+    --status-critical: var(--danger-9);
+
+    --text-color: var(--text-1);
+    --text-color-dimmed: var(--text-2);
+    --background-color: var(--surface);
+    --background-color-hi: var(--gray-4);
+    --brightness: 100%;
+    --border-color: var(--border-strong);
+    --border-color-dimmed: var(--border);
+    --tooltip-color: var(--surface);
 }
-body.theme--dark {
-    background-color: var(--background-dark);
+:root[data-theme='dark'] {
+    --background-color-hi: var(--gray-5);
+    --brightness: 90%;
+}
+
+/* ---------- base ---------- */
+html {
+    background: var(--bg);
+}
+body {
+    background: var(--bg);
+    color: var(--text-1);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+}
+::selection {
+    background: var(--accent-4);
 }
 .v-application {
-    --text-color: var(--text-light);
-    --text-color-dimmed: var(--text-light-dimmed);
-    --background-color: var(--background-light);
-    --background-color-hi: var(--background-light-hi);
-    --brightness: 100%;
-    --border-color: var(--border-light);
-    --border-color-dimmed: var(--border-light-dimmed);
-    --tooltip-color: var(--tooltip-light);
+    font-family: var(--font) !important;
+    color: var(--text-1);
 }
+.v-application.theme--light,
 .v-application.theme--dark {
-    --text-color: var(--text-dark);
-    --text-color-dimmed: var(--text-dark-dimmed);
-    --background-color: var(--background-dark);
-    --background-color-hi: var(--background-dark-hi);
-    --brightness: var(--brightness-dimmed);
-    --border-color: var(--border-dark);
-    --border-color-dimmed: var(--border-dark-dimmed);
-    --tooltip-color: var(--tooltip-dark);
-}
-.v-application.theme--dark .logo {
-    filter: brightness(var(--brightness-dimmed));
-}
-
-.v-application .v-navigation-drawer,
-.v-application .v-navigation-drawer .v-list {
-    color: var(--text-dark) !important;
-    background-color: var(--background-dark) !important;
-}
-
-.v-application .v-footer {
-    background-color: var(--background-color);
+    background: var(--bg);
+    color: var(--text-1);
 }
 .v-application .v-main {
-    color: var(--text-color) !important;
-    background-color: var(--background-color) !important;
+    color: var(--text-1) !important;
+    background-color: var(--bg) !important;
 }
-.v-application .v-main .v-tabs > .v-tabs-bar,
-.v-application .v-main .v-data-table,
-.v-application .v-main .v-list,
-.v-application .v-main .v-card {
-    color: var(--text-color) !important;
-    background-color: var(--background-color) !important;
+.v-application .v-main,
+.v-application .v-menu__content,
+.v-application .v-dialog,
+.v-application .v-input,
+.v-application .v-alert,
+.v-application .v-label {
+    font-size: 14px;
 }
-
-.v-application .v-tooltip__content {
-    opacity: 1 !important;
-    padding: 0;
+.v-application [class*='text-h'],
+.v-application [class*='text-subtitle'],
+.v-application [class*='text-body'],
+.v-application .text-caption,
+.v-application .caption,
+.v-application .subtitle-1,
+.v-application .subtitle-2,
+.v-application .headline,
+.v-application .title,
+.v-application .body-1,
+.v-application .body-2 {
+    font-family: var(--font) !important;
 }
-
-.v-application .v-icon,
-.v-application .v-btn,
-.v-application .v-chip {
-    filter: brightness(var(--brightness)) !important;
+.v-application .text-h4,
+.v-application .text-h5,
+.v-application .text-h6,
+.v-application h1,
+.v-application h2,
+.v-application h3 {
+    font-weight: 600;
+    letter-spacing: -0.01em !important;
 }
-
-.v-application .v-btn .v-icon {
-    filter: unset !important;
+.v-application .text-h5 {
+    font-size: 1.35rem !important;
+}
+.v-application .text-h6 {
+    font-size: 1.1rem !important;
+}
+.v-application .caption,
+.v-application .text-caption {
+    color: var(--text-2);
+    letter-spacing: normal !important;
+}
+.v-application code,
+.v-application kbd,
+.v-application pre,
+.v-application samp,
+.v-application var,
+.mono {
+    font-family: var(--mono);
+}
+.v-application var {
+    font-style: normal;
+    font-size: 0.92em;
+    padding: 0 4px;
+    border-radius: 4px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--border-soft);
+}
+.v-application code {
+    background: var(--surface-sunk);
+    color: var(--text-1);
+    box-shadow: none;
+    font-size: 0.9em;
+    border-radius: 4px;
+}
+.num {
+    font-variant-numeric: tabular-nums;
 }
 
 a {
     text-decoration: none !important;
 }
-.v-btn {
-    text-transform: none !important;
-    font-weight: normal !important;
-    letter-spacing: inherit !important;
-    font-size: inherit !important;
+.v-application a {
+    color: var(--link);
+}
+.v-application a:hover {
+    text-decoration: underline !important;
+}
+.v-application a.v-btn:hover,
+.v-application a.v-list-item:hover,
+.v-application a.v-tab:hover,
+.v-application a.v-chip:hover,
+.v-application .rail a:hover {
+    text-decoration: none !important;
+}
+a:focus-visible,
+button:focus-visible,
+[role='button']:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* ---------- status colors: material classes used across the app map to the status scales ---------- */
+.v-application .red.lighten-1,
+.v-application .red {
+    background-color: var(--danger-9) !important;
+    border-color: var(--danger-9) !important;
+}
+.v-application .orange.lighten-1,
+.v-application .orange {
+    background-color: var(--warning-9) !important;
+    border-color: var(--warning-9) !important;
+}
+.v-application .green.lighten-1,
+.v-application .green {
+    background-color: var(--success-9) !important;
+    border-color: var(--success-9) !important;
+}
+.v-application .grey.lighten-1 {
+    background-color: var(--gray-7) !important;
+    border-color: var(--gray-7) !important;
+}
+.v-application .red--text {
+    color: var(--danger-10) !important;
+    caret-color: var(--danger-10) !important;
+}
+.v-application .orange--text {
+    color: var(--warning-10) !important;
+}
+.v-application .green--text {
+    color: var(--success-10) !important;
+}
+.v-application .grey--text {
+    color: var(--text-2) !important;
+}
+.v-application .grey--text.text--lighten-1,
+.v-application .grey--text.text--darken-1 {
+    color: var(--text-3) !important;
+}
+.v-application .error--text {
+    color: var(--danger-10) !important;
+}
+.v-application .success--text {
+    color: var(--success-10) !important;
+}
+
+/* status chips: <span class="status-chip critical">critical</span> */
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    border: 1px solid var(--gray-6);
+    background: var(--gray-3);
+    color: var(--gray-11);
+}
+.status-chip.critical {
+    background: var(--danger-9);
+    border-color: var(--danger-9);
+    color: var(--danger-on);
+}
+.status-chip.danger {
+    background: var(--danger-3);
+    border-color: var(--danger-6);
+    color: var(--danger-11);
+}
+.status-chip.warning {
+    background: var(--warning-3);
+    border-color: var(--warning-6);
+    color: var(--warning-11);
+}
+.status-chip.success,
+.status-chip.ok {
+    background: var(--success-3);
+    border-color: var(--success-6);
+    color: var(--success-11);
+}
+.status-chip.info {
+    background: var(--info-3);
+    border-color: var(--info-6);
+    color: var(--info-11);
+}
+
+/* ---------- surfaces ---------- */
+.v-application .theme--light.v-sheet,
+.v-application .theme--dark.v-sheet {
+    background-color: var(--surface);
+    color: var(--text-1);
+    border-color: var(--border);
+}
+.v-application .v-card {
+    border-radius: var(--r-lg) !important;
+}
+.v-application .v-sheet.v-card:not(.v-sheet--outlined) {
+    box-shadow: var(--shadow);
+}
+.v-application .v-sheet--outlined {
+    border: 1px solid var(--border) !important;
+}
+.v-application .v-sheet.v-card.v-sheet--outlined {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+.v-application .v-main .v-card {
+    color: var(--text-1) !important;
+    background-color: var(--surface) !important;
+}
+.v-application .v-main .v-card.v-card--flat:not(.v-sheet--outlined) {
+    box-shadow: none;
+}
+.v-application .v-card__title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+.v-application .v-divider.theme--light,
+.v-application .v-divider.theme--dark {
+    border-color: var(--border) !important;
+}
+.v-application .v-tooltip__content {
+    opacity: 1 !important;
+    padding: 0;
+    background: transparent;
+}
+.v-application .v-tooltip__content > .v-card,
+.v-application .v-tooltip__content > .v-sheet {
+    border-radius: var(--r-md) !important;
+    box-shadow: var(--shadow-pop) !important;
+}
+
+/* menus and dialogs */
+.v-application .v-menu__content {
+    border-radius: var(--r-md) !important;
+    box-shadow: var(--shadow-pop) !important;
+    background: var(--surface);
+}
+.v-application .v-menu__content .v-list,
+.v-application .v-select-list {
+    background: var(--surface) !important;
+    color: var(--text-1) !important;
+}
+.v-application .v-dialog {
+    border-radius: var(--r-lg) !important;
+    box-shadow: var(--shadow-pop) !important;
+}
+.v-application .v-dialog > .v-card {
+    border-radius: var(--r-lg) !important;
+}
+.v-overlay__scrim {
+    background-color: rgb(17 17 20) !important;
+}
+
+/* lists */
+.v-application .v-main .v-list {
+    color: var(--text-1) !important;
+    background-color: transparent !important;
+}
+.v-application .v-list-item {
+    border-radius: var(--r-sm);
+}
+.v-application .v-list-item--link:before {
+    border-radius: var(--r-sm);
+}
+.v-application .theme--light.v-list-item:not(.v-list-item--active):not(.v-list-item--disabled),
+.v-application .theme--dark.v-list-item:not(.v-list-item--active):not(.v-list-item--disabled) {
+    color: var(--text-1) !important;
+}
+.v-application .theme--light.v-list-item .v-list-item__subtitle,
+.v-application .theme--dark.v-list-item .v-list-item__subtitle {
+    color: var(--text-2);
 }
 /* don't want smaller and bold items in dense lists, e.g. <v-select dense /> */
 .v-list--dense .v-list-item .v-list-item__title {
     font-size: inherit;
     font-weight: inherit;
 }
+.v-application .v-subheader {
+    font: 600 10.5px var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-2);
+    height: 32px;
+}
 
+/* buttons */
+.v-btn {
+    text-transform: none !important;
+    font-weight: 500 !important;
+    letter-spacing: normal !important;
+    font-size: inherit !important;
+}
+.v-application .v-btn:not(.v-btn--round):not(.v-btn--fab) {
+    border-radius: var(--r-sm);
+}
+.v-application .v-btn:not(.v-btn--flat):not(.v-btn--text):not(.v-btn--outlined):not(.v-btn--plain) {
+    box-shadow: none !important;
+}
+.v-application .v-btn--outlined {
+    border-color: var(--border) !important;
+}
+.v-application .v-btn--outlined.theme--light:not(.primary--text):not(.error--text):not(.success--text):not(.warning--text),
+.v-application .v-btn--outlined.theme--dark:not(.primary--text):not(.error--text):not(.success--text):not(.warning--text) {
+    color: var(--text-1) !important;
+    background: var(--surface);
+}
+.v-application .v-btn.v-btn--disabled.v-btn--has-bg {
+    background-color: var(--gray-4) !important;
+}
+.v-application .v-btn.v-btn--disabled {
+    color: var(--text-3) !important;
+}
+.v-application .v-btn-toggle {
+    border-radius: var(--r-sm);
+}
+
+/* form fields */
+.v-application .v-text-field--outlined:not(.v-input--is-focused):not(.error--text) fieldset {
+    border-color: var(--border);
+}
+.v-application .v-text-field--outlined:not(.v-input--is-focused):not(.error--text):not(.v-input--is-disabled) .v-input__control:hover fieldset {
+    border-color: var(--border-strong);
+}
+.v-application .v-text-field--outlined:not(.v-text-field--rounded) > .v-input__control > .v-input__slot,
+.v-application .v-text-field--outlined fieldset {
+    border-radius: var(--r-sm);
+}
+.v-application .v-text-field--outlined > .v-input__control > .v-input__slot {
+    background: var(--surface);
+}
+.v-application .v-input input,
+.v-application .v-input textarea,
+.v-application .v-select__selection--comma {
+    color: var(--text-1);
+}
+.v-application .v-label {
+    color: var(--text-2);
+}
+.v-application .v-input--selection-controls .v-input__slot > .v-label {
+    color: var(--text-1);
+}
+.v-application .v-messages {
+    color: var(--text-2);
+}
+
+/* chips */
+.v-application .v-chip:not(.v-chip--pill) {
+    border-radius: var(--r-sm);
+}
+.v-application .v-chip.v-size--small {
+    border-radius: 5px;
+}
+.v-application
+    .v-chip.theme--light:not(.v-chip--active):not([class*='lighten']):not([class*='darken']):not(.primary):not(.error):not(.warning):not(
+        .success
+    ):not(.info):not(.red):not(.orange):not(.green):not(.blue),
+.v-application
+    .v-chip.theme--dark:not(.v-chip--active):not([class*='lighten']):not([class*='darken']):not(.primary):not(.error):not(.warning):not(.success):not(
+        .info
+    ):not(.red):not(.orange):not(.green):not(.blue) {
+    background: var(--gray-3);
+    color: var(--text-1);
+}
+
+/* tabs */
+.v-application .v-tabs > .v-tabs-bar,
+.v-application .v-main .v-tabs > .v-tabs-bar {
+    background-color: transparent !important;
+    color: var(--text-1) !important;
+    border-bottom: 1px solid var(--border);
+}
+.v-application .v-tab {
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    font-weight: 500;
+    color: var(--text-2) !important;
+}
+.v-application .v-tab.v-tab--active {
+    color: var(--text-1) !important;
+}
+.v-application .v-tabs-slider-wrapper {
+    color: var(--accent-9);
+}
+.v-application .v-tabs-items {
+    background: transparent !important;
+}
+
+/* tables */
+.v-application .v-data-table,
+.v-application .v-main .v-data-table {
+    color: var(--text-1) !important;
+    background-color: transparent !important;
+}
+.v-application .v-data-table > .v-data-table__wrapper > table > thead > tr > th {
+    color: var(--text-2) !important;
+    font-weight: 500;
+    font-size: 12px;
+    white-space: nowrap;
+}
+.v-application .v-data-table > .v-data-table__wrapper > table > thead > tr:last-child > th,
+.v-application .v-data-table > .v-data-table__wrapper > table > tbody > tr:not(:last-child) > td:not(.v-data-table__mobile-row),
+.v-application .v-data-table > .v-data-table__wrapper > table > tbody > tr:not(:last-child) > th:not(.v-data-table__mobile-row) {
+    border-bottom: 1px solid var(--border) !important;
+}
+.v-application
+    .v-data-table
+    > .v-data-table__wrapper
+    > table
+    > tbody
+    > tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
+    background: var(--hover) !important;
+}
+.v-application .v-data-footer {
+    border-top: 1px solid var(--border) !important;
+    color: var(--text-2);
+}
+.v-application .v-data-table .v-data-footer {
+    font-size: 12px;
+}
+
+/* alerts */
+.v-application .v-alert {
+    border-radius: var(--r-md) !important;
+}
+.v-application .v-alert--outlined {
+    border-width: 1px !important;
+}
+.v-application .v-alert.v-sheet:not(.v-alert--outlined):not(.v-alert--text) {
+    box-shadow: var(--shadow) !important;
+}
+.v-application .v-alert--border.v-alert--border-left {
+    background: var(--surface) !important;
+}
+
+/* misc Vuetify components */
+.v-application .v-expansion-panel {
+    background: var(--surface) !important;
+    color: var(--text-1) !important;
+}
+.v-application .v-expansion-panels:not(.v-expansion-panels--accordion) > .v-expansion-panel:first-child,
+.v-application .v-expansion-panels > .v-expansion-panel:first-child {
+    border-top-left-radius: var(--r-md);
+    border-top-right-radius: var(--r-md);
+}
+.v-application .v-expansion-panels > .v-expansion-panel:last-child {
+    border-bottom-left-radius: var(--r-md);
+    border-bottom-right-radius: var(--r-md);
+}
+.v-application .v-progress-linear {
+    border-radius: 4px;
+}
+.v-application .v-skeleton-loader__bone {
+    border-radius: var(--r-sm);
+}
+.v-application .v-footer {
+    background-color: var(--bg);
+}
+.v-application .v-picker,
+.v-application .v-picker__body {
+    background: var(--surface) !important;
+}
+
+/* ---------- utilities ---------- */
 .nowrap {
     display: block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
 .gap-1 {
     gap: 4px;
 }
@@ -118,15 +542,52 @@ a {
     gap: 16px;
 }
 
-*::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-    background-color: #f5f5f5;
+/* ---------- scrollbars ---------- */
+* {
+    scrollbar-color: var(--gray-7) transparent;
+    scrollbar-width: thin;
 }
 *::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-    background-color: #f5f5f5;
+    width: 8px;
+    height: 8px;
+    background-color: transparent;
+}
+*::-webkit-scrollbar-track {
+    background-color: transparent;
 }
 *::-webkit-scrollbar-thumb {
-    background-color: #757575;
+    background-color: var(--gray-7);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* ---------- syntax highlighting (highlight.js intellij-light theme) in dark mode ---------- */
+:root[data-theme='dark'] .hljs {
+    background: var(--surface-sunk);
+    color: var(--text-1);
+}
+:root[data-theme='dark'] .hljs-keyword,
+:root[data-theme='dark'] .hljs-selector-tag,
+:root[data-theme='dark'] .hljs-built_in,
+:root[data-theme='dark'] .hljs-type {
+    color: var(--accent-11);
+}
+:root[data-theme='dark'] .hljs-string,
+:root[data-theme='dark'] .hljs-attr,
+:root[data-theme='dark'] .hljs-symbol {
+    color: var(--success-11);
+}
+:root[data-theme='dark'] .hljs-number,
+:root[data-theme='dark'] .hljs-literal {
+    color: var(--info-11);
+}
+:root[data-theme='dark'] .hljs-comment,
+:root[data-theme='dark'] .hljs-quote {
+    color: var(--text-3);
+}
+:root[data-theme='dark'] .hljs-variable,
+:root[data-theme='dark'] .hljs-template-variable,
+:root[data-theme='dark'] .hljs-title {
+    color: var(--warning-11);
 }

@@ -86,7 +86,7 @@
         <template v-if="tab === 'prometheus'">
             <h1 class="text-h5 my-5">
                 Prometheus integration
-                <a href="https://docs.coroot.com/configuration/prometheus" target="_blank">
+                <a :href="$utils.docsUrl('configuration/prometheus')" target="_blank">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
             </h1>
@@ -96,27 +96,22 @@
         <template v-if="tab === 'clickhouse'">
             <h1 class="text-h5 my-5">
                 ClickHouse integration
-                <a href="https://docs.coroot.com/configuration/clickhouse" target="_blank">
+                <a :href="$utils.docsUrl('configuration/clickhouse')" target="_blank">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
             </h1>
             <p>
-                Coroot stores
-                <a href="https://docs.coroot.com/logs" target="_blank">logs</a>, <a href="https://docs.coroot.com/tracing" target="_blank">traces</a>,
-                and <a href="https://docs.coroot.com/profiling" target="_blank">profiles</a> in the ClickHouse database.
+                shards stores
+                <a :href="$utils.docsUrl('logs')" target="_blank">logs</a>, <a :href="$utils.docsUrl('tracing')" target="_blank">traces</a>, and
+                <a :href="$utils.docsUrl('profiling')" target="_blank">profiles</a> in the ClickHouse database.
             </p>
             <IntegrationClickhouse />
-        </template>
-
-        <template v-if="tab === 'ai'">
-            <h1 class="text-h5 my-5">AI-Powered Root Cause Analysis</h1>
-            <IntegrationAI />
         </template>
 
         <template v-if="tab === 'clouds' || tab === 'aws'">
             <h1 class="text-h5 my-5">Cloud integrations</h1>
             <p style="max-width: 800px">
-                Coroot discovers the managed databases of your cloud provider and monitors them alongside your own services: RDS and ElastiCache on
+                shards discovers the managed databases of your cloud provider and monitors them alongside your own services: RDS and ElastiCache on
                 AWS, Cloud SQL and Memorystore on GCP, MySQL HeatWave, PostgreSQL and OCI Cache on Oracle Cloud.
             </p>
             <h2 class="mt-8 mb-3">
@@ -134,7 +129,7 @@
         <template v-if="tab === 'applications'">
             <h2 class="text-h5 my-5" id="categories">
                 Application categories
-                <a href="https://docs.coroot.com/configuration/application-categories" target="_blank">
+                <a :href="$utils.docsUrl('configuration/application-categories')" target="_blank">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
             </h2>
@@ -143,18 +138,18 @@
                 <a href="https://en.wikipedia.org/wiki/Glob_(programming)" target="_blank">glob patterns</a>
                 in the <var>&lt;namespace&gt;/&lt;application_name&gt;</var> format. For Kubernetes applications, categories can also be defined by
                 annotating Kubernetes objects. Refer the
-                <a href="https://docs.coroot.com/configuration/application-categories" target="_blank">documentation</a> for more details.
+                <a :href="$utils.docsUrl('configuration/application-categories')" target="_blank">documentation</a> for more details.
             </p>
             <ApplicationCategories />
 
             <h2 class="text-h5 mt-10 mb-5" id="custom-applications">
                 Custom applications
-                <a href="https://docs.coroot.com/configuration/custom-applications" target="_blank">
+                <a :href="$utils.docsUrl('configuration/custom-applications')" target="_blank">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
             </h2>
 
-            <p>Coroot groups individual containers into applications using the following approach:</p>
+            <p>shards groups individual containers into applications using the following approach:</p>
 
             <ul class="mb-3">
                 <li><b>Kubernetes metadata</b>: Pods are grouped into Deployments, StatefulSets, etc.</li>
@@ -166,12 +161,12 @@
             </ul>
 
             <p>
-                This default approach works well in most cases. However, since no one knows your system better than you do, Coroot allows you to
+                This default approach works well in most cases. However, since no one knows your system better than you do, shards allows you to
                 manually adjust application groupings to better fit your specific needs. You can match desired application instances by defining
                 <a href="https://en.wikipedia.org/wiki/Glob_(programming)" target="_blank">glob patterns</a>
                 for <var>instance_name</var>. Note that this does not apply to Kubernetes applications, which can be customized by annotating
-                Kubernetes objects. Refer the
-                <a href="https://docs.coroot.com/configuration/custom-applications" target="_blank">documentation</a> for more details.
+                Kubernetes objects. Refer the <a :href="$utils.docsUrl('configuration/custom-applications')" target="_blank">documentation</a> for
+                more details.
             </p>
 
             <CustomApplications />
@@ -180,7 +175,7 @@
         <template v-if="tab === 'notifications'">
             <h1 class="text-h5 my-5">
                 Notification integrations
-                <a href="https://docs.coroot.com/alerting/slo-monitoring" target="_blank">
+                <a :href="$utils.docsUrl('alerting/slo-monitoring')" target="_blank">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
             </h1>
@@ -190,29 +185,18 @@
         <template v-if="tab === 'organization'">
             <h1 class="text-h5 my-5">
                 Users
-                <a href="https://docs.coroot.com/configuration/authentication" target="_blank">
+                <a :href="$utils.docsUrl('configuration/authentication')" target="_blank">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
             </h1>
             <Users />
             <h1 class="text-h5 mt-10 mb-5">
                 Role-Based Access Control (RBAC)
-                <a href="https://docs.coroot.com/configuration/rbac" target="_blank">
+                <a :href="$utils.docsUrl('configuration/rbac')" target="_blank">
                     <v-icon>mdi-information-outline</v-icon>
                 </a>
             </h1>
             <RBAC />
-            <h1 class="text-h5 mt-10 mb-5">
-                Single Sign-On (SSO)
-                <a href="https://docs.coroot.com/configuration/authentication/#single-sign-on-sso" target="_blank">
-                    <v-icon>mdi-information-outline</v-icon>
-                </a>
-            </h1>
-            <SSO />
-        </template>
-
-        <template v-if="tab === 'cloud'">
-            <Cloud />
         </template>
     </div>
 </template>
@@ -230,9 +214,6 @@ import IntegrationOCI from './IntegrationOCI.vue';
 import CustomApplications from './CustomApplications.vue';
 import Users from './Users.vue';
 import RBAC from './RBAC.vue';
-import SSO from './SSO.vue';
-import IntegrationAI from '@/views/IntegrationAI.vue';
-import Cloud from './cloud/Cloud.vue';
 import ProjectStatus from '@/views/ProjectStatus.vue';
 
 export default {
@@ -243,7 +224,6 @@ export default {
 
     components: {
         ProjectStatus,
-        IntegrationAI,
         CustomApplications,
         IntegrationPrometheus,
         IntegrationClickhouse,
@@ -256,8 +236,6 @@ export default {
         Integrations,
         Users,
         RBAC,
-        SSO,
-        Cloud,
     },
 
     data() {
@@ -297,21 +275,15 @@ export default {
         },
         tabs() {
             const disabled = !this.projectId;
-            let tabs = [
+            return [
                 { id: undefined, name: 'General' },
                 { id: 'prometheus', name: 'Prometheus', disabled: disabled || this.multicluster },
                 { id: 'clickhouse', name: 'Clickhouse', disabled: disabled || this.multicluster },
-                { id: 'ai', name: 'AI' },
-                { id: 'cloud', name: 'Coroot Cloud' },
                 { id: 'clouds', name: 'Cloud integrations', disabled },
                 { id: 'applications', name: 'Applications', disabled },
                 { id: 'notifications', name: 'Notifications', disabled },
                 { id: 'organization', name: 'Organization' },
             ];
-            if (this.$coroot.edition === 'Enterprise') {
-                tabs = tabs.filter((t) => t.id !== 'cloud');
-            }
-            return tabs;
         },
     },
 

@@ -45,7 +45,7 @@ import ChartTooltip from './ChartTooltip';
 import ChartAnnotations from './ChartAnnotations';
 import ChartIncidents from './ChartIncidents';
 
-const font = '12px Roboto, sans-serif';
+const font = '12px Inter, Roboto, sans-serif';
 
 function fmtDigits(...v) {
     const min = Math.min(...v.filter((v) => !!v));
@@ -105,8 +105,8 @@ export default {
         theme() {
             const dark = this.$vuetify.theme.dark;
             return {
-                text: dark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0,0,0,0.87)',
-                grid: dark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0,0,0,0.07)',
+                text: dark ? 'rgba(235, 235, 237, 0.6)' : 'rgba(48, 48, 51, 0.8)',
+                grid: dark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.07)',
             };
         },
         config() {

@@ -4,25 +4,33 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <link rel="icon" href="{{.BasePath}}static/favicon.ico">
-    <title>Coroot</title>
+    <link rel="icon" href="{{.BasePath}}static/favicon.ico" sizes="any">
+    <link rel="icon" href="{{.BasePath}}static/brand/icon.svg" type="image/svg+xml">
+    <title>shards</title>
+    <link rel="stylesheet" href="{{.BasePath}}static/css/fonts.css">
     <link rel="stylesheet" href="{{.BasePath}}static/css/roboto.css">
     <link rel="stylesheet" href="{{.BasePath}}static/css/mdi.css">
+    <script>
+        try {
+            var theme = JSON.parse(localStorage.getItem('coroot') || '{}').theme || 'auto';
+            if (theme === 'auto') {
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {}
+    </script>
     <script>
         window.coroot = {
             base_path: '{{.BasePath}}',
             version: '{{.Version}}',
             instance_uuid: '{{.InstanceUUID}}',
-            check_for_updates: {{.CheckForUpdates}},
-            edition: '{{.Edition}}',
-            cloud_url: '{{.CloudURL}}',
             default_time_range: '{{.DefaultTimeRange}}',
         };
     </script>
 </head>
 <body>
 <noscript>
-    <strong>We're sorry but Coroot doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    <strong>We're sorry but shards doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
 </noscript>
 <div id="app"></div>
 </body>

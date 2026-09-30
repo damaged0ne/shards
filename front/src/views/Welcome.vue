@@ -1,9 +1,9 @@
 <template>
     <div class="wrapper">
         <div class="text-center" style="max-width: 800px">
-            <img :src="`${$coroot.base_path}static/icon.svg`" height="80" alt="Coroot Logo" />
+            <img :src="`${$coroot.base_path}static/brand/icon.svg`" height="80" alt="shards" />
 
-            <h1 class="text-h4 mt-5 mb-3">Welcome to Coroot</h1>
+            <h1 class="text-h4 mt-5 mb-3">Welcome to shards</h1>
 
             <div v-if="user.readonly">
                 <p>Looks like everything is working, but you don’t have access to any projects.</p>

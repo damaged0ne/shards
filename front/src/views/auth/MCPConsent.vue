@@ -1,14 +1,14 @@
 <template>
     <div class="form">
         <div class="text-center">
-            <img :src="`${$coroot.base_path}static/icon.svg`" alt=":~#" height="80" />
+            <img :src="`${$coroot.base_path}static/brand/icon.svg`" alt=":~#" height="80" />
         </div>
 
         <h2 class="text-h4 my-5 text-center">Authorize MCP access</h2>
 
         <p class="text-center mb-2">
             <span class="font-weight-medium">{{ clientName }}</span>
-            is requesting access to Coroot telemetry as
+            is requesting access to shards telemetry as
             <span class="font-weight-medium">{{ userName }}</span
             >.
         </p>

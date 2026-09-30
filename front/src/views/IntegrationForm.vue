@@ -4,7 +4,7 @@
             <div class="d-flex align-center font-weight-medium mb-4">
                 <div>
                     {{ value === 'view' ? 'View' : 'Configure' }} {{ title }} integration
-                    <a :href="`https://docs.coroot.com/alerting/${type}`" target="_blank">
+                    <a :href="$utils.docsUrl(`alerting/${type}`)" target="_blank">
                         <v-icon>mdi-information-outline</v-icon>
                     </a>
                     <v-progress-circular v-if="loading" indeterminate color="green" size="30" />

@@ -150,26 +150,6 @@ export default class Api {
         }
     }
 
-    sso(form, cb) {
-        if (form) {
-            this.post(`sso`, form, cb);
-        } else {
-            this.get(`sso`, {}, cb);
-        }
-    }
-
-    ssoStatus(cb) {
-        this.get(`sso-status`, {}, cb);
-    }
-
-    ai(form, cb) {
-        if (form) {
-            this.post(`ai`, form, cb);
-        } else {
-            this.get(`ai`, {}, cb);
-        }
-    }
-
     getProject(projectId, cb) {
         this.get(`project/${projectId || ''}`, {}, cb);
     }
@@ -329,13 +309,6 @@ export default class Api {
 
     deleteComment(id, cb) {
         this.del(this.projectPath(`comments/${id}`), cb);
-    }
-
-    getRCA(appId, withSummary, cb) {
-        const { from, to, incident, alert } = this.router.currentRoute.query;
-        const params = { withSummary, from, to, incident, alert };
-        const url = this.projectPath(`app/${encodeURIComponent(appId)}/rca`);
-        this.request({ method: 'get', url, params, timeout: withSummary ? 300000 : 60000 }, cb);
     }
 
     getInspectionConfig(appId, type, cb) {

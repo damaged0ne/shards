@@ -34,14 +34,6 @@
             :footer-props="{ itemsPerPageOptions: [10, 20, 50, 100] }"
             @update:items-per-page="changeLimit"
         >
-            <template #header.rca>
-                <div class="d-flex align-center gap-1">
-                    Root Cause
-                    <a :href="$utils.docsUrl('ai/overview')" target="_blank">
-                        <v-icon small>mdi-information-outline</v-icon>
-                    </a>
-                </div>
-            </template>
             <template #item.incident="{ item }">
                 <div class="incident" :class="{ 'grey--text': item.resolved_at }">
                     <div class="status" :class="item.color" />
@@ -85,17 +77,6 @@
                     <span :class="{ 'grey--text': item.resolved_at }">
                         {{ item.short_description }}
                     </span>
-                </div>
-            </template>
-
-            <template #item.rca="{ item }">
-                <div>
-                    <template v-if="item.rca">
-                        <v-icon v-if="item.rca.status === 'OK'" small color="success">mdi-check-circle</v-icon>
-                        <v-icon v-else-if="item.rca.status === 'Failed'" small color="error">mdi-alert-circle</v-icon>
-                        <span v-else class="grey--text">{{ item.rca.status }}</span>
-                    </template>
-                    <span v-else class="grey--text">&mdash;</span>
                 </div>
             </template>
 
@@ -175,7 +156,6 @@ export default {
                 { value: 'application', text: 'Application', sortable: false },
                 { value: 'cluster', text: 'Cluster', sortable: true },
                 { value: 'description', text: 'Description', sortable: false },
-                { value: 'rca', text: 'Root Cause', sortable: false },
                 { value: 'impact', text: 'Impacted requests', sortable: true },
                 { value: 'opened_at', text: 'Opened at', sortable: true },
                 { value: 'duration', text: 'Duration', sortable: true },

@@ -45,14 +45,9 @@ export const views = {
     nodes: { name: 'Nodes', icon: 'mdi-server' },
     kubernetes: { name: 'Kubernetes', icon: 'mdi-ship-wheel' },
     costs: { name: 'Costs', icon: 'mdi-currency-usd' },
-    anomalies: { name: 'Anomalies', icon: 'mdi-waveform' },
     risks: { name: 'Risks', icon: 'mdi-weather-lightning' },
     dashboards: { name: 'Dashboards', icon: 'mdi-view-dashboard-outline' },
 };
-
-if (window.coroot.edition !== 'Enterprise') {
-    delete views.anomalies;
-}
 
 export default {
     props: {

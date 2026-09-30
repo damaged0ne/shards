@@ -39,11 +39,6 @@
             <Costs />
         </template>
 
-        <template v-if="view === 'anomalies'">
-            <RCA v-if="id" :appId="id" />
-            <Anomalies v-else />
-        </template>
-
         <template v-if="view === 'risks'">
             <Risks />
         </template>
@@ -67,8 +62,6 @@ import Logs from '@/views/Logs.vue';
 import Nodes from '@/views/Nodes.vue';
 import Node from '@/views/Node.vue';
 import Costs from '@/views/Costs.vue';
-import Anomalies from '@/views/Anomalies.vue';
-import RCA from '@/views/RCA.vue';
 import Risks from '@/views/Risks.vue';
 import Dashboards from '@/views/dashboards/Dashboards.vue';
 import Dashboard from '@/views/dashboards/Dashboard.vue';
@@ -88,8 +81,6 @@ export default {
         Nodes,
         Node,
         Costs,
-        Anomalies,
-        RCA,
         Risks,
         Dashboards,
         Dashboard,

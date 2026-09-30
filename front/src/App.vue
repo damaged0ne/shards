@@ -1,15 +1,5 @@
 <template>
     <v-app>
-        <v-system-bar
-            :app="!!systemAlerts.length"
-            class="d-block px-0"
-            :height="systemAlertHeight * systemAlerts.length"
-            :style="{ height: systemAlerts.length * systemAlertHeight + 'px' }"
-        >
-            <CheckForUpdates v-if="$coroot.check_for_updates" :height="systemAlertHeight" @show="(v) => toggleSystemAlert('update', v)" />
-            <LicenseCheck v-if="ee" :height="systemAlertHeight" @show="(v) => toggleSystemAlert('license', v)" />
-        </v-system-bar>
-
         <v-navigation-drawer v-if="menu" permanent app dark :mini-variant="menuCollapsed" width="188" stateless>
             <template #prepend>
                 <div class="mx-2 my-3">
@@ -239,8 +229,6 @@
                 <ChangePassword v-if="user" v-model="changePassword" />
                 <ApiKeys v-if="user" v-model="apiKeys" :user="user" />
 
-                <CloudPromoDialog v-if="!ee && user" />
-
                 <Search v-if="search" v-model="search" />
             </v-container>
         </v-main>
@@ -250,19 +238,16 @@
 <script>
 import Welcome from '@/views/Welcome.vue';
 import Search from './views/Search.vue';
-import CheckForUpdates from './components/CheckForUpdates.vue';
 import ThemeSelector from './components/ThemeSelector.vue';
 import AgentInstallation from './views/AgentInstallation.vue';
 import ChangePassword from './views/auth/ChangePassword.vue';
 import ApiKeys from './views/auth/ApiKeys.vue';
-import CloudPromoDialog from './components/CloudPromoDialog.vue';
-import LicenseCheck from './components/LicenseCheck.vue';
 import { views } from '@/views/Views.vue';
 import { repoUrl } from '@/utils/utils';
 import './app.css';
 
 export default {
-    components: { Welcome, Search, CheckForUpdates, ThemeSelector, AgentInstallation, ChangePassword, ApiKeys, CloudPromoDialog, LicenseCheck },
+    components: { Welcome, Search, ThemeSelector, AgentInstallation, ChangePassword, ApiKeys },
 
     data() {
         let menuCollapsed = this.$storage.local('menu-collapsed');
@@ -276,7 +261,6 @@ export default {
             apiKeys: false,
             menuCollapsed: menuCollapsed,
             search: false,
-            systemAlerts: [],
         };
     },
 
@@ -322,9 +306,6 @@ export default {
         logo() {
             return 'brand/icon.svg';
         },
-        ee() {
-            return this.$coroot.edition === 'Enterprise';
-        },
         menu() {
             return !this.$route.meta.anonymous;
         },
@@ -354,9 +335,6 @@ export default {
             const f = this.context.fluxcd;
             const a = this.context.argocd;
             return (f ? f.issues : 0) + (a ? a.issues : 0);
-        },
-        systemAlertHeight() {
-            return this.$vuetify.breakpoint.xs ? 64 : 32;
         },
     },
 
@@ -438,18 +416,6 @@ export default {
                 e.preventDefault();
                 this.search = true;
             }
-        },
-        toggleSystemAlert(name, show) {
-            const set = new Set(this.systemAlerts);
-            if (show) {
-                set.add(name);
-            } else {
-                set.delete(name);
-            }
-            this.systemAlerts.splice(0);
-            set.forEach((item) => {
-                this.systemAlerts.push(item);
-            });
         },
     },
 };

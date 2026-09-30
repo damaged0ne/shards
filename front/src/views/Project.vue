@@ -108,11 +108,6 @@
             <IntegrationClickhouse />
         </template>
 
-        <template v-if="tab === 'ai'">
-            <h1 class="text-h5 my-5">AI-Powered Root Cause Analysis</h1>
-            <IntegrationAI />
-        </template>
-
         <template v-if="tab === 'clouds' || tab === 'aws'">
             <h1 class="text-h5 my-5">Cloud integrations</h1>
             <p style="max-width: 800px">
@@ -202,17 +197,6 @@
                 </a>
             </h1>
             <RBAC />
-            <h1 class="text-h5 mt-10 mb-5">
-                Single Sign-On (SSO)
-                <a :href="$utils.docsUrl('configuration/authentication/#single-sign-on-sso')" target="_blank">
-                    <v-icon>mdi-information-outline</v-icon>
-                </a>
-            </h1>
-            <SSO />
-        </template>
-
-        <template v-if="tab === 'cloud'">
-            <Cloud />
         </template>
     </div>
 </template>
@@ -230,9 +214,6 @@ import IntegrationOCI from './IntegrationOCI.vue';
 import CustomApplications from './CustomApplications.vue';
 import Users from './Users.vue';
 import RBAC from './RBAC.vue';
-import SSO from './SSO.vue';
-import IntegrationAI from '@/views/IntegrationAI.vue';
-import Cloud from './cloud/Cloud.vue';
 import ProjectStatus from '@/views/ProjectStatus.vue';
 
 export default {
@@ -243,7 +224,6 @@ export default {
 
     components: {
         ProjectStatus,
-        IntegrationAI,
         CustomApplications,
         IntegrationPrometheus,
         IntegrationClickhouse,
@@ -256,8 +236,6 @@ export default {
         Integrations,
         Users,
         RBAC,
-        SSO,
-        Cloud,
     },
 
     data() {
@@ -297,21 +275,15 @@ export default {
         },
         tabs() {
             const disabled = !this.projectId;
-            let tabs = [
+            return [
                 { id: undefined, name: 'General' },
                 { id: 'prometheus', name: 'Prometheus', disabled: disabled || this.multicluster },
                 { id: 'clickhouse', name: 'Clickhouse', disabled: disabled || this.multicluster },
-                { id: 'ai', name: 'AI' },
-                { id: 'cloud', name: 'Coroot Cloud' },
                 { id: 'clouds', name: 'Cloud integrations', disabled },
                 { id: 'applications', name: 'Applications', disabled },
                 { id: 'notifications', name: 'Notifications', disabled },
                 { id: 'organization', name: 'Organization' },
             ];
-            if (this.$coroot.edition === 'Enterprise') {
-                tabs = tabs.filter((t) => t.id !== 'cloud');
-            }
-            return tabs;
         },
     },
 

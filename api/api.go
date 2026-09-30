@@ -39,7 +39,6 @@ import (
 
 const (
 	MaxIncidentWindow = timeseries.Day
-	MaxRCAWindow      = 4 * timeseries.Hour
 )
 
 type LoadWorldF func(ctx context.Context, project *db.Project, from, to timeseries.Time) (*model.World, error)
@@ -54,7 +53,6 @@ type Api struct {
 	roles            rbac.RoleManager
 	globalClickHouse *db.IntegrationClickhouse
 	globalPrometheus *db.IntegrationPrometheus
-	licenseMgr       LicenseManager
 
 	authSecret        string
 	authAnonymousRole rbac.RoleName
@@ -65,7 +63,7 @@ type Api struct {
 	loadWorld LoadWorldF
 }
 
-func NewApi(cfg *config.Config, cache *cache.Cache, db *db.DB, collector *collector.Collector, stats *stats.Collector, pricing *pricing.Manager, roles rbac.RoleManager, licenseMgr LicenseManager,
+func NewApi(cfg *config.Config, cache *cache.Cache, db *db.DB, collector *collector.Collector, stats *stats.Collector, pricing *pricing.Manager, roles rbac.RoleManager,
 	globalClickHouse *db.IntegrationClickhouse, globalPrometheus *db.IntegrationPrometheus,
 	deploymentUuid, instanceUuid string, loadWorld LoadWorldF) *Api {
 
@@ -79,7 +77,6 @@ func NewApi(cfg *config.Config, cache *cache.Cache, db *db.DB, collector *collec
 		roles:            roles,
 		globalClickHouse: globalClickHouse,
 		globalPrometheus: globalPrometheus,
-		licenseMgr:       licenseMgr,
 		deploymentUuid:   deploymentUuid,
 		instanceUuid:     instanceUuid,
 		loadWorld:        loadWorld,

@@ -1,14 +1,9 @@
 package stats
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
-	"encoding/json"
-	"io"
 	"net/http"
 	"os"
-	"runtime/pprof"
 	"strings"
 	"sync"
 	"time"
@@ -22,14 +17,11 @@ import (
 	"github.com/coroot/coroot/timeseries"
 	"github.com/coroot/coroot/utils"
 	"github.com/gorilla/mux"
-	"github.com/grafana/pyroscope-go/godeltaprof"
 	"k8s.io/klog"
 )
 
 const (
-	collectUrl      = "https://coroot.com/ce/usage-statistics"
 	collectInterval = time.Hour
-	sendTimeout     = time.Minute
 	worldWindow     = timeseries.Hour
 )
 
@@ -149,7 +141,6 @@ type Collector struct {
 	db      *db.DB
 	cache   *cache.Cache
 	pricing *cloud_pricing.Manager
-	client  *http.Client
 
 	disabled bool
 
@@ -165,8 +156,6 @@ type Collector struct {
 	mcpCalls          map[string]int
 	lock              sync.Mutex
 
-	heapProfiler *godeltaprof.HeapProfiler
-
 	globalClickHouse *db.IntegrationClickhouse
 }
 
@@ -175,8 +164,6 @@ func NewCollector(disabled bool, instanceUuid, version string, edition string, d
 		db:      db,
 		cache:   cache,
 		pricing: pricing,
-
-		client: &http.Client{Timeout: sendTimeout},
 
 		instanceUuid:     instanceUuid,
 		instanceVersion:  version,
@@ -189,27 +176,13 @@ func NewCollector(disabled bool, instanceUuid, version string, edition string, d
 		apiCalls:          map[string]int{},
 		mcpCalls:          map[string]int{},
 
-		heapProfiler: godeltaprof.NewHeapProfiler(),
-
 		globalClickHouse: globalClickHouse,
 
 		disabled: disabled,
 	}
 
-	if err := c.heapProfiler.Profile(io.Discard); err != nil {
-		klog.Warningln(err)
-	}
-
-	if !c.disabled {
-		go func() {
-			c.send()
-			ticker := time.NewTicker(collectInterval)
-			for range ticker.C {
-				c.send()
-			}
-		}()
-	}
-
+	// shards never sends usage statistics anywhere: the stats are only collected locally
+	// and served to logged-in users at GET /stats.
 	return c
 }
 
@@ -279,39 +252,6 @@ func (c *Collector) RegisterRequest(r *http.Request) {
 		c.usersByTheme[e.Theme] = utils.NewStringSet()
 	}
 	c.usersByTheme[e.Theme].Add(e.DeviceId)
-}
-
-func (c *Collector) send() {
-	buf := new(bytes.Buffer)
-	if err := pprof.StartCPUProfile(buf); err != nil {
-		klog.Warningln(err)
-	}
-	from := time.Now()
-
-	stats := c.collect()
-
-	stats.Profile.From = from.Unix()
-	stats.Profile.To = time.Now().Unix()
-	pprof.StopCPUProfile()
-	stats.Profile.CPU = base64.StdEncoding.EncodeToString(buf.Bytes())
-	buf.Reset()
-	if err := c.heapProfiler.Profile(buf); err != nil {
-		klog.Warningln(err)
-	}
-
-	stats.Profile.Memory = base64.StdEncoding.EncodeToString(buf.Bytes())
-
-	buf.Reset()
-	if err := json.NewEncoder(buf).Encode(stats); err != nil {
-		klog.Errorln("failed to encode stats:", err)
-		return
-	}
-	res, err := c.client.Post(collectUrl, "application/json", buf)
-	if err != nil {
-		klog.Errorln("failed to send stats:", err)
-		return
-	}
-	_ = res.Body.Close()
 }
 
 func (c *Collector) collect() Stats {

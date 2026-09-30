@@ -409,7 +409,7 @@ export default {
 
 <style scoped>
 .mono {
-    font-family: monospace, monospace;
+    font-family: var(--mono);
 }
 .marker {
     height: 20px;

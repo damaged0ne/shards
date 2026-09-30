@@ -67,7 +67,7 @@ import ChartAnnotations from './ChartAnnotations';
 import ChartIncidents from './ChartIncidents';
 import ChartTooltip from './ChartTooltip';
 
-const font = '12px Roboto, sans-serif';
+const font = '12px Inter, Roboto, sans-serif';
 
 const suffixes1 = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'];
 const suffixes2 = ['', 'm', 'µ', 'n', 'p', 'f', 'a', 'z', 'y'];
@@ -133,8 +133,8 @@ export default {
             const dark = this.$vuetify.theme.dark;
             return {
                 dark,
-                text: dark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0,0,0,0.87)',
-                grid: dark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0,0,0,0.07)',
+                text: dark ? 'rgba(235, 235, 237, 0.6)' : 'rgba(48, 48, 51, 0.8)',
+                grid: dark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.07)',
             };
         },
         config() {

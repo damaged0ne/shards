@@ -1,6 +1,9 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import vuetify from '@/plugins/vuetify';
+import '@/styles/tokens.css';
+import '@/app.css';
+import { init as initTheme } from '@/utils/theme';
 import '@/plugins/resize';
 import '@/plugins/highlight';
 import pluralize from 'pluralize';
@@ -16,6 +19,8 @@ import Overview from '@/views/Overview';
 import Login from '@/views/auth/Login.vue';
 import Logout from '@/views/auth/Logout.vue';
 import MCPConsent from '@/views/auth/MCPConsent.vue';
+
+initTheme(vuetify);
 
 Vue.config.productionTip = false;
 Vue.config.devtools = false;

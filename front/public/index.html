@@ -7,8 +7,18 @@
     <link rel="icon" href="{{.BasePath}}static/favicon.ico" sizes="any">
     <link rel="icon" href="{{.BasePath}}static/brand/icon.svg" type="image/svg+xml">
     <title>shards</title>
+    <link rel="stylesheet" href="{{.BasePath}}static/css/fonts.css">
     <link rel="stylesheet" href="{{.BasePath}}static/css/roboto.css">
     <link rel="stylesheet" href="{{.BasePath}}static/css/mdi.css">
+    <script>
+        try {
+            var theme = JSON.parse(localStorage.getItem('coroot') || '{}').theme || 'auto';
+            if (theme === 'auto') {
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {}
+    </script>
     <script>
         window.coroot = {
             base_path: '{{.BasePath}}',

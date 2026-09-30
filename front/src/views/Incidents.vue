@@ -38,7 +38,7 @@
                 <div class="incident" :class="{ 'grey--text': item.resolved_at }">
                     <div class="status" :class="item.color" />
                     <router-link :to="{ name: 'overview', params: { view: 'incidents' }, query: { ...$utils.contextQuery(), incident: item.key } }">
-                        <span class="key" style="font-family: monospace">i-{{ item.key }}</span>
+                        <span class="key mono">i-{{ item.key }}</span>
                     </router-link>
                 </div>
             </template>

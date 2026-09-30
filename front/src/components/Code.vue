@@ -54,14 +54,16 @@ export default {
     margin-bottom: 12px;
 }
 .code:deep(pre) {
-    font-family: monospace, monospace;
-    font-size: 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
     display: block;
     overflow-x: auto;
     padding: 20px 20px 0 20px;
-    background: #282a36;
-    border-radius: 4px;
-    color: var(--text-dark);
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--code-text);
 }
 .copy {
     position: absolute;

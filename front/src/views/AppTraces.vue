@@ -336,7 +336,7 @@ export default {
 
 <style scoped>
 .details {
-    font-family: monospace, monospace;
+    font-family: var(--mono);
     font-size: 14px;
     white-space: nowrap;
     cursor: pointer;

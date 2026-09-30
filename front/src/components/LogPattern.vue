@@ -52,7 +52,7 @@ export default {
 
 <style scoped>
 .message {
-    font-family: monospace, monospace;
+    font-family: var(--mono);
     font-size: 14px;
     background-color: var(--background-color-hi);
     filter: brightness(var(--brightness));

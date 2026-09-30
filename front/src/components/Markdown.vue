@@ -80,7 +80,7 @@ export default {
     margin-bottom: 8px;
 }
 .markdown:deep(pre) {
-    font-family: monospace, monospace;
+    font-family: var(--mono);
     font-size: 14px;
     display: block;
     overflow-x: auto;

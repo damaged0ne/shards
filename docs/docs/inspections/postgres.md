@@ -4,7 +4,7 @@ sidebar_position: 11
 
 # Postgres
 
-Coroot inspects Postgres clusters using metrics gathered by the
+shards inspects Postgres clusters using metrics gathered by the
 [cluster-agent](/metrics/cluster-agent#postgres), which connects to each discovered instance
 and reads its system views (`pg_stat_activity`, `pg_stat_statements`, `pg_stat_replication`,
 `pg_stat_archiver`, `pg_stat_user_tables`, `pg_class`, and others). Backup state is collected
@@ -32,7 +32,7 @@ a glance whether the outage hit a replica or the primary.
 
 ## Latency
 
-Flags instances whose **average query latency** exceeds the threshold (default 0.1s). Coroot
+Flags instances whose **average query latency** exceeds the threshold (default 0.1s). shards
 combines completed-query statistics from `pg_stat_statements` with in-flight queries from
 `pg_stat_activity`, so slow queries are visible even before they finish.
 
@@ -57,7 +57,7 @@ Use the charts to pinpoint the cause:
 
 ## Replication lag
 
-Detects replicas that have fallen too far behind the primary (default 30s). Coroot separates the
+Detects replicas that have fallen too far behind the primary (default 30s). shards separates the
 two stages of replication so you can tell *shipping* problems (network or WAL sender) from
 *apply* problems (a stuck or paused replay).
 
@@ -73,7 +73,7 @@ Use the charts to tell which stage is at fault:
 * **WAL throughput**. A burst of WAL generation on the primary explains a temporary lag spike:
   the replica simply has more to catch up on.
 
-When a replica is stuck, Coroot also names the cause directly, such as a paused replay
+When a replica is stuck, shards also names the cause directly, such as a paused replay
 (`pg_wal_replay_paused`), a disconnected WAL receiver, or a recovery conflict.
 
 <img alt="Postgres replication" src="/img/docs/postgres_replication.png" class="card w-1200"/>
@@ -100,7 +100,7 @@ Use the charts to see what is consuming the connections:
 ## Checkpoints
 
 Flags a **stalled or overdue checkpoint**. A long time since the last completed checkpoint grows
-crash-recovery time and can indicate a stuck checkpointer or WAL pressure. Coroot shares its
+crash-recovery time and can indicate a stuck checkpointer or WAL pressure. shards shares its
 WAL-stall diagnosis with the replication check, for example a full disk, a stuck archiver, or a
 replication slot retaining WAL.
 
@@ -207,7 +207,7 @@ Reports whether cluster backups are healthy for clusters managed by CloudNativeP
 Operator. It alerts when the last successful backup is older than the threshold (default 24h),
 when a backup fails, when continuous WAL archiving is broken, or when a scheduled backup is
 overdue (derived from the schedule and the last backup, so a stalled scheduler is caught). When
-backups are failing, Coroot surfaces the operator's condition reason, for example "the pgBackRest
+backups are failing, shards surfaces the operator's condition reason, for example "the pgBackRest
 repository isn't initialized, check the backup storage and credentials".
 
 The section shows the backup status, destinations, schedule, retention, last and next backup,

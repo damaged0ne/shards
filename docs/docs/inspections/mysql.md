@@ -4,7 +4,7 @@ sidebar_position: 13
 
 # MySQL
 
-Coroot inspects MySQL instances using metrics gathered by the
+shards inspects MySQL instances using metrics gathered by the
 [cluster-agent](/metrics/cluster-agent#mysql), which connects to each discovered instance and
 reads its status counters and `performance_schema` / `information_schema` views
 (`SHOW GLOBAL STATUS`, `events_statements_summary_by_digest`, `events_statements_current`,
@@ -115,7 +115,7 @@ a growing applier queue is a group-wide problem, not a local one. The check also
 group has lost redundancy - for example, 2 of 3 members online means one more failure costs
 quorum.
 
-Cluster-wide member counts are derived from Coroot's own per-instance view rather than from a
+Cluster-wide member counts are derived from shards' own per-instance view rather than from a
 single member's perception of the group, because a partitioned member sees only itself.
 
 ## Backups

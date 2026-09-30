@@ -8,26 +8,54 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+// The site is published to GitHub Pages as a project site (https://damaged0ne.github.io/shards/).
+// Override with DOCS_URL / DOCS_BASE_URL when hosting it elsewhere (e.g. on a custom domain with DOCS_BASE_URL=/).
+const url = process.env.DOCS_URL || 'https://damaged0ne.github.io';
+const baseUrl = process.env.DOCS_BASE_URL || '/shards/';
+
+// Markdown links and images are resolved against baseUrl by Docusaurus, but raw HTML/JSX
+// attributes such as <img src="/img/..."> are not. This remark plugin prefixes site-absolute
+// src/href attributes of JSX elements with baseUrl.
+function remarkBaseUrl() {
+  const prefix = baseUrl.replace(/\/$/, '');
+  const walk = (node) => {
+    if ((node.type === 'mdxJsxFlowElement' || node.type === 'mdxJsxTextElement') && Array.isArray(node.attributes)) {
+      for (const attr of node.attributes) {
+        if (
+          attr.type === 'mdxJsxAttribute' &&
+          (attr.name === 'src' || attr.name === 'href') &&
+          typeof attr.value === 'string' &&
+          attr.value.startsWith('/') &&
+          !attr.value.startsWith('//') &&
+          prefix &&
+          !attr.value.startsWith(prefix + '/')
+        ) {
+          attr.value = prefix + attr.value;
+        }
+      }
+    }
+    if (Array.isArray(node.children)) {
+      node.children.forEach(walk);
+    }
+  };
+  return (tree) => walk(tree);
+}
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Coroot Documentation',
-  tagline: '',
-  favicon: 'img/favicon.ico',
-  url: 'https://docs.coroot.com',
-  baseUrl: '/',
-  organizationName: 'coroot', // Usually your GitHub org/user name.
-  projectName: 'coroot', // Usually your repo name.
+  title: 'shards',
+  tagline: 'Self-hosted observability, alerting and incident center, operable by people and AI agents',
+  favicon: 'img/icon.svg',
+  url,
+  baseUrl,
+  organizationName: 'damaged0ne', // Usually your GitHub org/user name.
+  projectName: 'shards', // Usually your repo name.
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'throw',
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
   },
-
-  scripts: [
-    {src: '/js/st.js'},
-    {src: 'https://plausible.io/js/script.js', defer: true, "data-domain": "docs.coroot.com"}
-  ],
 
   presets: [
     [
@@ -38,7 +66,8 @@ const config = {
           routeBasePath: '/',
           sidebarPath: './sidebars.js',
           editUrl:
-            'https://github.com/coroot/coroot/tree/main/docs',
+            'https://github.com/damaged0ne/shards/tree/main/docs',
+          remarkPlugins: [remarkBaseUrl],
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -50,22 +79,15 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // Replace with your project's social card
-      image: 'img/social_image.jpg',
       navbar: {
-        title: '',
+        title: 'shards',
         logo: {
-          alt: 'Coroot Logo',
-          src: 'img/logo.png',
+          alt: 'shards',
+          src: 'img/icon.svg',
         },
         items: [
           {
-            href: 'https://coroot.com',
-            label: 'coroot.com',
-            position: 'right',
-          },
-          {
-            href: 'https://github.com/coroot/coroot',
+            href: 'https://github.com/damaged0ne/shards',
             label: 'GitHub',
             position: 'right',
           },
@@ -75,50 +97,54 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Coroot Documentation',
+            title: 'shards',
             items: [
               {
                 label: 'Documentation',
-                to: 'https://docs.coroot.com',
+                to: '/',
+              },
+              {
+                label: 'Operator agents',
+                to: '/agents/operator-agents',
               },
             ],
           },
           {
-            title: 'Community',
+            title: 'Repositories',
             items: [
               {
-                label: 'Slack',
-                href: 'https://coroot.com/join-slack-community/',
+                label: 'shards',
+                href: 'https://github.com/damaged0ne/shards',
               },
               {
-                label: 'Linkedin',
-                href: 'https://www.linkedin.com/company/coroot',
+                label: 'shards-node-agent',
+                href: 'https://github.com/damaged0ne/shards-node-agent',
               },
               {
-                label: 'X',
-                href: 'https://x.com/coroot_com',
+                label: 'shards-cluster',
+                href: 'https://github.com/damaged0ne/shards-cluster',
               },
             ],
           },
           {
-            title: 'More',
+            title: 'Project',
             items: [
               {
-                label: 'coroot.com',
-                to: 'https://coroot.com',
+                label: 'Issues',
+                href: 'https://github.com/damaged0ne/shards/issues',
               },
               {
-                label: 'Blog',
-                to: 'https://coroot.com/blog',
+                label: 'License (Apache-2.0)',
+                href: 'https://github.com/damaged0ne/shards/blob/main/LICENSE',
               },
               {
-                label: 'GitHub',
-                href: 'https://github.com/coroot/coroot',
+                label: 'NOTICE',
+                href: 'https://github.com/damaged0ne/shards/blob/main/NOTICE',
               },
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} Coroot, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} the shards contributors. Derived from Coroot (Apache-2.0); not affiliated with Coroot, Inc. Built with Docusaurus.`,
       },
       prism: {
         theme: prismThemes.github,
@@ -133,6 +159,8 @@ const config = {
       {
         redirects: [
           { from: '/configuration/cli-arguments', to: '/configuration/configuration' },
+          { from: '/configuration/coroot-node-agent', to: '/configuration/shards-node-agent' },
+          { from: '/configuration/coroot-cluster-agent', to: '/configuration/shards-cluster' },
         ],
       },
     ],

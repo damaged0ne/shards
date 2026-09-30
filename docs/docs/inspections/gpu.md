@@ -5,7 +5,7 @@ toc_max_heading_level: 2
 
 # GPU 
 
-Coroot provides real-time visibility into GPU usage across your applications, helping you understand performance bottlenecks, 
+shards provides real-time visibility into GPU usage across your applications, helping you understand performance bottlenecks, 
 detect resource contention, and optimize workloads running on GPU-enabled nodes.
 
 <img alt="CPU" src="/img/docs/gpu.png" class="card w-1200"/>

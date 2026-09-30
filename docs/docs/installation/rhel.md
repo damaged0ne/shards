@@ -2,13 +2,8 @@
 sidebar_position: 9
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
 # RHEL & CentOS
 
-<Tabs queryString="edition">
-  <TabItem value="ce" label="Community Edition" default>
 
 **Step #1: Installing ClickHouse**
 
@@ -22,7 +17,7 @@ sudo systemctl start clickhouse-server
 
 **Step #2: Installing Prometheus**
 
-Coroot requires Prometheus with support for Remote Write Receiver, which has been available since v2.25.0. 
+shards requires Prometheus with support for Remote Write Receiver, which has been available since v2.25.0. 
 Unfortunately, there is no official Prometheus RPM package. 
 Here is a step-by-step guide on how to install Prometheus manually, including creating a systemd service file for it.
 
@@ -91,157 +86,38 @@ sudo systemctl start prometheus
 sudo systemctl enable prometheus
 ```
 
-**Step #3: Installing Coroot**
+**Step #3: Installing shards**
 
 ```
-curl -sfL https://raw.githubusercontent.com/coroot/coroot/main/deploy/install.sh | \
+curl -sfL https://raw.githubusercontent.com/damaged0ne/shards/main/deploy/install.sh | \
   BOOTSTRAP_PROMETHEUS_URL="http://127.0.0.1:9090" \
   BOOTSTRAP_REFRESH_INTERVAL=15s \
   BOOTSTRAP_CLICKHOUSE_ADDRESS=127.0.0.1:9000 \
   sh -
 ```
 
-**Step #4: Installing coroot-node-agent**
+**Step #4: Installing shards-node-agent**
 
 ```
-curl -sfL https://raw.githubusercontent.com/coroot/coroot-node-agent/main/install.sh | \
+curl -sfL https://raw.githubusercontent.com/damaged0ne/shards-node-agent/main/install.sh | \
   COLLECTOR_ENDPOINT=http://127.0.0.1:8080 \
   SCRAPE_INTERVAL=15s \
   sh -
 ```
 
-**Step #5: Accessing Coroot**
+**Step #5: Accessing shards**
 
-Access Coroot at: http://NODE_IP:8080.
+Access shards at: http://NODE_IP:8080.
 
-**Upgrade Coroot**
+**Upgrade shards**
 
-To upgrade Coroot, re-run the installation command from Step #3 — the install script downloads the latest version and restarts the service.
-To upgrade coroot-node-agent, re-run the installation command from Step #4.
+To upgrade shards, re-run the installation command from Step #3 — the install script downloads the latest version and restarts the service.
+To upgrade shards-node-agent, re-run the installation command from Step #4.
 
-**Uninstall Coroot**
+**Uninstall shards**
 
-To uninstall Coroot run the following command:
-
-```
-/usr/local/bin/coroot-uninstall.sh
-```
-
-</TabItem>
-
-  <TabItem value="ee" label="Enterprise Edition">
-
-:::info
-Coroot Enterprise Edition is a paid subscription (from $1 per CPU core/month) that offers extra features and priority support.
-To install the Enterprise Edition, you'll need a license. [Start](https://coroot.com/account) your free trial today.
-:::
-
-**Step #1: Installing ClickHouse**
+To uninstall shards run the following command:
 
 ```
-sudo yum install -y yum-utils
-sudo yum-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo
-sudo yum install -y clickhouse-server clickhouse-client
-sudo systemctl enable clickhouse-server
-sudo systemctl start clickhouse-server
+/usr/local/bin/shards-uninstall.sh
 ```
-
-**Step #2: Installing Prometheus**
-
-Coroot requires Prometheus with support for Remote Write Receiver, which has been available since v2.25.0. 
-Unfortunately, there is no official Prometheus RPM package. 
-Here is a step-by-step guide on how to install Prometheus manually, including creating a systemd service file for it.
-
-Create a Prometheus user:
-
-```
-sudo useradd --no-create-home --shell /bin/false prometheus
-```
-
-Navigate to the Prometheus download page, and find the URL for the latest version of Prometheus for Linux and your architecture. Use wget to download it:
-
-```
-wget https://github.com/prometheus/prometheus/releases/download/v2.51.2/prometheus-2.51.2.linux-amd64.tar.gz
-```
-
-Extract the downloaded tarball and move the binary to `/usr/local/bin/`:
-
-```
-sudo yum -y install tar
-tar xvfz prometheus-2.51.2.linux-amd64.tar.gz
-sudo cp prometheus-2.51.2.linux-amd64/prometheus /usr/local/bin/
-```
-
-Create directories for Prometheus configuration files and data:
-
-```
-sudo mkdir /etc/prometheus
-sudo mkdir /var/lib/prometheus
-sudo chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
-```
-
-Create a Prometheus configuration file:
-
-```sh
-sudo cat <<EOF >/etc/prometheus/prometheus.yml
-global:
-scrape_interval: 15s
-EOF
-```
-
-Create a systemd service file for Prometheus:
-
-```sh
-sudo cat <<EOF >/etc/systemd/system/prometheus.service
-[Unit]
-Description=Prometheus
-After=network.target
-
-[Service]
-User=prometheus
-Group=prometheus
-Type=simple
-ExecStart=/usr/local/bin/prometheus --config.file /etc/prometheus/prometheus.yml --storage.tsdb.path /var/lib/prometheus --enable-feature=remote-write-receiver
-
-[Install]
-WantedBy=multi-user.target
-EOF
-```
-
-Reload systemd to load the new service and start Prometheus:
-
-```
-sudo systemctl daemon-reload
-sudo systemctl start prometheus
-sudo systemctl enable prometheus
-```
-
-**Step #3: Installing Coroot**
-
-```
-curl -sfL https://raw.githubusercontent.com/coroot/coroot/main/deploy/install.sh | \
-  LICENSE_KEY="COROOT-LICENSE-KEY-HERE" \
-  BOOTSTRAP_PROMETHEUS_URL="http://127.0.0.1:9090" \
-  BOOTSTRAP_REFRESH_INTERVAL=15s \
-  BOOTSTRAP_CLICKHOUSE_ADDRESS=127.0.0.1:9000 \
-  sh -
-```
-
-**Step #5: Accessing Coroot**
-
-Access Coroot at: http://NODE_IP:8080.
-
-**Upgrade Coroot**
-
-To upgrade Coroot, re-run the installation command from Step #3 — the install script downloads the latest version and restarts the service.
-
-**Uninstall Coroot**
-
-To uninstall Coroot run the following command:
-
-```
-/usr/local/bin/coroot-uninstall.sh
-```
-
-</TabItem>
-</Tabs>

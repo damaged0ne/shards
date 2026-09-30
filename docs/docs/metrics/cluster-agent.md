@@ -5,12 +5,12 @@ toc_max_heading_level: 2
 
 # Cluster-agent
 
-This page describes metrics gathered by [coroot-cluster-agent](https://github.com/coroot/coroot-cluster-agent).
+This page describes metrics gathered by [shards-cluster](https://github.com/damaged0ne/shards-cluster).
 
-Coroot-cluster-agent is a dedicated tool for collecting cluster-wide telemetry data:
- * It gathers database metrics by discovering databases through Coroot's Service Map and Kubernetes control-plane.
-Using the credentials provided by Coroot or via Kubernetes annotations, the agent connects to the identified databases such as Postgres, MySQL, Redis, Memcached, and MongoDB, collects database-specific metrics, and sends them to Coroot using the Prometheus Remote Write protocol.
- * When `--track-database-changes` is enabled, the agent tracks schema and configuration changes in databases. Change events are sent to Coroot as OpenTelemetry log records under the `DatabaseChanges` service name.
+shards-cluster is a dedicated tool for collecting cluster-wide telemetry data:
+ * It gathers database metrics by discovering databases through shards' Service Map and Kubernetes control-plane.
+Using the credentials provided by shards or via Kubernetes annotations, the agent connects to the identified databases such as Postgres, MySQL, Redis, Memcached, and MongoDB, collects database-specific metrics, and sends them to shards using the Prometheus Remote Write protocol.
+ * When `--track-database-changes` is enabled, the agent tracks schema and configuration changes in databases. Change events are sent to shards as OpenTelemetry log records under the `DatabaseChanges` service name.
  * The agent can be integrated with AWS to discover RDS and ElastiCache clusters and collect their telemetry data.
  * The agent discovers and scrapes [custom metrics](/metrics/custom-metrics) from annotated pods.
  * The agent monitors GitOps tooling by reading [FluxCD](#fluxcd) and [ArgoCD](#argocd) custom resources through its embedded kube-state-metrics and exposing their state as metrics.
@@ -313,7 +313,7 @@ When `--track-database-bloat` is enabled, the agent also estimates wasted space 
 * **Source**: Estimated from `pg_class` and `pg_stats`
 * **Labels**: db, schema, table, index
 
-When `--track-database-sizes` is enabled, the agent also reports dead-row statistics — a leading indicator of autovacuum falling behind, distinct from bloat. The dead/live counts let Coroot compute *autovacuum pressure* (how many times past its own autovacuum trigger a table sits), and dead bytes provides materiality. All three are emitted from one query with one top-N ranking (by dead bytes), so every reported table carries the complete set.
+When `--track-database-sizes` is enabled, the agent also reports dead-row statistics — a leading indicator of autovacuum falling behind, distinct from bloat. The dead/live counts let shards compute *autovacuum pressure* (how many times past its own autovacuum trigger a table sits), and dead bytes provides materiality. All three are emitted from one query with one top-N ranking (by dead bytes), so every reported table carries the complete set.
 
 ### pg_table_dead_tuple_bytes
 * **Description**: Estimated size of dead tuples not yet reclaimed by vacuum (heap size × dead fraction)
@@ -340,13 +340,13 @@ When `--track-database-sizes` is enabled, the agent also reports dead-row statis
 * **Labels**: db, schema, table
 
 ### pg_table_setting
-* **Description**: Info metric (value always `1`) carrying a table's per-table autovacuum and autoanalyze reloption overrides as labels. Reported only for tables that override at least one setting; an unset override is an empty label. Coroot uses the trigger overrides to compute pressure against the table's own vacuum and analyze triggers, and the cost overrides to pinpoint per-table throttling.
+* **Description**: Info metric (value always `1`) carrying a table's per-table autovacuum and autoanalyze reloption overrides as labels. Reported only for tables that override at least one setting; an unset override is an empty label. shards uses the trigger overrides to compute pressure against the table's own vacuum and analyze triggers, and the cost overrides to pinpoint per-table throttling.
 * **Type**: Gauge
 * **Source**: `pg_class.reloptions`
 * **Labels**: db, schema, table, and the override values: `autovacuum_disabled` (`1` when `autovacuum_enabled=false`, which disables autoanalyze too), `autovacuum_vacuum_scale_factor`, `autovacuum_vacuum_threshold`, `autovacuum_vacuum_cost_delay`, `autovacuum_vacuum_cost_limit`, `autovacuum_analyze_scale_factor`, `autovacuum_analyze_threshold`
 
 ### pg_table_vacuum_in_progress
-* **Description**: `1` if a vacuum is currently running on the table. Reported only while a vacuum is in progress. Lets Coroot tell a table that has a worker on it (possibly crawling) from one waiting for a free worker.
+* **Description**: `1` if a vacuum is currently running on the table. Reported only while a vacuum is in progress. Lets shards tell a table that has a worker on it (possibly crawling) from one waiting for a free worker.
 * **Type**: Gauge
 * **Source**: [`pg_stat_progress_vacuum`](https://www.postgresql.org/docs/current/progress-reporting.html#VACUUM-PROGRESS-REPORTING) (Postgres >= 9.6)
 * **Labels**: db, schema, table
@@ -358,7 +358,7 @@ When `--track-database-sizes` is enabled, the agent also reports dead-row statis
 * **Labels**: db, schema, table
 
 ### pg_table_mods_since_analyze
-* **Description**: Rows modified (inserted, updated, or deleted) since the table's planner statistics were last analyzed. Unlike dead tuples this includes inserts, so it is collected as its own top-N (ranked by analyze pressure) rather than reusing the dead-tuple set. Coroot divides it by the autoanalyze trigger to compute how stale the statistics are.
+* **Description**: Rows modified (inserted, updated, or deleted) since the table's planner statistics were last analyzed. Unlike dead tuples this includes inserts, so it is collected as its own top-N (ranked by analyze pressure) rather than reusing the dead-tuple set. shards divides it by the autoanalyze trigger to compute how stale the statistics are.
 * **Type**: Gauge
 * **Source**: `pg_stat_user_tables` (`n_mod_since_analyze`)
 * **Labels**: db, schema, table
@@ -377,16 +377,16 @@ When `--track-database-sizes` is enabled, the agent also reports dead-row statis
 
 ## Postgres backups
 
-Backup state is collected through the agent's embedded kube-state-metrics from the custom resources of [CloudNativePG](https://cloudnative-pg.io/) (`cnpg`) and the [Percona Operator for PostgreSQL](https://docs.percona.com/percona-operator-for-postgresql/) (pgBackRest, `percona`). Every metric carries an `operator` label identifying the source and, via the common `namespace`/`name` labels, correlates to the corresponding `DatabaseCluster` application in Coroot, so a single operator-agnostic set of metrics powers the backup inspection.
+Backup state is collected through the agent's embedded kube-state-metrics from the custom resources of [CloudNativePG](https://cloudnative-pg.io/) (`cnpg`) and the [Percona Operator for PostgreSQL](https://docs.percona.com/percona-operator-for-postgresql/) (pgBackRest, `percona`). Every metric carries an `operator` label identifying the source and, via the common `namespace`/`name` labels, correlates to the corresponding `DatabaseCluster` application in shards, so a single operator-agnostic set of metrics powers the backup inspection.
 
 ### pg_backup_target_info
-* **Description**: A configured backup destination. cnpg reports a single object-storage target, and pgBackRest reports one series per repository. Coroot assembles the destination from the explicit `path` or the object-storage sub-fields.
+* **Description**: A configured backup destination. cnpg reports a single object-storage target, and pgBackRest reports one series per repository. shards assembles the destination from the explicit `path` or the object-storage sub-fields.
 * **Type**: Info
 * **Source**: `Cluster.spec.backup` (cnpg), `PerconaPGCluster.spec.backups.pgbackrest.repos` (Percona)
 * **Labels**: operator, method, path, endpoint, s3_bucket, s3_endpoint, gcs_bucket, azure_container, schedule, retention_policy
 
 ### pg_cluster_status
-* **Description**: A cluster status condition (e.g. `ReadyForBackup`, `LastBackupSucceeded`, `ContinuousArchiving`, `PGBackRestRepoHostReady`). Value is 1 for the currently-active series. The reason feeds Coroot's "why backups are failing" hint.
+* **Description**: A cluster status condition (e.g. `ReadyForBackup`, `LastBackupSucceeded`, `ContinuousArchiving`, `PGBackRestRepoHostReady`). Value is 1 for the currently-active series. The reason feeds shards' "why backups are failing" hint.
 * **Type**: Info
 * **Source**: `.status.conditions`
 * **Labels**: operator, type, status, reason
@@ -416,7 +416,7 @@ Backup state is collected through the agent's embedded kube-state-metrics from t
 * **Labels**: operator, cluster, schedule
 
 ### pg_backup_next_scheduled_timestamp_seconds
-* **Description**: When the next scheduled backup is due. Coroot also derives an expected next run from the schedule and the last backup, so an overdue schedule is detected even when the operator stops advancing this value.
+* **Description**: When the next scheduled backup is due. shards also derives an expected next run from the schedule and the last backup, so an overdue schedule is detected even when the operator stops advancing this value.
 * **Type**: Gauge
 * **Source**: `ScheduledBackup.status.nextScheduleTime` (cnpg)
 * **Labels**: operator, cluster
@@ -935,16 +935,16 @@ data volume. If binary logging is disabled the binary log query is skipped.
 
 ### MySQL backups
 
-When running on Kubernetes, backup state is collected through the agent's embedded kube-state-metrics from the custom resources of the [Percona Operator for MySQL based on Percona XtraDB Cluster](https://docs.percona.com/percona-operator-for-mysql/pxc/) (`PerconaXtraDBCluster`, `PerconaXtraDBClusterBackup`). Every metric carries an `operator` label (`percona`) and, via the common `namespace`/`name` labels, correlates to the corresponding `DatabaseCluster` application in Coroot.
+When running on Kubernetes, backup state is collected through the agent's embedded kube-state-metrics from the custom resources of the [Percona Operator for MySQL based on Percona XtraDB Cluster](https://docs.percona.com/percona-operator-for-mysql/pxc/) (`PerconaXtraDBCluster`, `PerconaXtraDBClusterBackup`). Every metric carries an `operator` label (`percona`) and, via the common `namespace`/`name` labels, correlates to the corresponding `DatabaseCluster` application in shards.
 
 ### mysql_backup_target_info
-* **Description**: A configured backup storage, one series per entry of `spec.backup.storages` (the `method` label is the storage name). Coroot assembles the destination from the S3 bucket and prefix or the Azure container.
+* **Description**: A configured backup storage, one series per entry of `spec.backup.storages` (the `method` label is the storage name). shards assembles the destination from the S3 bucket and prefix or the Azure container.
 * **Type**: Info
 * **Source**: `PerconaXtraDBCluster.spec.backup.storages`
 * **Labels**: operator, method, type, s3_bucket, s3_endpoint, s3_prefix, azure_container
 
 ### mysql_backup_schedule_info
-* **Description**: A scheduled backup (one series per entry of `spec.backup.schedule`). Coroot uses the schedule to detect overdue backups; `method` is the storage the schedule writes to.
+* **Description**: A scheduled backup (one series per entry of `spec.backup.schedule`). shards uses the schedule to detect overdue backups; `method` is the storage the schedule writes to.
 * **Type**: Info
 * **Source**: `PerconaXtraDBCluster.spec.backup.schedule`
 * **Labels**: operator, task, schedule, method
@@ -996,13 +996,13 @@ When running on Kubernetes, backup state is collected through the agent's embedd
 * **Labels**: server_version, flavor
 
 ### mongo_rs_status
-* **Description**: Replica set status: 1 if the member is part of a replica set. The member reports its own role (`role` label), which Coroot uses to identify the primary and to derive each secondary's replication lag from `mongo_rs_last_applied_timestamp_ms`.
+* **Description**: Replica set status: 1 if the member is part of a replica set. The member reports its own role (`role` label), which shards uses to identify the primary and to derive each secondary's replication lag from `mongo_rs_last_applied_timestamp_ms`.
 * **Type**: Gauge
 * **Source**: `replSetGetStatus` (the `self` member)
 * **Labels**: rs, role
 
 ### mongo_rs_last_applied_timestamp_ms
-* **Description**: Timestamp of the member's last applied operation, in milliseconds. Coroot computes replication lag as the primary's value minus each secondary's.
+* **Description**: Timestamp of the member's last applied operation, in milliseconds. shards computes replication lag as the primary's value minus each secondary's.
 * **Type**: Gauge
 * **Source**: `replSetGetStatus` (`optimes.appliedOpTime`)
 
@@ -1013,13 +1013,13 @@ When running on Kubernetes, backup state is collected through the agent's embedd
 * **Labels**: rs, member, arbiter, votes
 
 ### mongo_rs_config_info
-* **Description**: Replica set configuration; Coroot warns when `write_concern_majority_journal_default` is `false` (acknowledged majority writes may be lost if a majority of members crash simultaneously)
+* **Description**: Replica set configuration; shards warns when `write_concern_majority_journal_default` is `false` (acknowledged majority writes may be lost if a majority of members crash simultaneously)
 * **Type**: Gauge
 * **Source**: `replSetGetConfig`
 * **Labels**: rs, write_concern_majority_journal_default
 
 ### mongo_profiling_level
-* **Description**: Database profiling level (0 - off, 1 - slow operations, 2 - all operations). Coroot suggests enabling profiling when it is off everywhere, since it is the source of per-query statistics.
+* **Description**: Database profiling level (0 - off, 1 - slow operations, 2 - all operations). shards suggests enabling profiling when it is off everywhere, since it is the source of per-query statistics.
 * **Type**: Gauge
 * **Source**: the `profile` command (get-only, `profile: -1`)
 * **Labels**: db
@@ -1217,16 +1217,16 @@ reads new entries incrementally, but the capture overhead is paid by the server 
 
 ### MongoDB backups
 
-When running on Kubernetes, backup state is collected through the agent's embedded kube-state-metrics from the custom resources of the [Percona Operator for MongoDB](https://docs.percona.com/percona-operator-for-mongodb/) (`PerconaServerMongoDB`, `PerconaServerMongoDBBackup`), which runs backups with Percona Backup for MongoDB (PBM). Every metric carries an `operator` label (`percona`) and, via the common `namespace`/`name` labels, correlates to the corresponding `DatabaseCluster` application in Coroot.
+When running on Kubernetes, backup state is collected through the agent's embedded kube-state-metrics from the custom resources of the [Percona Operator for MongoDB](https://docs.percona.com/percona-operator-for-mongodb/) (`PerconaServerMongoDB`, `PerconaServerMongoDBBackup`), which runs backups with Percona Backup for MongoDB (PBM). Every metric carries an `operator` label (`percona`) and, via the common `namespace`/`name` labels, correlates to the corresponding `DatabaseCluster` application in shards.
 
 ### mongo_backup_target_info
-* **Description**: A configured backup storage, one series per entry of `spec.backup.storages` (the `method` label is the storage name). Coroot assembles the destination from the S3 bucket and prefix or the Azure container.
+* **Description**: A configured backup storage, one series per entry of `spec.backup.storages` (the `method` label is the storage name). shards assembles the destination from the S3 bucket and prefix or the Azure container.
 * **Type**: Info
 * **Source**: `PerconaServerMongoDB.spec.backup.storages`
 * **Labels**: operator, method, type, s3_bucket, s3_endpoint, s3_prefix, azure_container
 
 ### mongo_backup_schedule_info
-* **Description**: A scheduled backup task (one series per entry of `spec.backup.tasks`). Coroot uses the schedule of enabled tasks to detect overdue backups; `method` is the storage the task writes to and `kind` is `logical` or `physical`.
+* **Description**: A scheduled backup task (one series per entry of `spec.backup.tasks`). shards uses the schedule of enabled tasks to detect overdue backups; `method` is the storage the task writes to and `kind` is `logical` or `physical`.
 * **Type**: Info
 * **Source**: `PerconaServerMongoDB.spec.backup.tasks`
 * **Labels**: operator, task, schedule, method, kind, enabled
@@ -1314,7 +1314,7 @@ The agent collects database and collection size metrics. For collection sizes, o
 
 ## Redis
 
-Redis metrics are collected by the embedded [redis_exporter](https://github.com/oliver006/redis_exporter) (in `redis-metrics-only` mode with latency histograms disabled), so the full metric set and its semantics are described in the exporter's documentation. The metrics Coroot relies on are:
+Redis metrics are collected by the embedded [redis_exporter](https://github.com/oliver006/redis_exporter) (in `redis-metrics-only` mode with latency histograms disabled), so the full metric set and its semantics are described in the exporter's documentation. The metrics shards relies on are:
 
 ### redis_up
 * **Description**: Whether the Redis server is reachable or not
@@ -1326,7 +1326,7 @@ Redis metrics are collected by the embedded [redis_exporter](https://github.com/
 * **Labels**: err
 
 ### redis_instance_info
-* **Description**: The server info; Coroot uses `role` (`master`/`slave`) to build the replication topology
+* **Description**: The server info; shards uses `role` (`master`/`slave`) to build the replication topology
 * **Type**: Gauge
 * **Labels**: redis_version, role, and other fields of `INFO server`/`INFO replication`
 
@@ -1344,7 +1344,7 @@ Redis metrics are collected by the embedded [redis_exporter](https://github.com/
 
 ## Memcached
 
-Memcached metrics are collected by the embedded [memcached_exporter](https://github.com/prometheus/memcached_exporter), so the full metric set is described in the exporter's documentation. The metrics Coroot relies on are:
+Memcached metrics are collected by the embedded [memcached_exporter](https://github.com/prometheus/memcached_exporter), so the full metric set is described in the exporter's documentation. The metrics shards relies on are:
 
 ### memcached_up
 * **Description**: Whether the Memcached server is reachable or not
@@ -1364,13 +1364,13 @@ Memcached metrics are collected by the embedded [memcached_exporter](https://git
 * **Type**: Counter
 
 ### memcached_commands_total
-* **Description**: Total number of commands by type and outcome (`get`/`hit`, `get`/`miss`, `set`, `delete`, ...); Coroot derives the hit rate from the `get` hits and misses
+* **Description**: Total number of commands by type and outcome (`get`/`hit`, `get`/`miss`, `set`, `delete`, ...); shards derives the hit rate from the `get` hits and misses
 * **Type**: Counter
 * **Labels**: command, status
 
 ## AWS
 
-When the [AWS integration](/configuration/aws) is configured, the agent discovers RDS instances and ElastiCache nodes through the AWS API (optionally filtered by tags) and exposes their state. Every RDS metric carries an `rds_instance_id` label (`<region>/<DBInstanceIdentifier>`) and every ElastiCache metric an `ec_instance_id` label (`<region>/<CacheClusterId>/<CacheNodeId>`), which Coroot uses to match the instances to the applications that connect to them.
+When the [AWS integration](/configuration/aws) is configured, the agent discovers RDS instances and ElastiCache nodes through the AWS API (optionally filtered by tags) and exposes their state. Every RDS metric carries an `rds_instance_id` label (`<region>/<DBInstanceIdentifier>`) and every ElastiCache metric an `ec_instance_id` label (`<region>/<CacheClusterId>/<CacheNodeId>`), which shards uses to match the instances to the applications that connect to them.
 
 ### aws_discovery_error
 * **Description**: 1 for each distinct AWS API error encountered during the last discovery cycle, 0 when discovery succeeded
@@ -1438,7 +1438,7 @@ The following OS-level metrics are read from [RDS Enhanced Monitoring](https://d
 * **Labels**: device, operation
 
 ### aws_rds_fs_total_bytes / aws_rds_fs_used_bytes
-* **Description**: The size of each file system and the space used by files on it; Coroot uses the `/rdsdbdata` mount point for the data volume
+* **Description**: The size of each file system and the space used by files on it; shards uses the `/rdsdbdata` mount point for the data volume
 * **Type**: Gauge
 * **Labels**: mount_point
 
@@ -1609,7 +1609,7 @@ Every metric below also carries `uid`, `name`, and `namespace` labels identifyin
 
 ## GCP
 
-When the [GCP integration](/configuration/gcp) is configured, the agent discovers Cloud SQL and Memorystore instances through the GCP APIs (optionally filtered by labels) and exposes their state. Every Cloud SQL metric carries a `cloudsql_instance_id` label (`<project>/<instance>`) and every Memorystore metric a `memorystore_instance_id` label (`<project>/<region>/<instance>`), which Coroot uses to match the instances to the applications that connect to them.
+When the [GCP integration](/configuration/gcp) is configured, the agent discovers Cloud SQL and Memorystore instances through the GCP APIs (optionally filtered by labels) and exposes their state. Every Cloud SQL metric carries a `cloudsql_instance_id` label (`<project>/<instance>`) and every Memorystore metric a `memorystore_instance_id` label (`<project>/<region>/<instance>`), which shards uses to match the instances to the applications that connect to them.
 
 ### gcp_discovery_error
 * **Description**: 1 for each distinct GCP API error encountered during the last discovery cycle, 0 when discovery succeeded

@@ -48,7 +48,7 @@ If the application Pods contain more than one container, this chart provides you
 The **profile** button opens the CPU profiling data, allowing you to identify and analyze unexpected spikes in CPU usage down to the precise line of code.
 
 :::info
-Learn more about [Continuous profiling](/profiling/) in Coroot.
+Learn more about [Continuous profiling](/profiling/) in shards.
 :::
         
 ### CPU delay

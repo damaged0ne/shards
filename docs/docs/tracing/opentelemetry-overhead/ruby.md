@@ -45,7 +45,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 
 | Mode                                   | off    | 100%          | 50%           | 20%           | 0%            |
 |----------------------------------------|--------|---------------|---------------|---------------|---------------|
-| Spans received by Coroot, per second   | 0      | 1,993         | 996           | 399           | 0             |
+| Spans received by shards, per second   | 0      | 1,993         | 996           | 399           | 0             |
 | CPU usage, cores                       | 0.24   | 0.40 (+67%)   | 0.35 (+45%)   | 0.31 (+28%)   | 0.29 (+21%)   |
 | Memory (RSS), MB                       | 170    | 231 (+36%)    | 216 (+27%)    | 210 (+24%)    | 177 (+4%)     |
 | Trace export traffic, Mbit/s           | -      | 0.7           | 0.35          | 0.1           | 0             |

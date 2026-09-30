@@ -11,7 +11,7 @@ However, alerts usually have no context, so you have to manually extract issues 
 
 <img alt="Alerting Rules" src="/img/docs/inspections_alerting_rules.svg" class="card w-600"/>
 
-Coroot turns the conventional metric analysis inside out. 
+shards turns the conventional metric analysis inside out. 
 It uses a distributed system model to evaluate every inspection within an application's context. 
 For instance, the _Network round-trip time_ inspection checks the network latency between a particular app and the services it depends on.
 
@@ -28,7 +28,7 @@ Each inspection threshold can be easily overridden for a specific application or
 
 ## Application status
 
-To highlight the status of each application on the overview page, Coroot takes the status of the SLO inspection.
+To highlight the status of each application on the overview page, shards takes the status of the SLO inspection.
 <img alt="App Status" src="/img/docs/inspections_app_status.png" class="card w-1200"/>
 
 

@@ -24,6 +24,10 @@ Every language went through the same test, so the results are comparable. The [c
 
 ## How we measured
 
+:::note
+These measurements were made by the upstream Coroot project, which shards is derived from.
+:::
+
 ### The app
 
 We wrote the same tiny service in every language, using the stack most people would pick for it: an HTTP server with one endpoint.
@@ -36,7 +40,7 @@ Tracing is switched on with an environment variable, so the very same build runs
 * we used what a typical developer would use: the official zero-code agent where there is one (Java, Python, Node.js) or the official SDK with its instrumentation libraries. Rust and C++ have no instrumentation for their HTTP servers and Redis clients, so there the two spans are created by hand with the SDK API;
 * traces only: OpenTelemetry metrics and logs are off;
 * every request produces **exactly two spans**: a `SERVER` span for the HTTP request and a `CLIENT` span for the Valkey call. Where an instrumentation adds more spans by default, we turned them off;
-* spans go to Coroot over OTLP/HTTP (protobuf) through the batch span processor with its default settings.
+* spans go to shards over OTLP/HTTP (protobuf) through the batch span processor with its default settings.
 
 ### Five modes
 
@@ -63,11 +67,11 @@ Four virtual machines in one private network, so nothing competes for resources:
 * the app: 4 dedicated vCPUs, 16GB RAM;
 * Valkey 8: 2 dedicated vCPUs;
 * the load generator: [wrk2](https://github.com/giltene/wrk2), which holds the request rate constant (`-t4 -c100 -R1000`);
-* Coroot, which receives the traces and does the measuring.
+* shards, which receives the traces and does the measuring.
 
-CPU and memory of the app come from the container metrics collected by coroot-node-agent. Network traffic is measured on the app node.
-We turned off coroot-node-agent's own eBPF tracing on the app node, so it doesn't get in the way.
-Latency comes from wrk2, and we count the spans in Coroot's storage to make sure none got lost on the way.
+CPU and memory of the app come from the container metrics collected by shards-node-agent. Network traffic is measured on the app node.
+We turned off shards-node-agent's own eBPF tracing on the app node, so it doesn't get in the way.
+Latency comes from wrk2, and we count the spans in shards' storage to make sure none got lost on the way.
 
 ## Results
 

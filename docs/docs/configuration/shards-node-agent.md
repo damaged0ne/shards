@@ -2,9 +2,9 @@
 sidebar_position: 11
 ---
 
-# Coroot-node-agent
+# shards-node-agent
 
-Coroot-node-agent is a Prometheus- and OpenTelemetry-compatible agent that gathers comprehensive telemetry data about
+shards-node-agent is a Prometheus- and OpenTelemetry-compatible agent that gathers comprehensive telemetry data about
 all containers running on a node and the node itself.
 
 It collects and exports the following telemetry:
@@ -16,7 +16,7 @@ It collects and exports the following telemetry:
 
 ## Node Agent Configuration
 
-You can configure coroot-node-agent using command-line flags or environment variables.
+You can configure shards-node-agent using command-line flags or environment variables.
 
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
@@ -49,7 +49,7 @@ You can configure coroot-node-agent using command-line flags or environment vari
 | `--max-fqdns-per-container` | `MAX_FQDNS_PER_CONTAINER` | `50` | Max unique FQDN values per container in `container_dns_requests_total`; extras are bucketed under `~other` |
 | `--max-label-length` | `MAX_LABEL_LENGTH` | `4096` | Max metric label length |
 | `--collector-endpoint` | `COLLECTOR_ENDPOINT` | – | Unified base URL for telemetry export |
-| `--api-key` | `API_KEY` | – | Coroot API key |
+| `--api-key` | `API_KEY` | – | shards API key |
 | `--metrics-endpoint` | `METRICS_ENDPOINT` | – | Custom URL for metrics export |
 | `--traces-endpoint` | `TRACES_ENDPOINT` | – | Custom URL for traces export |
 | `--traces-sampling` | `TRACES_SAMPLING` | `1.0` | Trace sampling rate (0.0 to 1.0) |
@@ -70,7 +70,7 @@ Flag names are identical (for example `--scrape-interval`), but **environment va
 
 | Flag | Env Variable | Description |
 |------|--------------|-------------|
-| `--collector-endpoint` | `COROOT_COLLECTOR_ENDPOINT` | Base URL of your Coroot instance |
+| `--collector-endpoint` | `COROOT_COLLECTOR_ENDPOINT` | Base URL of your shards instance |
 | `--api-key` | `COROOT_API_KEY` | Project API key |
 | `--scrape-interval` | `COROOT_SCRAPE_INTERVAL` | Metrics collection interval |
 | `--metrics-endpoint` / `--logs-endpoint` | `COROOT_METRICS_ENDPOINT` / `COROOT_LOGS_ENDPOINT` | Custom export URLs |

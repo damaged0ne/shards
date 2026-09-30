@@ -5,12 +5,12 @@ toc_max_heading_level: 2
 
 # Custom metrics
 
-Coroot-cluster-agent can scrape custom metrics exposed by an application in the Prometheus format.
+shards-cluster can scrape custom metrics exposed by an application in the Prometheus format.
 So far, it supports only Kubernetes service discovery.
 
 ## Kubernetes service discovery
 
-If a pod exposes metrics on a specific endpoint (like `/metrics`), you can annotate the pod to enable scraping by coroot-cluster-agent.
+If a pod exposes metrics on a specific endpoint (like `/metrics`), you can annotate the pod to enable scraping by shards-cluster.
 
 For example, to enable metrics scraping, add the following annotations to your pod:
 
@@ -23,6 +23,6 @@ metadata:
     coroot.com/metrics-scheme: 'http' # optional
 ```
 
-This configuration tells coroot-cluster-agent to scrape metrics from port `8080` and the `/metrics` path.
+This configuration tells shards-cluster to scrape metrics from port `8080` and the `/metrics` path.
 
 Each scraped metric will be annotated with the `pod` and `namespace` labels, allowing you to filter and aggregate metrics efficiently.

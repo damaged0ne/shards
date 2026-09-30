@@ -4,18 +4,18 @@ sidebar_position: 2
 
 # MySQL
 
-Coroot leverages eBPF to monitor MySQL queries between applications and databases, requiring no additional integration.
+shards leverages eBPF to monitor MySQL queries between applications and databases, requiring no additional integration.
 While this approach provides a high-level view of database performance, it lacks the visibility needed to understand why issues occur within the database internals.
 
-To bridge this gap, Coroot also collects statistics from the MySQL Performance Schema, complementing the eBPF-based metrics and traces.
+To bridge this gap, shards also collects statistics from the MySQL Performance Schema, complementing the eBPF-based metrics and traces.
 
 ## Prerequisites
 
 This integration requires a database user with the following permissions:
 
 ```sql
-CREATE USER 'coroot'@'%' IDENTIFIED BY '<PASSWORD>';
-GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO 'coroot'@'%';
+CREATE USER 'shards'@'%' IDENTIFIED BY '<PASSWORD>';
+GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO 'shards'@'%';
 ```
 
 ### Minimal permissions
@@ -23,9 +23,9 @@ GRANT SELECT, PROCESS, REPLICATION CLIENT ON *.* TO 'coroot'@'%';
 If you don't need schema and size tracking for user databases, you can use narrower grants:
 
 ```sql
-CREATE USER 'coroot'@'%' IDENTIFIED BY '<PASSWORD>';
-GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'coroot'@'%';
-GRANT SELECT ON performance_schema.* TO 'coroot'@'%';
+CREATE USER 'shards'@'%' IDENTIFIED BY '<PASSWORD>';
+GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'shards'@'%';
+GRANT SELECT ON performance_schema.* TO 'shards'@'%';
 ```
 
 Query performance, table I/O waits, replication, cluster replication, InnoDB internals, binary log and undo sizes, and settings change detection will all work fully - `performance_schema` data is not filtered by database-level privileges, and the InnoDB views are gated by `PROCESS` rather than by database-level grants.
@@ -35,7 +35,7 @@ Schema and size tracking will not error but will only cover system databases, si
 
 **SELECT ON \*.\***
 
-Coroot reads from:
+shards reads from:
 - `performance_schema` tables (`events_statements_summary_by_digest`, `table_io_waits_summary_by_table`, `data_lock_waits`, `threads`, `events_statements_current`, `variables_info`) for query statistics, table I/O waits, lock contention, and settings change detection.
 - `information_schema` tables (`tables`, `columns`, `statistics`, `key_column_usage`) for schema and size tracking.
 
@@ -58,14 +58,14 @@ Allows `SHOW REPLICA STATUS` (or `SHOW SLAVE STATUS` on older versions) to monit
 This privilege is useful on **every** instance that has binary logging enabled, not only on replicas: binary logs accumulate on the primary too, and they are a common cause of a full data volume.
 
 :::note
-All access is **read-only**. Coroot never modifies any data, schema, or configuration on your MySQL server.
+All access is **read-only**. shards never modifies any data, schema, or configuration on your MySQL server.
 :::
 
 ## What data is collected
 
 ### Server status and configuration
 
-**Always collected.** Coroot runs `SHOW GLOBAL VARIABLES` and `SHOW GLOBAL STATUS` on each scrape to collect:
+**Always collected.** shards runs `SHOW GLOBAL VARIABLES` and `SHOW GLOBAL STATUS` on each scrape to collect:
 
 - **`version`**, **`server_id`**, **`server_uuid`** - identify the instance and display server info.
 - **`max_connections`** - the configured connection limit.
@@ -77,14 +77,14 @@ All access is **read-only**. Coroot never modifies any data, schema, or configur
 
 **Enabled by default.** Controlled by `--track-database-changes` / `TRACK_DATABASE_CHANGES` (default: `true`).
 
-Coroot compares successive `SHOW GLOBAL VARIABLES` snapshots to detect configuration changes (e.g., someone adjusts `innodb_buffer_pool_size`) and surfaces them in the change timeline. To determine which variables are writable it reads `performance_schema.variables_info` (MySQL) or `information_schema.SYSTEM_VARIABLES` (MariaDB).
+shards compares successive `SHOW GLOBAL VARIABLES` snapshots to detect configuration changes (e.g., someone adjusts `innodb_buffer_pool_size`) and surfaces them in the change timeline. To determine which variables are writable it reads `performance_schema.variables_info` (MySQL) or `information_schema.SYSTEM_VARIABLES` (MariaDB).
 
 ### Query performance
 
-**Always collected.** Coroot reads `performance_schema.events_statements_summary_by_digest` to get per-query statistics:
+**Always collected.** shards reads `performance_schema.events_statements_summary_by_digest` to get per-query statistics:
 
 - **`SCHEMA_NAME`** - associate queries with a database.
-- **`DIGEST`**, **`DIGEST_TEXT`** - normalized query text. MySQL's Performance Schema already replaces literal values with placeholders (e.g., `SELECT * FROM users WHERE id = ?`), but Coroot performs additional obfuscation to ensure that sensitive query arguments never appear in the collected telemetry data.
+- **`DIGEST`**, **`DIGEST_TEXT`** - normalized query text. MySQL's Performance Schema already replaces literal values with placeholders (e.g., `SELECT * FROM users WHERE id = ?`), but shards performs additional obfuscation to ensure that sensitive query arguments never appear in the collected telemetry data.
 - **`COUNT_STAR`** - query execution rate (calls/sec).
 - **`SUM_TIMER_WAIT`** - total execution time rate (seconds/sec).
 - **`SUM_LOCK_TIME`** - lock wait time rate (seconds/sec).
@@ -93,7 +93,7 @@ The top 20 queries by execution time are reported each scrape interval.
 
 ### Lock waits
 
-**Always collected** (MySQL only; skipped on MariaDB). On each scrape Coroot samples `performance_schema.data_lock_waits`, joining `performance_schema.threads` and `performance_schema.events_statements_current` on both the requesting (waiting) and blocking threads:
+**Always collected** (MySQL only; skipped on MariaDB). On each scrape shards samples `performance_schema.data_lock_waits`, joining `performance_schema.threads` and `performance_schema.events_statements_current` on both the requesting (waiting) and blocking threads:
 
 - **victim query** - the currently running statement of the thread waiting for a lock.
 - **blocking query** - the currently running statement of the thread holding the lock.
@@ -102,7 +102,7 @@ This produces live gauges of how many queries are currently blocked (`mysql_lock
 
 ### Table I/O waits
 
-**Always collected.** Coroot reads `performance_schema.table_io_waits_summary_by_table`:
+**Always collected.** shards reads `performance_schema.table_io_waits_summary_by_table`:
 
 - **`OBJECT_SCHEMA`**, **`OBJECT_NAME`** - the database and table.
 - **`SUM_TIMER_READ`**, **`SUM_TIMER_WRITE`** - cumulative read and write I/O wait time.
@@ -113,7 +113,7 @@ The top 20 tables by total I/O wait time are reported, broken down by read and w
 
 **Always collected** (requires the `REPLICATION CLIENT` privilege; safe to skip the privilege if the instance is not a replica).
 
-Coroot runs `SHOW REPLICA STATUS` (falling back to `SHOW SLAVE STATUS` on MySQL &lt; 8.0.22):
+shards runs `SHOW REPLICA STATUS` (falling back to `SHOW SLAVE STATUS` on MySQL &lt; 8.0.22):
 
 - **IO/SQL thread running state and last error** - whether the replica is receiving and applying events.
 - **`Seconds_Behind_Source`** - replication lag.
@@ -121,7 +121,7 @@ Coroot runs `SHOW REPLICA STATUS` (falling back to `SHOW SLAVE STATUS` on MySQL 
 
 ### Cluster replication (Galera and Group Replication)
 
-**Always collected**, when the instance is part of a cluster. Coroot detects the flavour automatically and collects only what applies.
+**Always collected**, when the instance is part of a cluster. shards detects the flavour automatically and collects only what applies.
 
 For **Galera** (Percona XtraDB Cluster, MariaDB Galera) the `wsrep_*` counters already present in `SHOW GLOBAL STATUS`:
 
@@ -139,7 +139,7 @@ For **Group Replication**, from `performance_schema.replication_group_members` a
 
 ### InnoDB internals
 
-**Always collected.** Most of these come from the `SHOW GLOBAL STATUS` counters Coroot already reads, so they add no extra queries:
+**Always collected.** Most of these come from the `SHOW GLOBAL STATUS` counters shards already reads, so they add no extra queries:
 
 - **Buffer pool** - total, free, dirty and data pages (converted to bytes via `innodb_page_size`), read requests vs disk reads (hit rate), waits for a free page, and pages flushed.
 - **Row operations** - rows read, inserted, updated, deleted.
@@ -157,10 +157,10 @@ Table-level lock waits (`Table_locks_waited`, `Table_locks_immediate`) are colle
 
 ### Binary logs and undo tablespaces
 
-**Always collected.** These artifacts grow independently of table data and are a common cause of a full data volume, so Coroot tracks them alongside table sizes:
+**Always collected.** These artifacts grow independently of table data and are a common cause of a full data volume, so shards tracks them alongside table sizes:
 
-- **Binary logs** - total size and file count from `SHOW BINARY LOGS` (requires `REPLICATION CLIENT`), plus the configured retention (`binlog_expire_logs_seconds`, or `expire_logs_days` on older MySQL and MariaDB). Coroot reports binary logs as a disk growth source, and calls out the case where retention is disabled and they are never purged automatically.
-- **InnoDB undo tablespaces** - total size from `information_schema.INNODB_TABLESPACES` (`INNODB_SYS_TABLESPACES` on MariaDB; requires `PROCESS`). When undo is growing and the history list is long, Coroot attributes the growth to lagging purge.
+- **Binary logs** - total size and file count from `SHOW BINARY LOGS` (requires `REPLICATION CLIENT`), plus the configured retention (`binlog_expire_logs_seconds`, or `expire_logs_days` on older MySQL and MariaDB). shards reports binary logs as a disk growth source, and calls out the case where retention is disabled and they are never purged automatically.
+- **InnoDB undo tablespaces** - total size from `information_schema.INNODB_TABLESPACES` (`INNODB_SYS_TABLESPACES` on MariaDB; requires `PROCESS`). When undo is growing and the history list is long, shards attributes the growth to lagging purge.
 
 If binary logging is disabled, the binary log query is skipped and no error is reported.
 
@@ -168,7 +168,7 @@ If binary logging is disabled, the binary log query is skipped and no error is r
 
 **Enabled by default.** Controlled by `--track-database-changes` / `TRACK_DATABASE_CHANGES` (default: `true`).
 
-Coroot queries `information_schema` to reconstruct table DDL and detect schema changes over time:
+shards queries `information_schema` to reconstruct table DDL and detect schema changes over time:
 
 - **`information_schema.columns`** - column name, type, nullability, default, extra attributes.
 - **`information_schema.statistics`** - index name, uniqueness, column list.
@@ -178,7 +178,7 @@ Coroot queries `information_schema` to reconstruct table DDL and detect schema c
 
 **Enabled by default.** Controlled by `--track-database-sizes` / `TRACK_DATABASE_SIZES` (default: `true`).
 
-Coroot reads `information_schema.tables` (`data_length + index_length`) to track per-table and per-database sizes and detect growth trends.
+shards reads `information_schema.tables` (`data_length + index_length`) to track per-table and per-database sizes and detect growth trends.
 
 ### Common options for schema and size tracking
 
@@ -196,7 +196,7 @@ With the default agent settings (15-second scrape interval, schema and size trac
 
 - the latency of application queries did not change (0.72ms on average with the instrumentation both disabled and enabled);
 - `mysqld` consumed about 0.07 additional CPU cores (+2%), with no additional memory usage or disk I/O;
-- coroot-cluster-agent consumed about 0.01 CPU cores and less than 120MB of memory.
+- shards-cluster consumed about 0.01 CPU cores and less than 120MB of memory.
 
 See [Performance Impact](/installation/performance-impact#mysql-instrumentation) for the lab setup and detailed results.
 
@@ -204,17 +204,17 @@ See [Performance Impact](/installation/performance-impact#mysql-instrumentation)
 
 The Kubernetes approach to monitoring databases typically involves running metric exporters as sidecar containers within database instance Pods.
 However, this method can be challenging for certain use cases.
-Coroot has a dedicated coroot-cluster-agent that can discover and gather metrics from databases without requiring a separate container for each database instance.
+shards has a dedicated cluster agent (shards-cluster) that can discover and gather metrics from databases without requiring a separate container for each database instance.
 
-Coroot-cluster-agent automatically discovers and collects metrics from pods annotated with `coroot.com/mysql-scrape` annotations.
-Coroot can retrieve database credentials from a Secret or be configured with plain-text credentials.
+shards-cluster automatically discovers and collects metrics from pods annotated with `coroot.com/mysql-scrape` annotations.
+shards can retrieve database credentials from a Secret or be configured with plain-text credentials.
 
 ```yaml
 coroot.com/mysql-scrape: "true"
 coroot.com/mysql-scrape-port: "3306"
 
 # plain-text credentials
-coroot.com/mysql-scrape-credentials-username: "coroot"
+coroot.com/mysql-scrape-credentials-username: "shards"
 coroot.com/mysql-scrape-credentials-password: "<PASSWORD>"
 
 # credentials from a secret
@@ -235,12 +235,12 @@ coroot.com/mysql-scrape-tls-secret-cert-key: "tls.crt"
 coroot.com/mysql-scrape-tls-secret-key-key: "tls.key"
 ```
 
-Note that Coroot checks only **Pod** annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
+Note that shards checks only **Pod** annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
 
 ## Non-Kubernetes environments
 
-In non-Kubernetes environments, the MySQL integration can be enabled via the Coroot UI.
-In this setup, coroot-cluster-agent retrieves MySQL instance credentials from the Coroot configuration storage.
+In non-Kubernetes environments, the MySQL integration can be enabled via the shards UI.
+In this setup, shards-cluster retrieves MySQL instance credentials from the shards configuration storage.
 
 To configure the integration, go to the `MYSQL` tab and click the `Configure` button.
 <img alt="MySQL Configuration" src="/img/docs/databases/mysql/configure.png" class="card w-800"/>
@@ -248,12 +248,12 @@ To configure the integration, go to the `MYSQL` tab and click the `Configure` bu
 Then, switch to `Manual Configuration`, complete the form, and click `Save`.
 <img alt="MySQL Manual Configuration" src="/img/docs/databases/mysql/manual.png" class="card w-600"/>
 
-Coroot-cluster-agent updates its configuration every minute and also takes some time to collect metrics.
+shards-cluster updates its configuration every minute and also takes some time to collect metrics.
 Please wait a few minutes for telemetry to appear.
 
 ### Configuration as code
 
-When Coroot is deployed by the [Kubernetes Operator](/installation/k8s-operator), remote MySQL instances can be
+When shards is deployed by the [Kubernetes Operator](/installation/k8s-operator), remote MySQL instances can be
 declared in the `clusterAgent.databases` section of the Coroot custom resource instead of the UI, with credentials
 referenced from a Kubernetes Secret. A hostname is re-resolved on every configuration update, and every resolved IP
 address is monitored, so DNS-based failover and multi-address names work without changes:
@@ -266,14 +266,14 @@ spec:
         host: db.example.internal        # or `rds: <DBInstanceIdentifier>` (AWS integration) / `cloudsql: <instance name>` (GCP integration) / `ocidb: <display name>` (OCI integration)
         port: "3306"
         credentials:
-          usernameSecret: {name: mysql-coroot, key: username}
-          passwordSecret: {name: mysql-coroot, key: password}
+          usernameSecret: {name: mysql-shards, key: username}
+          passwordSecret: {name: mysql-shards, key: password}
 ```
 
-Coroot attributes the collected metrics to the application it sees clients connecting to, by address. Settings in the
+shards attributes the collected metrics to the application it sees clients connecting to, by address. Settings in the
 custom resource take precedence over the UI. Installations without the operator can put the same `databases` list in
-the cluster-agent's [configuration file](/configuration/coroot-cluster-agent#configuration-file).
+the cluster-agent's [configuration file](/configuration/shards-cluster#configuration-file).
 
 ## Troubleshooting
 
-Check the coroot-cluster-agent logs if you encounter any issues.
+Check the shards-cluster logs if you encounter any issues.

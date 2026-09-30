@@ -2,68 +2,15 @@
 sidebar_position: 3
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
 # Kubernetes
 
-<Tabs queryString="edition">
-  <TabItem value="ce" label="Community Edition" default>
-
-Add the Coroot helm chart repo:
-
-```bash
-helm repo add coroot https://coroot.github.io/helm-charts
-helm repo update coroot
-```
-
-Next, install the Coroot Operator:
-
-```bash
-helm install -n coroot --create-namespace coroot-operator coroot/coroot-operator
-```
-
-Install the Coroot Community Edition. This chart creates a minimal [Coroot Custom Resource](/installation/k8s-operator):
-
-```bash
-helm install -n coroot coroot coroot/coroot-ce \
-  --set "clickhouse.shards=2,clickhouse.replicas=2"
-```
-
-Forward the Coroot port to your machine:
-
-```bash
-kubectl port-forward -n coroot service/coroot-coroot 8080:8080
-```
-
-Then, you can access Coroot at http://localhost:8080
-
-**Upgrade**
-
-The Coroot Operator automatically upgrades all Coroot components (Coroot server, node agent, cluster agent) as long as their image versions are not pinned in the [Coroot Custom Resource](/installation/k8s-operator). If you have specified a particular image for a component, the operator keeps that version, and you upgrade by changing the image tag in the Custom Resource.
-
-To upgrade the operator itself:
-
-```bash
-helm repo update coroot
-helm upgrade -n coroot coroot-operator coroot/coroot-operator
-```
-
-**Uninstall**
-
-To uninstall Coroot run the following command:
-
-```bash
-helm uninstall coroot -n coroot
-helm uninstall coroot-operator -n coroot
-```
-  </TabItem>
-
-  <TabItem value="ee" label="Enterprise Edition">
-
-:::info
-Coroot Enterprise Edition is a paid subscription (from $1 per CPU core/month) that offers extra features and priority support.
-To install the Enterprise Edition, you'll need a license. [Start](https://coroot.com/account) your free trial today.
+:::note Operator and Helm charts
+shards does not publish its own Kubernetes operator or Helm charts yet.
+The [Coroot operator](https://github.com/coroot/coroot-operator) and the Helm charts at `https://coroot.github.io/helm-charts` are maintained by Coroot, Inc.
+Because shards stays compatible with the upstream custom resource, you can deploy shards with that operator by overriding the component images
+with the shards images (`ghcr.io/damaged0ne/shards`, `ghcr.io/damaged0ne/shards-node-agent`, `ghcr.io/damaged0ne/shards-cluster`).
+These images are built from the shards repositories (see the `Dockerfile` in each repository). Pin explicit tags: the operator's automatic
+version discovery only knows about the upstream images.
 :::
 
 Add the Coroot helm chart repo:
@@ -73,56 +20,78 @@ helm repo add coroot https://coroot.github.io/helm-charts
 helm repo update coroot
 ```
 
-Next, install the Coroot Operator:
+Next, install the Coroot operator:
 
 ```bash
-helm install -n coroot --create-namespace coroot-operator coroot/coroot-operator
+helm install -n shards --create-namespace coroot-operator coroot/coroot-operator
 ```
 
-Install the Coroot Enterprise Edition.This chart creates a minimal [Coroot Custom Resource](/installation/k8s-operator):
+Create a custom resource that points the operator at the shards images (see [Kubernetes Operator](/installation/k8s-operator) for all options):
 
-```
-helm install -n coroot coroot coroot/coroot-ee \
-  --set "licenseKey=COROOT-LICENSE-KEY-HERE,clickhouse.shards=2,clickhouse.replicas=2"
+```yaml
+apiVersion: coroot.com/v1
+kind: Coroot
+metadata:
+  name: shards
+  namespace: shards
+spec:
+  communityEdition:
+    image:
+      name: ghcr.io/damaged0ne/shards:<version>
+  nodeAgent:
+    image:
+      name: ghcr.io/damaged0ne/shards-node-agent:<version>
+  clusterAgent:
+    image:
+      name: ghcr.io/damaged0ne/shards-cluster:<version>
+  clickhouse:
+    shards: 2
+    replicas: 2
 ```
 
-Forward the Coroot port to your machine:
-
-```
-kubectl port-forward -n coroot service/coroot-coroot 8080:8080
+```bash
+kubectl apply -f shards.yaml
 ```
 
-Then, you can access Coroot at http://localhost:8080
+Forward the shards port to your machine (the operator names the service `<resource name>-coroot`):
+
+```bash
+kubectl port-forward -n shards service/shards-coroot 8080:8080
+```
+
+Then, you can access shards at http://localhost:8080
 
 **Upgrade**
 
-The Coroot Operator automatically upgrades all Coroot components (Coroot server, node agent, cluster agent) as long as their image versions are not pinned in the [Coroot Custom Resource](/installation/k8s-operator). If you have specified a particular image for a component, the operator keeps that version, and you upgrade by changing the image tag in the Custom Resource.
+Change the image tags in the custom resource and re-apply it. The operator rolls out the new versions.
 
 To upgrade the operator itself:
 
-```
+```bash
 helm repo update coroot
-helm upgrade -n coroot coroot-operator coroot/coroot-operator
+helm upgrade -n shards coroot-operator coroot/coroot-operator
 ```
 
 **Uninstall**
 
-To uninstall Coroot run the following command:
-
+```bash
+kubectl delete -f shards.yaml
+helm uninstall coroot-operator -n shards
 ```
-helm uninstall coroot -n coroot
-helm uninstall coroot-operator -n coroot
-```
-  </TabItem>
 
-</Tabs>
+## Without the operator
+
+For a minimal setup, `manifests/shards.yaml` in the shards repository deploys only the shards server (a Deployment with a PersistentVolumeClaim).
+In that case, you need to provide Prometheus (with the remote write receiver enabled) and ClickHouse yourself, and deploy
+[shards-node-agent](https://github.com/damaged0ne/shards-node-agent) as a privileged DaemonSet and
+[shards-cluster](https://github.com/damaged0ne/shards-cluster) as a Deployment.
 
 ## Troubleshooting
 
 ### Pod Security Standards
 
-The Coroot node agent requires privileged access for eBPF monitoring, host filesystem access, and container inspection. If the node agent fails to start due to Pod Security violations (common in Talos clusters), allow privileged workloads in the namespace:
+The node agent requires privileged access for eBPF monitoring, host filesystem access, and container inspection. If the node agent fails to start due to Pod Security violations (common in Talos clusters), allow privileged workloads in the namespace:
 
 ```bash
-kubectl label ns coroot pod-security.kubernetes.io/enforce=privileged
+kubectl label ns shards pod-security.kubernetes.io/enforce=privileged
 ```

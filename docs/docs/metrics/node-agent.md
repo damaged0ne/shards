@@ -5,7 +5,7 @@ toc_max_heading_level: 2
 
 # Node-agent
 
-This page describes metrics gathered by [coroot-node-agent](https://github.com/coroot/coroot-node-agent).
+This page describes metrics gathered by [shards-node-agent](https://github.com/damaged0ne/shards-node-agent).
 
 Each container metric has the `container_id` label. This is a compound identifier and its format varies between container types, e.g.,
 `/docker/upbeat_borg`, `k8s/namespace-1/pod-2/container-3` or `/system.slice/nginx.service`.

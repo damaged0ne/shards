@@ -4,7 +4,7 @@ sidebar_position: 5.6
 
 # GCP
 
-The GCP integration lets Coroot discover Cloud SQL instances (Postgres, MySQL and SQL Server, including read
+The GCP integration lets shards discover Cloud SQL instances (Postgres, MySQL and SQL Server, including read
 replicas) and Memorystore instances (Redis, Memcached and Valkey) and collect their telemetry.
 Discovered instances appear in the Service Map as separate applications, linked to the services that connect to them
 through the eBPF-based metrics collected on the client side.
@@ -13,16 +13,16 @@ The integration adds:
 
 * **Instance inventory and status**: engine, version, tier, availability type, region and zone
 * **OS-level metrics** from [Cloud Monitoring](https://cloud.google.com/sql/docs/postgres/admin-api/metrics): CPU, memory, disk and network of Cloud SQL instances, CPU, memory and network of Memorystore nodes
-* **Database logs** of Cloud SQL Postgres and MySQL instances from [Cloud Logging](https://cloud.google.com/sql/docs/postgres/logging): shipped to Coroot and grouped by message pattern
+* **Database logs** of Cloud SQL Postgres and MySQL instances from [Cloud Logging](https://cloud.google.com/sql/docs/postgres/logging): shipped to shards and grouped by message pattern
 
 Database internals (query statistics, locks, replication) are collected separately, see
 [Database credentials](#database-credentials).
 
-All GCP API calls are made by the [cluster-agent](/installation/architecture), not by the Coroot server. The agent
+All GCP API calls are made by the [cluster-agent](/installation/architecture), not by the shards server. The agent
 polls the Cloud SQL Admin and Memorystore APIs once a minute. Unlike the [AWS integration](/configuration/aws), the GCP
-integration is configured only as code: in the Coroot custom resource when Coroot is deployed by the
+integration is configured only as code: in the Coroot custom resource when shards is deployed by the
 [Kubernetes Operator](/installation/k8s-operator), or in the cluster-agent's
-[configuration file](/configuration/coroot-cluster-agent#configuration-file). The **Cloud integrations** page of the
+[configuration file](/configuration/shards-cluster#configuration-file). The **Cloud integrations** page of the
 project settings shows the discovery status and the discovered instances, and warns when the cluster runs on GCP
 without the integration configured.
 
@@ -66,11 +66,11 @@ a replica is discovered whenever its primary matches the filters.
 ## Logs
 
 The cluster-agent reads the logs of Cloud SQL Postgres and MySQL instances from Cloud Logging every 30 seconds and
-forwards every entry to Coroot as an OpenTelemetry log record, the same way coroot-node-agent forwards container
+forwards every entry to shards as an OpenTelemetry log record, the same way shards-node-agent forwards container
 logs. Entries are fetched by the time Cloud Logging received them, so lines that Cloud SQL ships with a delay are not
 missed. Messages are grouped by automatically extracted patterns. The records keep the timestamp and severity of the
 Cloud Logging entry, carry the `pattern.hash` attribute, and have `service.name` set to
-`/gcp/cloudsql/<project>/<instance>`, which Coroot uses to show them in the **Logs** tab of the Cloud SQL application.
+`/gcp/cloudsql/<project>/<instance>`, which shards uses to show them in the **Logs** tab of the Cloud SQL application.
 Forwarding can be disabled with the cluster-agent's `--collect-gcp-logs=false` flag, in which case only the
 pattern-based `gcp_cloudsql_log_messages_total` metric is collected. Memorystore logs are not collected.
 
@@ -83,7 +83,7 @@ database itself, so the cluster-agent connects to each instance directly over th
    access. Public-IP-only instances need the agent's egress address in the authorized networks.
 2. Create a monitoring user as described in [Postgres](/databases/postgres) or [MySQL](/databases/mysql). A user
    created with `gcloud sql users create` on a MySQL instance gets an empty host, so grant its privileges to
-   `'coroot'@''` from a database session.
+   `'shards'@''` from a database session.
 3. Declare the instance in `clusterAgent.databases` of the custom resource with `cloudsql: <instance name>` and the
    credentials referenced from a Secret. Cloud SQL requires SSL by default, so set `sslmode: require` for Postgres.
 
@@ -97,7 +97,7 @@ primary's credentials without being declared separately.
 
 The `cloudsqladmin` database that Cloud SQL creates on every Postgres instance is used by the service itself, so it is
 excluded from monitoring by default: its maintenance connections and queries don't show up among yours, see
-[`--exclude-databases`](/configuration/coroot-cluster-agent).
+[`--exclude-databases`](/configuration/shards-cluster).
 
 ## Configuration as code
 
@@ -110,8 +110,8 @@ spec:
       - type: postgres
         cloudsql: my-db
         credentials:
-          usernameSecret: {name: my-db-coroot, key: username}
-          passwordSecret: {name: my-db-coroot, key: password}
+          usernameSecret: {name: my-db-shards, key: username}
+          passwordSecret: {name: my-db-shards, key: password}
         params: {sslmode: require}
       - type: redis
         memorystore: my-cache

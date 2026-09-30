@@ -40,7 +40,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 
 | Mode                                   | off    | 100%          | 50%           | 20%           | 0%            |
 |----------------------------------------|--------|---------------|---------------|---------------|---------------|
-| Spans received by Coroot, per second   | 0      | 1,994         | 998           | 398           | 0             |
+| Spans received by shards, per second   | 0      | 1,994         | 998           | 398           | 0             |
 | CPU usage, cores                       | 0.134  | 0.228 (+70%)  | 0.218 (+63%)  | 0.210 (+57%)  | 0.189 (+41%)  |
 | Memory (RSS), MB, average              | 147    | 688 (+369%)   | 687 (+369%)   | 686 (+368%)   | 566 (+286%)   |
 | Memory (RSS), MB, peak                 | 243    | 691           | 701           | 701           | 678           |
@@ -58,7 +58,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 
 ## Where the CPU goes
 
-Coroot's eBPF profiler shows what the extra CPU time is spent on. To make the JavaScript frames readable, the app was started with
+shards' eBPF profiler shows what the extra CPU time is spent on. To make the JavaScript frames readable, the app was started with
 `--perf-basic-prof-only-functions --interpreted-frames-native-stack`, which makes Node.js write a perf map that the profiler picks up
 (see [eBPF-based profiling](/profiling/ebpf-based-profiling#nodejs)). This flame graph comes from a separate off → 100% run, so the numbers in the table above are not affected by it.
 Red frames take a bigger share of CPU time with tracing on, green frames a smaller one.

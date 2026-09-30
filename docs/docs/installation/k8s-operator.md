@@ -2,11 +2,16 @@
 sidebar_position: 4
 ---
 
-# Kubernetes Operator 
+# Kubernetes Operator
 
-The best way to deploy Coroot into a Kubernetes or OpenShift cluster is by using the [coroot-operator](https://github.com/coroot/coroot-operator). 
-The operator simplifies the deployment of all required components and enables scaling as needed. 
-It supports the deployment of both Coroot Community and Enterprise editions.
+:::note
+The [coroot-operator](https://github.com/coroot/coroot-operator) and its Helm chart are maintained by Coroot, Inc., not by the shards project.
+shards keeps compatibility with its custom resource, so the operator can deploy shards when you override the component images
+(`communityEdition.image`, `nodeAgent.image`, `clusterAgent.image`) with the shards images. Everything else on this page describes
+the upstream operator's behavior.
+:::
+
+The operator simplifies the deployment of all required components (shards server, agents, Prometheus, ClickHouse) and enables scaling as needed.
 
 ## Operator installation
 
@@ -17,78 +22,75 @@ helm repo add coroot https://coroot.github.io/helm-charts
 helm repo update coroot
 ```
 
-Next, install the Coroot Operator:
+Next, install the Coroot operator:
 
 ```bash
-helm install -n coroot --create-namespace coroot-operator coroot/coroot-operator
+helm install -n shards --create-namespace coroot-operator coroot/coroot-operator
 ```
 
-## Custom image registry
+## Using shards images
 
-By default, the operator pulls all component images from `ghcr.io/coroot`.
-To use a private or self-hosted registry, configure the operator via Helm values:
+By default, the operator pulls all component images from Coroot's registry (`ghcr.io/coroot`) and keeps them updated automatically.
+To run shards, set the images explicitly in the custom resource:
 
-```bash
-helm install -n coroot --create-namespace coroot-operator coroot/coroot-operator \
-  --set registry.url=https://registry.example.com/coroot \
-  --set registry.pullSecret=coroot-registry-auth \
-  --set registry.tlsSkipVerify=false
+```yaml
+spec:
+  communityEdition:
+    image:
+      name: ghcr.io/damaged0ne/shards:<version>
+  nodeAgent:
+    image:
+      name: ghcr.io/damaged0ne/shards-node-agent:<version>
+  clusterAgent:
+    image:
+      name: ghcr.io/damaged0ne/shards-cluster:<version>
 ```
 
-| Parameter | Description |
-|-----------|-------------|
-| `registry.url` | Full registry URL including scheme and path prefix (default: `https://ghcr.io/coroot`). |
-| `registry.pullSecret` | Name of an existing `kubernetes.io/dockerconfigjson` secret. Used for both version discovery and as `imagePullSecret` on all component pods. |
-| `registry.tlsSkipVerify` | Skip TLS certificate verification for registries with self-signed certificates. |
-
-The registry must have the same image layout as the default registry
-(e.g., `<registry>/coroot`, `<registry>/coroot-node-agent`, `<registry>/clickhouse`, etc.).
-
-For a step-by-step example, see the [Using JFrog Artifactory as a Registry for Coroot](/guides/jfrog-artifactory) guide.
+When an image is specified, the operator keeps that version, and you upgrade by changing the tag.
 
 ## Coroot CR (Custom Resource)
 
-To deploy Coroot, you need to create a Coroot resource. Below is an example specification of the Coroot custom resource.
+To deploy shards, you need to create a Coroot resource. Below is an example specification of the Coroot custom resource.
 The operator continuously monitors these resources and adjusts the configuration if necessary.
-Additionally, the operator checks for new versions of Coroot components and automatically updates them unless you specify particular versions.
+Additionally, the operator checks for new versions of shards components and automatically updates them unless you specify particular versions.
 
 ```yaml
 apiVersion: coroot.com/v1
 kind: Coroot
 metadata:
-  name: coroot
-  namespace: coroot
+  name: shards
+  namespace: shards
 spec:
 #  metricsRefreshInterval: 15s # Specifies the metric resolution interval.
-#  cacheTTL: 30d # Duration for which Coroot retains the metric cache.
-#  authAnonymousRole: # Allows access to Coroot without authentication if set (one of Admin, Editor, or Viewer).
+#  cacheTTL: 30d # Duration for which shards retains the metric cache.
+#  authAnonymousRole: # Allows access to shards without authentication if set (one of Admin, Editor, or Viewer).
 #  authBootstrapAdminPassword:        # Initial admin password for bootstrapping (plain-text).
 #  authBootstrapAdminPasswordSecret:  # Secret containing the initial admin password.
 #    name: # Name of the secret to select from.
 #    key:  # Key of the secret to select from.
 #  # Service accounts for programmatic access with API keys, e.g. autonomous agents using the MCP endpoint.
-#  # Coroot creates or updates them on startup; they are locked in the UI and their keys are managed here.
+#  # shards creates or updates them on startup; they are locked in the UI and their keys are managed here.
 #  serviceAccounts:
 #    - name: claude-agent # Service account name, used as its login (required).
-#      role: Viewer       # Admin, Editor, Viewer, or a custom role in the Enterprise Edition (required).
+#      role: Viewer       # Admin, Editor, or Viewer (required).
 #      apiKeys:           # At least one key is required. Descriptions are required and must be unique within the account.
 #        - description: production investigation agent
 #          key:           # Plain-text API key. Prefer using `keySecret` for better security.
 #          keySecret:     # Secret containing the API key. Generated automatically if missing.
 #            name: # Name of the secret to select from.
 #            key:  # Key of the secret to select from.
-#  env: # Environment variables for Coroot.
+#  env: # Environment variables for shards.
 #    - name:
 #      value:
 #      valueFrom:
 #  nodeSelector: # Restricts scheduling to nodes matching the specified labels.
 #    <node label name>: <node label value>
-#  affinity: # Affinity rules for Coroot pods.
-#  tolerations: # Tolerations for Coroot pods.
-#  resources: # Resource requests and limits for Coroot pods.
-#  podAnnotations: # Annotations for Coroot pods.
+#  affinity: # Affinity rules for shards pods.
+#  tolerations: # Tolerations for shards pods.
+#  resources: # Resource requests and limits for shards pods.
+#  podAnnotations: # Annotations for shards pods.
 #  storage:
-#    size: 10Gi # Volume size for Coroot storage.
+#    size: 10Gi # Volume size for shards storage.
 #    className: "" # If not set, the default storage class will be used.
 #    reclaimPolicy: Delete # Options: Retain (keeps PVC) or Delete (removes PVC on Coroot CR deletion).
 #    annotations: # Annotations for PersistentVolumeClaim (PVC).
@@ -99,10 +101,10 @@ spec:
 #    grpcPort:      # gRPC port (default 4317).
 #    grpcNodePort:  # gRPC nodePort (if type is NodePort).
 #    annotations: # Annotations for Service.
-#  ingress: # Ingress configuration for Coroot.
+#  ingress: # Ingress configuration for shards.
 #    className: # Ingress class name (e.g., nginx, traefik; if not set the default IngressClass will be used).
-#    host: # Domain name for Coroot (e.g., coroot.company.com).
-#    path: # Path prefix for Coroot (e.g., /coroot).
+#    host: # Domain name for shards (e.g., shards.company.com).
+#    path: # Path prefix for shards (e.g., /shards).
 #    annotations: # Annotations for Ingress.
 #    tls: # TLS configuration.
 #      hosts: # The array with host names
@@ -120,7 +122,7 @@ spec:
 
 #  disableBuiltinAlerts: false # Disable all built-in alerting rules on startup.
 
-# Coroot stores Traces, Logs, Profiles (and optionally Metrics) in ClickHouse.
+# shards stores Traces, Logs, Profiles (and optionally Metrics) in ClickHouse.
 # Their retention is managed by setting a Time-To-Live (TTL) for the corresponding Clickhouse tables.  
 # The TTLs below are applied during table creation and do not currently affect existing tables.
 #  metricsTTL: 7d
@@ -128,36 +130,25 @@ spec:
 #  logsTTL: 7d
 #  profilesTTL: 7d
 
-# Configuration for Coroot Community Edition.
+# Configuration of the shards server (the operator calls it the Community Edition).
 #  communityEdition:
-#    image: # If unspecified, the operator will automatically update Coroot CE to the latest version from Coroot's public registry.
-#      name:           # Specifies the full image reference (e.g., <private-registry>/coroot:<version>)
-#      pullPolicy:     # The image pull policy (e.g., Always, IfNotPresent, Never).
-#      pullSecrets: [] # The pull secrets for pulling the image from a private registry.
-
-# Configuration for Coroot Enterprise Edition.
-#  enterpriseEdition:
-#    licenseKey: COROOT-1111-111 # License key for Coroot Enterprise Edition.
-#    licenseKeySecret: # Secret containing the license key.
-#      name: # Name of the secret to select from.
-#      key:  # Key of the secret to select from.
-#    image: # If unspecified, the operator will automatically update Coroot EE to the latest version from Coroot's public registry.
-#      name:           # Specifies the full image reference (e.g., <private-registry>/coroot-ee:<version>)
+#    image: # If unspecified, the operator will install the upstream Coroot CE image from Coroot's public registry. Set it to run shards.
+#      name:           # Specifies the full image reference (e.g., ghcr.io/damaged0ne/shards:<version>)
 #      pullPolicy:     # The image pull policy (e.g., Always, IfNotPresent, Never).
 #      pullSecrets: [] # The pull secrets for pulling the image from a private registry.
 
 # Configures the operator to install only the node-agent and cluster-agent.
 #  agentsOnly:
-#    corootURL: http(s)://COROOT_IP:PORT/ # URL of the Coroot instance to which agents send metrics, logs, traces, and profiles.
-#    tlsSkipVerify: false # Whether to skip verification of the Coroot server's TLS certificate.
+#    corootURL: http(s)://SHARDS_IP:PORT/ # URL of the shards instance to which agents send metrics, logs, traces, and profiles.
+#    tlsSkipVerify: false # Whether to skip verification of the shards server's TLS certificate.
 
-# The API key used by agents when sending telemetry to Coroot.
+# The API key used by agents when sending telemetry to shards.
 #  apiKey: # Plain-text API key. Prefer using `apiKeySecret` for better security.
 #  apiKeySecret: # Secret containing the API key.
 #    name: # Name of the secret to select from.
 #    key:  # Key of the secret to select from.
 
-# Configuration for Coroot Node Agent.
+# Configuration for shards Node Agent.
 #  nodeAgent:
 #    priorityClassName: # Priority class for the node-agent pods.
 #    update_strategy: # Update strategy for node-agent pods.
@@ -174,11 +165,11 @@ spec:
 #        cpu: 500m
 #        memory: 1Gi
 #    env: # Environment variables for the node-agent.
-#    image: # If unspecified, the operator will automatically update Coroot Node Agent to the latest version from Coroot's public registry.
-#      name:           # Specifies the full image reference (e.g., <private-registry>/coroot-node-agent:<version>)
+#    image: # If unspecified, the operator will install the upstream node agent from Coroot's public registry. Set it to run shards-node-agent.
+#      name:           # Specifies the full image reference (e.g., ghcr.io/damaged0ne/shards-node-agent:<version>)
 #      pullPolicy:     # The image pull policy (e.g., Always, IfNotPresent, Never).
 #      pullSecrets: [] # The pull secrets for pulling the image from a private registry.
-#    trackPublicNetworks: ["0.0.0.0/0"] # Allow track connections to the specified IP networks (e.g., Y.Y.Y.Y/mask). By default, Coroot tracks all connections.
+#    trackPublicNetworks: ["0.0.0.0/0"] # Allow track connections to the specified IP networks (e.g., Y.Y.Y.Y/mask). By default, shards tracks all connections.
 #    logCollector:
 #      collectLogBasedMetrics: true # Collect log-based metrics. Disables `collectLogEntries` if set to false.
 #      collectLogEntries: true      # Collect log entries and store them in ClickHouse.
@@ -188,7 +179,7 @@ spec:
 #    ebpfProfiler:
 #      enabled: true # Collect profiles and store them in ClickHouse.
 
-# Configuration for Coroot Cluster Agent.
+# Configuration for shards Cluster Agent.
 #  clusterAgent:
 #    nodeSelector: # Restricts scheduling to nodes matching the specified labels.
 #    affinity: # Affinity rules for cluster-agent.
@@ -196,11 +187,11 @@ spec:
 #    podAnnotations: # Annotations for cluster-agent.
 #    resources: # Resource requests and limits for cluster-agent.
 #    env: # Environment variables for the cluster-agent.
-#    image: # If unspecified, the operator will automatically update Coroot Cluster Agent to the latest version from Coroot's public registry.
-#      name:           # Specifies the full image reference (e.g., <private-registry>/coroot-cluster-agent:<version>)
+#    image: # If unspecified, the operator will install the upstream cluster agent from Coroot's public registry. Set it to run shards-cluster.
+#      name:           # Specifies the full image reference (e.g., ghcr.io/damaged0ne/shards-cluster:<version>)
 #      pullPolicy:     # The image pull policy (e.g., Always, IfNotPresent, Never).
 #      pullSecrets: [] # The pull secrets for pulling the image from a private registry.
-#    # AWS integration (discovery of RDS and ElastiCache instances). Overrides the settings made in the Coroot UI.
+#    # AWS integration (discovery of RDS and ElastiCache instances). Overrides the settings made in the shards UI.
 #    aws:
 #      region:          # AWS region to discover instances in (default: the region the cluster runs in).
 #      accessKeySecret: # Secret with a static access key (keys: access_key_id, secret_access_key).
@@ -219,7 +210,7 @@ spec:
 #      cloudsqlLabelFilters:    # Discover only Cloud SQL instances whose labels match (glob patterns are supported in values).
 #        team: payments
 #      memorystoreLabelFilters: {} # Same for Memorystore instances.
-#    # Databases to collect metrics from, in addition to those configured in the Coroot UI or discovered through pod annotations.
+#    # Databases to collect metrics from, in addition to those configured in the shards UI or discovered through pod annotations.
 #    oci:
 #      compartmentIds: [] # OCIDs of the compartments to discover instances in (default: the cluster's compartment, with OKE Workload Identity).
 #      region:            # Region to discover instances in (default: the region the cluster runs in).
@@ -233,16 +224,16 @@ spec:
 #      - type: postgres         # postgres, mysql, redis (also for Valkey), memcached or mongodb.
 #        rds: my-db             # An RDS instance discovered by the AWS integration: its endpoint is used.
 #        credentials:
-#          usernameSecret: {name: my-db-coroot, key: username}
-#          passwordSecret: {name: my-db-coroot, key: password}
+#          usernameSecret: {name: my-db-shards, key: username}
+#          passwordSecret: {name: my-db-shards, key: password}
 #        params: {sslmode: require}
 #      - type: redis
 #        elasticache: my-cache  # An ElastiCache cluster discovered by the AWS integration: every node is monitored.
 #      - type: postgres
 #        cloudsql: my-db        # A Cloud SQL instance discovered by the GCP integration: its private IP is used.
 #        credentials:
-#          usernameSecret: {name: my-db-coroot, key: username}
-#          passwordSecret: {name: my-db-coroot, key: password}
+#          usernameSecret: {name: my-db-shards, key: username}
+#          passwordSecret: {name: my-db-shards, key: password}
 #        params: {sslmode: require}
 #      - type: redis
 #        memorystore: my-cache  # A Memorystore instance (Redis, Valkey with type redis, or Memcached with type memcached) discovered by the GCP integration.
@@ -252,8 +243,8 @@ spec:
 #        host: mysql.example.internal # A hostname is re-resolved on every configuration update; every resolved IP address is monitored.
 #        port: "3306"
 #        credentials:
-#          usernameSecret: {name: mysql-coroot, key: username}
-#          passwordSecret: {name: mysql-coroot, key: password}
+#          usernameSecret: {name: mysql-shards, key: username}
+#          passwordSecret: {name: mysql-shards, key: password}
 #    kubeStateMetrics:
 #      image: # If unspecified, the operator will install Kube State Metrics from Coroot's public registry.
 #        name:           # Specifies the full image reference (e.g., <private-registry>/kube-state-metrics:<version>)
@@ -293,7 +284,7 @@ spec:
 #    customHeaders:  # Custom headers to include in requests to the Prometheus server.
 #      <header name>: <header value>
 #    # The URL for metric ingestion though the Prometheus Remote Write protocol (optional).
-#    # By default, Coroot appends /api/v1/write to the base URL configured above.
+#    # By default, shards appends /api/v1/write to the base URL configured above.
 #    remoteWriteURL: # (e.g., http://vminsert:8480/insert/0/prometheus/api/v1/write).
 
 # Configuration for Clickhouse managed by the operator.
@@ -358,7 +349,7 @@ spec:
 #    tlsEnabled: false # Whether to enable TLS for the connection to ClickHouse.
 #    tlsSkipVerify: false # Whether to skip verification of the ClickHouse server's TLS certificate.
 
-#  replicas: 1 # Number of Coroot StatefulSet pods.
+#  replicas: 1 # Number of shards StatefulSet pods.
 
 # Store configuration in a Postgres DB instead of SQLite (required if `replicas` > 1).
 #  postgres:
@@ -381,10 +372,10 @@ spec:
 #      memberProjects:
 #        - prod-eu
 #        - prod-us
-#      # Use another Coroot instance as the data source for this project (optional).
+#      # Use another shards instance as the data source for this project (optional).
 #      remoteCoroot:
-#        url: # Base URL of the remote Coroot instance (e.g., https://coroot.example.com).
-#        tlsSkipVerify: false # Whether to skip verification of the Coroot server's TLS certificate.
+#        url: # Base URL of the remote shards instance (e.g., https://shards.example.com).
+#        tlsSkipVerify: false # Whether to skip verification of the shards server's TLS certificate.
 #        apiKey: # API key of the remote project. Prefer using `apiKeySecret` for better security.
 #        apiKeySecret: # Secret containing the API key.
 #          name: # Name of the secret to select from.
@@ -399,7 +390,7 @@ spec:
 #            key:  # Key of the secret to select from.
 #      # Project notification integrations.
 #      notificationIntegrations:
-#        baseURL: # The URL of Coroot instance (required). Used for generating links in notifications.
+#        baseURL: # The URL of shards instance (required). Used for generating links in notifications.
 #        slack:
 #          token:        # Slack Bot User OAuth Token (required).
 #          tokenSecret:  # Secret containing the Token.
@@ -528,7 +519,6 @@ spec:
 #            type: kubernetes_events
 #            kubernetesEvents:
 #              minCount: 3              # Require at least 3 occurrences before alerting.
-#              evaluateWithAi: false    # Disable AI evaluation.
 #        # Custom check-based rule scoped to a category
 #        - id: custom-postgres-latency
 #          name: "Postgres latency (production)"
@@ -586,7 +576,6 @@ spec:
 #                - fatal
 #              minCount: 5            # Minimum occurrences before alerting.
 #              maxAlertsPerApp: 10    # Maximum alerts per application for this rule.
-#              evaluateWithAi: true   # Use AI to evaluate log patterns and reduce noise.
 #          severity: critical
 #        # Custom Kubernetes events-based rule
 #        - id: custom-k8s-events
@@ -596,7 +585,6 @@ spec:
 #            kubernetesEvents:
 #              minCount: 3              # Minimum occurrences before alerting.
 #              maxAlertsPerApp: 10      # Maximum alerts per application for this rule.
-#              evaluateWithAi: true     # Use AI to evaluate events and reduce noise.
 #          severity: warning
 #      # Project inspection overrides.
 #      inspectionOverrides:
@@ -611,68 +599,11 @@ spec:
 #          - applicationId: external:ExternalService:api.github.com:443
 #            objectivePercent: 99 
 #            objectiveThreshold: 2s
-
-# Coroot Cloud integration.
-#  corootCloud:
-#    # Coroot Cloud API key (required). Can be obtained from the UI after connecting to Coroot Cloud.
-#    apiKey:
-#    apiKeySecret: # Secret containing the API key.
-#      name: # Name of the secret to select from.
-#      key:  # Key of the secret to select from.
-#    # Root Cause Analysis (RCA) configuration.
-#    rca:
-#      # If 'true', incidents will not be investigated automatically.
-#      disableIncidentsAutoInvestigation: false
-
-# Single Sign-on configuration (Coroot Enterprise edition only).
-# Define either `saml` or `oidc` section to enable SSO.
-#  sso:
-#    enabled: true
-#    forceSSO: false # Disable password login and only allow SSO authentication.
-#    defaultRole: Viewer # Default role for authenticated users (Admin, Editor, Viewer, or a custom role).
-#    # SAML configuration (define this section to use SAML SSO).
-#    saml:
-#      metadata: |  # SAML Identity Provider Metadata XML.
-#        <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="http://www.okta.com/exkk72*********n5d7">
-#          ...
-#        </md:EntityDescriptor>
-#      metadataSecret:  # Secret containing the Metadata XML.
-#        name: # Name of the secret to select from.
-#        key:  # Key of the secret to select from.
-#    # OIDC configuration (define this section to use OIDC SSO).
-#    oidc:
-#      issuerURL:     # OIDC provider issuer URL (e.g., https://accounts.google.com).
-#      clientID:      # OAuth client ID.
-#      clientSecret:  # OAuth client secret (plain-text). Prefer using `clientSecretSecret` for better security.
-#      clientSecretSecret:  # Secret containing the client secret (recommended).
-#        name: # Name of the secret to select from.
-#        key:  # Key of the secret to select from.
-  
-# AI configuration (Coroot Enterprise edition only).
-#  ai:
-#    provider: # AI model provider (one of: anthropic, openai, or openai_compatible).
-#    anthropic:
-#      apiKey:        # Anthropic API key (required).
-#      apiKeySecret:  # Secret containing the API key.
-#        name: # Name of the secret to select from.
-#        key:  # Key of the secret to select from.
-#    openai:
-#      apiKey:        # OpenAI API key (required).
-#      apiKeySecret:  # Secret containing the API key.
-#        name: # Name of the secret to select from.
-#        key:  # Key of the secret to select from.
-#    openaiCompatible:
-#      apiKey:        # API key (required).
-#      apiKeySecret:  # Secret containing the API key.
-#        name: # Name of the secret to select from.
-#        key:  # Key of the secret to select from.
-#      baseURL:  # Base URL (e.g., https://generativelanguage.googleapis.com/v1beta/openai).
-#      model:    # Model name (e.g., gemini-2.5-pro-preview-06-05).
 ```
 
 ## Operator upgrade
 
 ```bash
 helm repo update coroot
-helm upgrade -n coroot coroot-operator coroot/coroot-operator
+helm upgrade -n shards coroot-operator coroot/coroot-operator
 ```

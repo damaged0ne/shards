@@ -5,7 +5,7 @@ slug: /configuration/configuration
 
 # Configuration
 
-Coroot can be configured using command-line arguments, environment variables, and a configuration file.
+shards can be configured using command-line arguments, environment variables, and a configuration file.
 
 Configuration values are evaluated in the following precedence, with items higher on the list taking priority:
 1. Command-line arguments
@@ -29,7 +29,7 @@ For instance, the `projects` parameter (a list of predefined projects) can only 
 | --grpc-listen                        | GRPC_LISTEN                        | :4317         | gRPC listen address - ip:port or :port.                                                                                                                                         |
 | --tls-cert-file                      | TLS_CERT_FILE                      |               | Path to the TLS certificate file.                                                                                                                                               |
 | --tls-key-file                       | TLS_KEY_FILE                       |               | Path to the TLS private key file.                                                                                                                                               |
-| --url-base-path                      | URL_BASE_PATH                      | /             | Base URL to run Coroot at a sub-path, e.g., `/coroot/`.                                                                                                                         |
+| --url-base-path                      | URL_BASE_PATH                      | /             | Base URL to run shards at a sub-path, e.g., `/shards/`.                                                                                                                         |
 | --data-dir                           | DATA_DIR                           | /data         | Path to the data directory.                                                                                                                                                     |
 | --default-time-range                 | DEFAULT_TIME_RANGE                 | 1h            | Default time range shown in the UI and used by the API when no explicit range is given, e.g., `30m`, `1h`, `3h`. Must be a whole number of minutes.                          |
 | --cache-ttl                          | CACHE_TTL                          | 30d           | Metric Cache Time-To-Live (TTL).                                                                                                                                                |
@@ -47,11 +47,10 @@ For instance, the `projects` parameter (a list of predefined projects) can only 
 | --disable-builtin-alerts             | DISABLE_BUILTIN_ALERTS             | false         | Disable all built-in alerting rules for all projects on startup.                                                                                                                |
 | --auth-anonymous-role                | AUTH_ANONYMOUS_ROLE                |               | Disable authentication and assign one of the following roles to the anonymous user: Admin, Editor, or Viewer.                                                                   |
 | --auth-bootstrap-admin-password      | AUTH_BOOTSTRAP_ADMIN_PASSWORD      |               | Password for the default Admin user.                                                                                                                                            |
-| --license-key                        | LICENSE_KEY                        |               | License key for Coroot Enterprise Edition.                                                                                                                                      |
 | --global-clickhouse-address          | GLOBAL_CLICKHOUSE_ADDRESS          |               | The address of the ClickHouse server to be used for all projects.                                                                                                               |
 | --global-clickhouse-user             | GLOBAL_CLICKHOUSE_USER             |               | The username for the ClickHouse server to be used for all projects.                                                                                                             |
 | --global-clickhouse-password         | GLOBAL_CLICKHOUSE_PASSWORD         |               | The password for the ClickHouse server to be used for all projects.                                                                                                             |
-| --global-clickhouse-initial-database | GLOBAL_CLICKHOUSE_INITIAL_DATABASE |               | The initial database on the ClickHouse server to be used for all projects. Coroot will automatically create and manage a dedicated database for each project within the server. |
+| --global-clickhouse-initial-database | GLOBAL_CLICKHOUSE_INITIAL_DATABASE |               | The initial database on the ClickHouse server to be used for all projects. shards will automatically create and manage a dedicated database for each project within the server. |
 | --global-clickhouse-tls-enabled      | GLOBAL_CLICKHOUSE_TLS_ENABLED      | false         | Whether TLS is enabled for the ClickHouse server connection (true or false).                                                                                                    |
 | --global-clickhouse-tls-skip-verify  | GLOBAL_CLICKHOUSE_TLS_SKIP_VERIFY  | false         | Whether to skip verification of the ClickHouse server's TLS certificate (true or false).                                                                                        |
 | --global-clickhouse-tls-ca-file      | GLOBAL_CLICKHOUSE_TLS_CA_FILE      |               | Path to the CA certificate file for ClickHouse TLS verification.                                                                                                              |
@@ -75,7 +74,7 @@ Use the `--config` flag to specify the configuration file to load. The file must
 listen_address: 0.0.0.0:8080 # Listen address in the format `ip:port` or `:port`. 
 https_listen_address:        # HTTPS listen address in the format `ip:port` or `:port`.
 http_disabled: false         # Disable plain HTTP server (default: false).
-url_base_path: /             # Base URL to run Coroot at a sub-path, e.g., `/coroot/`.
+url_base_path: /             # Base URL to run shards at a sub-path, e.g., `/shards/`.
 data_dir: /data              # Path to the data directory. 
 defaultTimeRange: 1h         # Default time range shown in the UI and used by the API when no explicit range is given, e.g., `30m`, `1h`, `3h`.
 
@@ -93,7 +92,7 @@ cache:
   ttl: 30d        # Metric Cache Time-To-Live (TTL).
   gc_interval: 10m # Metric Cache Garbage Collection (GC) interval. 
 
-# Coroot stores Traces, Logs, and Profiles in ClickHouse.  
+# shards stores Traces, Logs, and Profiles in ClickHouse.  
 # Their retention is managed by setting a Time-To-Live (TTL) for the corresponding Clickhouse tables.  
 # The TTLs below are applied during table creation and do not currently affect existing tables.
 traces:
@@ -104,8 +103,8 @@ profiles:
   ttl: 7d
 
 postgres: # Store configuration in a Postgres DB instead of SQLite
-  # URI form: "postgres://coroot:password@127.0.0.1:5432/coroot?sslmode=disable" 
-  # KV form: "host=127.0.0.1 user=coroot password=password port=5432 dbname=coroot ssl_mode=disable"
+  # URI form: "postgres://shards:password@127.0.0.1:5432/shards?sslmode=disable" 
+  # KV form: "host=127.0.0.1 user=shards password=password port=5432 dbname=shards ssl_mode=disable"
   # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
   connection_string: 
 
@@ -151,13 +150,11 @@ do_not_check_for_updates: false     # Do not check for new versions.
 disable_usage_statistics: false     # Disable anonymous usage statistics.
 disableBuiltinAlerts: false       # Disable all built-in alerting rules for all projects on startup.
 
-license_key: # License key for Coroot Enterprise Edition.
-
 # The project defined here will be created if it does not exist 
 #  and will be configured with the provided API keys.
 # If a project with the same name already exists (e.g., configured via the UI), 
 #  its API keys and other settings will be replaced.
-# If remoteCoroot is set, Coroot uses the remote instance for metrics and ClickHouse access.
+# If remoteCoroot is set, shards uses the remote instance for metrics and ClickHouse access.
 projects: # Create or update projects (configuration file only).
   - name:     # Project name (e.g., production, staging; must be unique; required).
     memberProjects: # Optional list of existing project names to aggregate (multi-cluster mode).
@@ -167,15 +164,15 @@ projects: # Create or update projects (configuration file only).
     apiKeys:
       - key:         # Random string or UUID (must be unique; required).
         description: # The API key description (optional).
-    # Use another Coroot instance as the data source for this project.
+    # Use another shards instance as the data source for this project.
     remoteCoroot:
-      url: https://coroot.example.com # Base URL of the remote Coroot instance.
+      url: https://shards.example.com # Base URL of the remote shards instance.
       apiKey:                         # API key of the remote project (required).
       tlsSkipVerify: false            # Whether to skip TLS verification (default: false).
       metricResolution: 15s           # Prometheus query resolution/refresh interval (required).
     # Project notification integrations.
     notificationIntegrations:
-      baseURL: # The URL of Coroot instance (required). Used for generating links in notifications.
+      baseURL: # The URL of shards instance (required). Used for generating links in notifications.
       slack:
         token:              # Slack Bot User OAuth Token (required).
         defaultChannel:     # Default channel (required).
@@ -322,7 +319,6 @@ projects: # Create or update projects (configuration file only).
               - fatal
             minCount: 5
             maxAlertsPerApp: 10
-            evaluateWithAi: true
         severity: critical
       # Custom Kubernetes events-based rule
       - id: custom-k8s-events
@@ -332,7 +328,6 @@ projects: # Create or update projects (configuration file only).
           kubernetesEvents:
             minCount: 1
             maxAlertsPerApp: 10
-            evaluateWithAi: true
         selector:
           type: category
           categories:
@@ -352,44 +347,4 @@ projects: # Create or update projects (configuration file only).
       sloAvailability:
         - applicationId: default:Deployment:catalog
           objectivePercent: 98
-
-# Single Sign-on configuration (Coroot Enterprise edition only).
-# Choose either SAML or OIDC as the provider.
-sso:
-  enabled: false
-  provider: saml # SSO provider: "saml" or "oidc".
-  defaultRole: Viewer # Default role for authenticated users (Admin, Editor, Viewer, or a custom role).
-  # SAML configuration (required if provider is "saml").
-  saml:
-    # SAML Identity Provider Metadata XML (required).
-    metadata: |
-      <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="http://www.okta.com/exkk72*********n5d7">
-        ...
-      </md:EntityDescriptor>
-  # OIDC configuration (required if provider is "oidc").
-  oidc:
-    issuerURL: https://accounts.google.com  # OIDC provider issuer URL (required).
-    clientID: your-client-id                # OAuth client ID (required).
-    clientSecret: your-client-secret        # OAuth client secret (required).
-
-# AI configuration (Coroot Enterprise edition only).
-ai:
-  provider: # AI model provider (one of: anthropic, openai, or openai_compatible).
-  anthropic:
-    apiKey: # Anthropic API key. 
-  openai:
-    apiKey: # OpenAI API key.
-  openaiCompatible:
-    apiKey:   # API key.
-    baseUrl:  # Base URL (e.g., https://generativelanguage.googleapis.com/v1beta/openai).
-    model:    # Model name (e.g., gemini-2.5-pro-preview-06-05).
-
-# Coroot Cloud integration.
-corootCloud:
-  # API key (required). Can be obtained from the UI after connecting to Coroot Cloud.
-  apiKey:
-  # Root Cause Analysis (RCA) configuration.
-  rca:
-    # If true, incidents will not be investigated automatically.
-    disableIncidentsAutoInvestigation: false
 ```

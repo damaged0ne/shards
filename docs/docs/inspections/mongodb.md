@@ -4,7 +4,7 @@ sidebar_position: 12
 
 # Mongodb
 
-Coroot inspects MongoDB replica sets using metrics gathered by the
+shards inspects MongoDB replica sets using metrics gathered by the
 [cluster-agent](/metrics/cluster-agent#mongodb), which connects to each discovered `mongod` instance
 and reads `serverStatus`, `replSetGetStatus`, `$queryStats`, `$currentOp`, `$collStats`, and the oplog.
 Backup state is collected from the Percona Operator for MongoDB custom resources.
@@ -26,7 +26,7 @@ in abnormal states (`RECOVERING`, `ROLLBACK`, `STARTUP2`, `DOWN`).
 
 Fires when the average operation latency (from `serverStatus.opLatencies`) exceeds the threshold
 (0.1s by default). The check ranks the likely causes: exhausted WiredTiger tickets, cache pressure
-(application threads evicting pages), and the most time-consuming query shapes. Coroot also measures
+(application threads evicting pages), and the most time-consuming query shapes. shards also measures
 client-side latency via eBPF, so server-side and client-side views can be compared directly.
 
 ## Replication lag
@@ -82,7 +82,7 @@ and recent backup runs.
 ## Configuration hints
 
 In addition to the checks, the MongoDB report can show a configuration-hint banner (not an alert - an
-advisory, like the Postgres `track_io_timing` hint). Coroot warns when the **database profiler is
+advisory, like the Postgres `track_io_timing` hint). shards warns when the **database profiler is
 disabled**, since the profiler is the source of per-query statistics and without it the top-queries view
 stays empty. Enable `operationProfiling` (on Percona Server for MongoDB with `rateLimit` sampling) to
 populate it.

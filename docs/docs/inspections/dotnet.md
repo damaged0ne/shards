@@ -4,7 +4,7 @@ sidebar_position: 9
 
 # .NET
 
-This inspection relies on .NET runtime metrics automatically collected by `coroot-node-agent` for every .NET runtime running on the node. 
+This inspection relies on .NET runtime metrics automatically collected by `shards-node-agent` for every .NET runtime running on the node. 
 It works out of the box without any configuration but requires .NET [diagnostic ports](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/diagnostic-port) to be enabled.
 
 This inspection helps troubleshoot various issues in your .NET applications, such as:

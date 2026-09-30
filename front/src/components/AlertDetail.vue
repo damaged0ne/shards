@@ -175,6 +175,8 @@
                     {{ error }}
                 </v-alert>
 
+                <Timeline target-type="alert" :target-id="alert.id || alertId" class="mt-4" />
+
                 <div class="d-flex align-center mt-4" style="gap: 8px">
                     <v-btn
                         v-if="isFiring"
@@ -217,9 +219,10 @@
 <script>
 import Panel from '@/views/dashboards/Panel.vue';
 import Dashboard from '@/components/Dashboard.vue';
+import Timeline from '@/components/Timeline.vue';
 
 export default {
-    components: { Panel, Dashboard },
+    components: { Panel, Dashboard, Timeline },
 
     props: {
         alertId: {

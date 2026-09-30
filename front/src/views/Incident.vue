@@ -197,6 +197,9 @@
                         />
                     </div>
                 </template>
+                <v-card v-if="$route.query.incident" outlined class="my-5 pa-4">
+                    <Timeline target-type="incident" :target-id="$route.query.incident" />
+                </v-card>
             </template>
 
             <template v-else-if="view === 'traces'">
@@ -215,9 +218,10 @@ import CheckForm from '@/components/CheckForm.vue';
 import AppTraces from '@/views/AppTraces.vue';
 import Markdown from '@/components/Markdown.vue';
 import PropagationMap from '@/components/PropagationMap.vue';
+import Timeline from '@/components/Timeline.vue';
 
 export default {
-    components: { PropagationMap, Markdown, Views, AppTraces, CheckForm, Widget, NoData },
+    components: { PropagationMap, Markdown, Views, AppTraces, CheckForm, Widget, NoData, Timeline },
 
     computed: {
         availabilityBurnRate() {

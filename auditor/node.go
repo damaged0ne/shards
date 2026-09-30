@@ -238,6 +238,8 @@ func AuditNode(w *model.World, node *model.Node) *model.AuditReport {
 
 	}
 
+	auditNodeShards(w, report, node) // shards fork
+
 	report.ArrangeWidgets()
 
 	return report

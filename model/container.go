@@ -52,6 +52,8 @@ type Container struct {
 	MemoryPressureFull *timeseries.TimeSeries
 
 	OOMKills *timeseries.TimeSeries
+
+	Docker *DockerContainer // shards fork: Docker-level state, see shards.go
 }
 
 func NewContainer(id, name string) *Container {

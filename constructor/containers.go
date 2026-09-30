@@ -221,6 +221,7 @@ func (c *Constructor) loadContainers(w *model.World, metrics map[string][]*model
 	loadContainer("container_restarts", func(instance *model.Instance, container *model.Container, metric *model.MetricValues) {
 		container.Restarts = merge(container.Restarts, timeseries.Increase(metric.Values, pjs.get(metric.Labels)), timeseries.Any)
 	})
+	loadDockerContainers(loadContainer) // shards fork
 	loadContainer("container_net_latency", func(instance *model.Instance, container *model.Container, metric *model.MetricValues) {
 		id := instanceId{ns: instance.Owner.Id.Namespace, name: instance.Name, node: instance.NodeId()}
 		rtts := rttByInstance[id]

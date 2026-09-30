@@ -2,17 +2,17 @@ volumes:
   prometheus_data: {}
   clickhouse_data: {}
   clickhouse_logs: {}
-  coroot_data: {}
+  shards_data: {}
   cluster_agent_data: {}
 
 services:
-  coroot:
+  shards:
     restart: always
-    image: ghcr.io/coroot/coroot${LICENSE_KEY:+-ee} # set 'coroot-ee' as the image if LICENSE_KEY is defined
+    image: ghcr.io/damaged0ne/shards
     pull_policy: always
     user: root
     volumes:
-      - coroot_data:/data
+      - shards_data:/data
     ports:
       - target: 8080
         published: 8080
@@ -23,24 +23,22 @@ services:
       - '--bootstrap-prometheus-url=http://prometheus:9090'
       - '--bootstrap-refresh-interval=15s'
       - '--bootstrap-clickhouse-address=clickhouse:9000'
-    environment:
-      - LICENSE_KEY=${LICENSE_KEY:-}
     depends_on:
       - clickhouse
       - prometheus
 
   cluster-agent:
     restart: always
-    image: ghcr.io/coroot/coroot-cluster-agent
+    image: ghcr.io/damaged0ne/shards-cluster
     pull_policy: always
     volumes:
       - cluster_agent_data:/data
     command:
-      - '--coroot-url=http://coroot:8080'
+      - '--coroot-url=http://shards:8080'
       - '--metrics-scrape-interval=15s'
       - '--metrics-wal-dir=/data'
     depends_on:
-      - coroot
+      - shards
 
   prometheus:
     restart: always

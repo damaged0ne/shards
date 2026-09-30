@@ -4,9 +4,15 @@ sidebar_position: 5
 
 # Monitoring Amazon RDS and ElastiCache from EKS
 
-This guide connects Coroot running on Amazon EKS to your RDS and ElastiCache instances. The cluster-agent
+:::note Coroot operator
+This guide uses the [Coroot operator](/installation/k8s-operator), which is maintained by Coroot, Inc.
+Kubernetes resource names below (the `coroot` namespace, the `Coroot` custom resource and the `coroot-*` workloads it creates) follow the operator's conventions.
+To run shards, add the image overrides from [Using shards images](/installation/k8s-operator#using-shards-images) to the custom resource.
+:::
+
+This guide connects shards running on Amazon EKS to your RDS and ElastiCache instances. The cluster-agent
 authenticates to AWS with an IAM role bound to its pod, and database credentials come from a Kubernetes Secret
-referenced in the Coroot custom resource. No access keys and no settings in the Coroot UI are needed.
+referenced in the Coroot custom resource. No access keys and no settings in the shards UI are needed.
 
 What you get: RDS and ElastiCache instances in the Service Map, linked to the services that connect to them, with
 instance status, OS metrics from Enhanced Monitoring, database logs in the Logs tab, and database internals such as
@@ -14,7 +20,7 @@ query statistics and locks. The integration is described in detail on the [AWS](
 
 ## Prerequisites
 
-- Coroot deployed on EKS via the [Kubernetes Operator](/installation/k8s-operator)
+- shards deployed on EKS via the [Kubernetes Operator](/installation/k8s-operator)
 - The `eks-pod-identity-agent` add-on installed in the cluster
 - `aws` CLI and `kubectl` configured, with permissions to manage IAM and EKS
 
@@ -204,7 +210,7 @@ new target: postgres://10.0.12.34:5432 (rds:my-db)
 new target: redis://10.0.45.67:6379 (elasticache:my-cache)
 ```
 
-Settings in the custom resource take precedence over anything configured in the Coroot UI.
+Settings in the custom resource take precedence over anything configured in the shards UI.
 
 ## Using IRSA
 

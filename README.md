@@ -1,133 +1,103 @@
-<img width="200" src="https://coroot.com/static/logo_u.png">
-
-![](https://github.com/coroot/coroot/actions/workflows/ci.yml/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/coroot/coroot)](https://goreportcard.com/report/github.com/coroot/coroot)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![](https://img.shields.io/badge/slack-coroot-brightgreen.svg?logo=slack)](https://coroot.com/join-slack-community/)
-
-### [Features](#features) | [Installation](https://docs.coroot.com/) | [Documentation](https://docs.coroot.com/) | [Community & Support](#community--support) | [Live demo](https://demo.coroot.com/) | [Coroot Enterprise](https://coroot.com/enterprise/) 
-
-
-## Open-source observability augmented with actionable insights
-
-Collecting metrics, logs, and traces alone doesn't make your applications observable.
-Coroot turns that data into actionable insights for you!
-
-## Features
-
-### Zero-instrumentation observability
-
-* Metrics, logs, traces, and profiles are gathered automatically by using eBPF
-* Coroot provides you with a Service Map that covers 100% of your system with no blind spots
-* Predefined inspections audit each application without any configuration
-
 <p align="center">
-<img width="775" src="https://user-images.githubusercontent.com/194465/235189673-833066d1-b18f-4c7a-8b81-81b37f966daf.png">
+  <img src="front/public/brand/icon.svg" width="96" height="96" alt="shards">
 </p>
 
-
-### Application Health Summary
-
-* Easily understand the status of your services, even when dealing with hundreds of them
-* Gain insight into application logs without the need to manually inspect each one
-* SLOs (Service Level Objectives) tracking
+<h1 align="center">shards</h1>
 
 <p align="center">
-<img width="773" src="https://github.com/coroot/coroot/assets/194465/6cef06d4-0dcc-4908-85a3-7ec140bd444f">
+  Self-hosted observability, alerting and incident center, operable by people and by AI operator agents.<br>
+  Maintained by <a href="https://github.com/damaged0ne">damaged0ne</a>.
 </p>
-
-### Explore any outlier requests with distributed tracing
-
-* Investigate any anomaly with just one click
-* Vendor-neutral instrumentation with OpenTelemetry
-* Are you unable to instrument legacy or third-party services?
-Coroot's eBPF-based instrumentation can capture requests without requiring any code changes.
 
 <p align="center">
-<img width="1352" src="https://github.com/coroot/coroot/assets/194465/f5a4342f-776d-48b1-a3b8-03ccbdf43b5e">
+  <a href="https://github.com/damaged0ne/shards/actions/workflows/ci.yml"><img src="https://github.com/damaged0ne/shards/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache-2.0"></a>
 </p>
 
-### Grasp insights from logs with just a quick glance
+## What it does
 
-* Log patterns: out-of-the-box event clustering
-* Seamless logs-to-traces correlation
-* Lightning-fast search based on ClickHouse
+- Collects metrics, logs, traces and profiles from Linux hosts and containers with eBPF agents, no application changes required.
+- Builds a live service map from observed network traffic and runs built-in health checks for every application, node and database.
+- Tracks SLOs, opens incidents when they burn, and fires alerts from check, log-pattern, Kubernetes-event and PromQL rules.
+- Sends notifications to Slack, Microsoft Teams, PagerDuty, Opsgenie or any webhook.
+- Keeps an incident and alert timeline with comments, so people and agents can see what was tried and why.
+- Exposes the same data and workflow over MCP and a REST API: agents can triage, comment, edit alerting rules and resolve alerts with a comment.
+- Stores telemetry in ClickHouse and metrics in Prometheus (or ClickHouse); runs on a single Docker host, Docker Swarm, systemd or Kubernetes.
 
-<p align="center">
-<img width="777" src="https://github.com/coroot/coroot/assets/194465/14abefdb-4737-4991-9d48-c7efec42fefd">
-</p>
+## Components
 
-### Profile any application in 1 click
+| Repository | Role |
+|---|---|
+| [damaged0ne/shards](https://github.com/damaged0ne/shards) | Server: UI, API, MCP endpoint, alerting and incident workflow. |
+| [damaged0ne/shards-node-agent](https://github.com/damaged0ne/shards-node-agent) | Runs on every host. eBPF-based metrics, logs, traces and profiles for the host and its containers. |
+| [damaged0ne/shards-cluster](https://github.com/damaged0ne/shards-cluster) | One per cluster. Database metrics, Kubernetes state and events, cloud integrations. |
 
-* Analyze any unexpected spike in CPU or memory usage down to the precise line of code
-* Don't make assumptions, know exactly what the resources were spent on
-* Easily investigate any anomaly by comparing it to the system's baseline behavior
+Additions in shards-node-agent:
 
-<p align="center">
-<img width="773" src="https://user-images.githubusercontent.com/194465/235190071-21256cbe-6201-4d16-97f3-6565f7256f98.png">
-</p>
+- Docker and Docker Compose container state, health, restarts, exit codes and OOM kills, including stopped containers.
+- Release windows after a container is (re)created, with image version and revision.
+- Filesystem size, free space and inodes per mount; load averages.
+- nftables counters and fail2ban jails.
+- `--hostname-override` for hosts whose UTS hostname is not meaningful.
+- Agent self-metrics (lost eBPF samples, event queue length, recovered panics, remote write failures).
 
-### Built-in expertise
+The full list is in [docs/docs/metrics/shards-node-agent.md](docs/docs/metrics/shards-node-agent.md).
 
-* Coroot can automatically identify over 80% of issues
-* If an app is not meeting its Service Level Objectives (SLOs), Coroot will send a single alert that includes the results of all relevant inspections
-* You can easily adjust any inspection for a particular application or an entire project
+## Quick start
 
-<p align="center">
-  <img width="778" src="https://github.com/coroot/coroot/assets/194465/3590a492-8895-4cc6-94df-a880656a330a">
-</p>
+With Docker Compose (server, both agents, Prometheus and ClickHouse on one host):
 
-### Deployment Tracking
+```bash
+git clone https://github.com/damaged0ne/shards.git
+cd shards
+docker compose -f deploy/docker-compose.yaml up -d
+```
 
-* Coroot discovers and monitors every application rollout in your Kubernetes cluster
-* Requires no integration with your CI/CD pipeline
-* Each release is automatically compared with the previous one, so you'll never miss even the slightest performance degradation
-* With integrated Cost Monitoring, developers can track how each change affects their cloud bill
+Open http://localhost:8080 and set the admin password.
 
-<p align="center">
-<img width="772" src="https://user-images.githubusercontent.com/194465/235190275-a6541063-1b26-4ae3-8c20-87787d2e928d.png">
-</p>
+The compose file uses `ghcr.io/damaged0ne/shards`, `ghcr.io/damaged0ne/shards-node-agent` and `ghcr.io/damaged0ne/shards-cluster`,
+published by the release workflows of the three repositories. To use a local build of the server instead:
 
-### Cost Monitoring
+```bash
+docker build -t ghcr.io/damaged0ne/shards .
+```
 
-* Understand your cloud costs down to the specific application
-* Doesn't require access to you cloud account or any other configurations
-* AWS, GCP, Azure
+Other options (Docker Swarm, systemd via `deploy/install.sh`, Kubernetes) are described in [the documentation](docs/docs/installation).
 
-<p align="center">
-<img width="771" src="https://user-images.githubusercontent.com/194465/235190425-a7f33c7f-33ef-4ef5-9dc1-525ff7524e93.png">
-</p>
+## Operator agents
 
+AI agents connect to `https://<your-shards>/mcp` with OAuth or a service-account API key and work through alerts and incidents
+the way an on-call engineer would: read the timeline, investigate, leave comments, tune alerting rules, and resolve or suppress alerts with a comment.
+Every action goes through the normal RBAC and is attributed to the agent's account.
+See [docs/docs/agents/operator-agents.md](docs/docs/agents/operator-agents.md) and the tool list in [docs/docs/mcp/overview.md](docs/docs/mcp/overview.md).
 
-## Installation
+## Development
 
-You can run Coroot as a Docker container or deploy it into any Kubernetes cluster.
-Check out the [Installation guide](https://docs.coroot.com/).
+Requirements: Go 1.25 and Node.js 24.
 
-## Documentation
+```bash
+# UI: builds into ./static, which the server embeds (use `npm run build-dev` for a watcher)
+(cd front && npm ci && npm run build-prod)
 
-The Coroot documentation is available at [docs.coroot.com/docs](https://docs.coroot.com/).
+# server (needs ./static from the UI build)
+go build -o shards .
+./shards --data-dir=./data --bootstrap-prometheus-url=http://127.0.0.1:9090 --bootstrap-clickhouse-address=127.0.0.1:9000
 
-## Live demo
+# tests and linters
+make test
+make lint
+```
 
-A live demo of Coroot is available at [demo.coroot.com](https://demo.coroot.com/)
+A development container: `docker build -f dev.dockerfile -t shards-dev .` More details in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Community & Support
+The documentation site lives in [docs/](docs) (`npm ci && npm run build`).
 
-* [Community Slack](https://coroot.com/join-slack-community/)
-* [GitHub Discussions](https://github.com/coroot/coroot/discussions)
-* [GitHub Issues](https://github.com/coroot/coroot/issues)
-* Twitter: [@coroot_com](https://twitter.com/coroot_com)
+## Roadmap
 
+- shards-cluster: new collection targets for Kafka, ClickHouse and Elasticsearch (in progress).
 
-## Contributing
-To start contributing, check out our [Contributing Guide](https://github.com/coroot/coroot/blob/main/CONTRIBUTING.md).
+## Origins & license
 
-## License
-
-Coroot is licensed under the [Apache License, Version 2.0](https://github.com/coroot/coroot/blob/main/LICENSE).
-
-
-
-
-
+shards is derived from [Coroot](https://github.com/coroot/coroot) (Copyright 2020-present Coroot, Inc.) and, like it,
+is licensed under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE) for attribution.
+shards is an independent project and is not affiliated with or endorsed by Coroot, Inc.; "Coroot" is a trademark of Coroot, Inc.

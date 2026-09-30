@@ -4,14 +4,14 @@ sidebar_position: 4
 
 # Go profiling
 
-Coroot supports two complementary approaches to profiling Go applications:
+shards supports two complementary approaches to profiling Go applications:
 
-* **Automatic heap profiling** via `coroot-node-agent`: collects memory profiles by reading Go runtime internals
-* **Pprof scraping** via `coroot-cluster-agent`: requires exposing pprof endpoints, provides additional profile types (CPU, blocking, mutex)
+* **Automatic heap profiling** via `shards-node-agent`: collects memory profiles by reading Go runtime internals
+* **Pprof scraping** via `shards-cluster`: requires exposing pprof endpoints, provides additional profile types (CPU, blocking, mutex)
 
 ## Automatic heap profiling (node-agent)
 
-`Coroot-node-agent` collects memory profiles from Go processes by reading the Go runtime's internal
+`shards-node-agent` collects memory profiles from Go processes by reading the Go runtime's internal
 memory profiling data directly from `/proc/<pid>/mem`. This is the same data that Go's `runtime.MemProfile()`
 returns, but read externally without any cooperation from the target process.
 
@@ -26,7 +26,7 @@ returns, but read externally without any cooperation from the target process.
    that the eBPF CPU profiler uses, with no additional ELF parsing.
 5. **Delta computation**: Cumulative allocation counters are converted to per-interval deltas
    using the bucket address as a stable key.
-6. **Upload**: Profiles are uploaded to Coroot in pprof format.
+6. **Upload**: Profiles are uploaded to shards in pprof format.
 
 ### Supported profile types
 
@@ -91,14 +91,14 @@ In addition to profiles, the agent exports allocation rate metrics as Prometheus
 | `container_go_alloc_objects_total` | Counter | Total objects allocated by a Go application |
 
 These metrics are derived from the same memory profiling data and provide time-series visibility into allocation rates.
-Coroot uses them to display allocation rate charts alongside the flamegraph profiles.
+shards uses them to display allocation rate charts alongside the flamegraph profiles.
 
 ## Pprof scraping (cluster-agent)
 
 The Go standard library includes the [pprof](https://pkg.go.dev/net/http/pprof) package,
 enabling developers to expose profiling data of their Go applications.
 
-`Coroot-cluster-agent` automatically discovers and periodically retrieves profiles from Golang applications.
+`shards-cluster` automatically discovers and periodically retrieves profiles from Golang applications.
 
 <img alt="golang pull profiling" src="/img/docs/profiling/golang-profiling.png" class="card w-1200"/>
 
@@ -114,7 +114,7 @@ including unbuffered channels and locks.
 ### Enabling
 
 To enable collecting profiles of a Go application, you need to expose `pprof` endpoints
-and allow Coroot to discover the application pods.
+and allow shards to discover the application pods.
 
 #### Step 1: exposing pprof endpoints
 
@@ -140,7 +140,7 @@ router.PathPrefix("/debug/pprof").Handler(http.DefaultServeMux)
 
 #### Step 2: annotating application Pods
 
-Coroot-cluster-agent automatically discovers and fetches profiles from pods
+shards-cluster automatically discovers and fetches profiles from pods
 annotated with `coroot.com/profile-scrape` and `coroot.com/profile-port` annotations:
 
 ```yaml

@@ -4,19 +4,19 @@ sidebar_position: 3
 
 # Redis
 
-Coroot leverages eBPF to monitor Redis queries between applications and databases, requiring no additional integration.
+shards leverages eBPF to monitor Redis queries between applications and databases, requiring no additional integration.
 While this approach provides a high-level view of database performance, it lacks the visibility needed to understand why issues occur within the database internals.
 
-To bridge this gap, Coroot also collects telemetry using the Redis INFO command, complementing the eBPF-based metrics and traces.
+To bridge this gap, shards also collects telemetry using the Redis INFO command, complementing the eBPF-based metrics and traces.
 
 ## Kubernetes (pod annotations)
 
 The Kubernetes approach to monitoring databases typically involves running metric exporters as sidecar containers within database instance Pods.
 However, this method can be challenging for certain use cases.
-Coroot has a dedicated coroot-cluster-agent that can discover and gather metrics from databases without requiring a separate container for each database instance.
+shards has a dedicated cluster agent (shards-cluster) that can discover and gather metrics from databases without requiring a separate container for each database instance.
 
-Coroot-cluster-agent automatically discovers and collects metrics from pods annotated with `coroot.com/redis-scrape` annotations.
-Coroot can retrieve database credentials from a Secret or be configured with plain-text credentials.
+shards-cluster automatically discovers and collects metrics from pods annotated with `coroot.com/redis-scrape` annotations.
+shards can retrieve database credentials from a Secret or be configured with plain-text credentials.
 
 ```yaml
 coroot.com/redis-scrape: "true"
@@ -30,12 +30,12 @@ coroot.com/redis-scrape-credentials-secret-name: "redis-secret"
 coroot.com/redis-scrape-credentials-secret-password-key: "password"
 ```
 
-Note that Coroot checks only **Pod** annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
+Note that shards checks only **Pod** annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
 
 ## Non-Kubernetes environments
 
-In non-Kubernetes environments, the Redis integration can be enabled via the Coroot UI.
-In this setup, coroot-cluster-agent retrieves Redis instance credentials from the Coroot configuration storage.
+In non-Kubernetes environments, the Redis integration can be enabled via the shards UI.
+In this setup, shards-cluster retrieves Redis instance credentials from the shards configuration storage.
 
 To configure the integration, go to the `REDIS` tab and click the `Configure` button.
 <img alt="Redis Configuration" src="/img/docs/databases/redis/configure.png" class="card w-800"/>
@@ -43,7 +43,7 @@ To configure the integration, go to the `REDIS` tab and click the `Configure` bu
 Then, switch to `Manual Configuration`, complete the form, and click `Save`.
 <img alt="Redis Manual Configuration" src="/img/docs/databases/redis/manual.png" class="card w-600"/>
 
-Coroot-cluster-agent updates its configuration every minute and also takes some time to collect metrics.
+shards-cluster updates its configuration every minute and also takes some time to collect metrics.
 Please wait a few minutes for telemetry to appear.
 
 ### TLS
@@ -54,7 +54,7 @@ agent connects to the IP address. Managed caches that require TLS, such as OCI C
 
 ### Configuration as code
 
-When Coroot is deployed by the [Kubernetes Operator](/installation/k8s-operator), remote Redis instances can be
+When shards is deployed by the [Kubernetes Operator](/installation/k8s-operator), remote Redis instances can be
 declared in the `clusterAgent.databases` section of the Coroot custom resource instead of the UI, with credentials
 referenced from a Kubernetes Secret. A hostname is re-resolved on every configuration update, and every resolved IP
 address is monitored, so DNS-based failover and multi-address names work without changes:
@@ -67,13 +67,13 @@ spec:
         host: cache.example.internal     # or `elasticache: <CacheClusterId>` (AWS integration) / `memorystore: <instance name>` (GCP integration) / `ocicache: <display name>` (OCI integration)
         port: "6379"
         credentials:                     # only when AUTH is enabled
-          passwordSecret: {name: redis-coroot, key: password}
+          passwordSecret: {name: redis-shards, key: password}
 ```
 
-Coroot attributes the collected metrics to the application it sees clients connecting to, by address. Settings in the
+shards attributes the collected metrics to the application it sees clients connecting to, by address. Settings in the
 custom resource take precedence over the UI. Installations without the operator can put the same `databases` list in
-the cluster-agent's [configuration file](/configuration/coroot-cluster-agent#configuration-file).
+the cluster-agent's [configuration file](/configuration/shards-cluster#configuration-file).
 
 ## Troubleshooting
 
-Check the coroot-cluster-agent logs if you encounter any issues.
+Check the shards-cluster logs if you encounter any issues.

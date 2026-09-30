@@ -4,7 +4,7 @@ sidebar_position: 5.5
 
 # AWS
 
-The AWS integration lets Coroot discover Amazon RDS instances and ElastiCache nodes and collect their telemetry.
+The AWS integration lets shards discover Amazon RDS instances and ElastiCache nodes and collect their telemetry.
 Discovered instances appear in the Service Map as separate applications, linked to the services that connect to them
 through the eBPF-based metrics collected on the client side.
 
@@ -12,13 +12,13 @@ The integration adds:
 
 * **Instance inventory and status**: engine, version, instance type, storage, Multi-AZ, read replicas, backup retention
 * **OS-level metrics** from [RDS Enhanced Monitoring](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Monitoring.OS.html): CPU, memory, disk I/O, network
-* **Database logs** of RDS Postgres and MySQL instances (including Aurora), read through the RDS API: shipped to Coroot and grouped by message pattern
+* **Database logs** of RDS Postgres and MySQL instances (including Aurora), read through the RDS API: shipped to shards and grouped by message pattern
 * **Cost estimates** for RDS and ElastiCache instances in the [Costs](/costs/overview) report
 
 Database internals (query statistics, locks, replication) are collected separately, see
 [Database credentials](#database-credentials).
 
-All AWS API calls are made by the [cluster-agent](/installation/architecture), not by the Coroot server. The agent polls
+All AWS API calls are made by the [cluster-agent](/installation/architecture), not by the shards server. The agent polls
 the RDS and ElastiCache APIs once a minute, so a new instance shows up within about a minute of being created.
 
 The recommended setup uses the IAM role of the cluster-agent pod and declares the settings in the Coroot custom
@@ -74,12 +74,12 @@ IRSA, shared config files, and finally the EC2 instance profile. Binding an IAM 
 described step by step in the [Monitoring Amazon RDS and ElastiCache from EKS](/guides/aws-eks-rds) guide.
 
 For a static key, create an [IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html) with
-programmatic access, attach the policy above, and enter its Access Key ID and Secret Access Key in the form. Coroot
+programmatic access, attach the policy above, and enter its Access Key ID and Secret Access Key in the form. shards
 stores the key in the project settings and passes it to the cluster-agent along with the rest of the configuration.
 
 ## Region
 
-Coroot discovers RDS and ElastiCache instances in a single region. Leave the **Region** field empty to use the region
+shards discovers RDS and ElastiCache instances in a single region. Leave the **Region** field empty to use the region
 the cluster-agent runs in: the agent takes it from the `AWS_REGION` environment variable, then from the
 `topology.kubernetes.io/region` label of the Kubernetes nodes, and finally from the EC2 instance metadata service.
 Set the field explicitly to monitor instances in a different region than the one the agent runs in.
@@ -105,12 +105,12 @@ metrics for; instances without it still get inventory, status, and log metrics.
 ## Logs
 
 The cluster-agent tails the log files of RDS instances with the `postgres`, `aurora-postgresql`, `mysql`, `mariadb` and
-`aurora-mysql` engines through the RDS API and forwards every message to Coroot as an OpenTelemetry log record, the
-same way coroot-node-agent forwards container logs. All log files the RDS API lists for the instance are read: for
+`aurora-mysql` engines through the RDS API and forwards every message to shards as an OpenTelemetry log record, the
+same way shards-node-agent forwards container logs. All log files the RDS API lists for the instance are read: for
 Postgres that is the server log, for MySQL the error log plus the slow query and general logs when they are written
 to files (`log_output=FILE` in the parameter group). Messages
 are grouped by automatically extracted patterns, and multi-line messages are joined. The records carry the
-`pattern.hash` attribute and `service.name` set to `/aws/rds/<region>/<DBInstanceIdentifier>`, which Coroot uses to
+`pattern.hash` attribute and `service.name` set to `/aws/rds/<region>/<DBInstanceIdentifier>`, which shards uses to
 show them in the **Logs** tab of the RDS application. Log files are polled every 30 seconds, so a record's timestamp
 can lag the time in the log line by up to that much.
 
@@ -125,7 +125,7 @@ database itself, so the cluster-agent connects to each instance directly:
 
 1. Allow inbound connections from the cluster-agent to the database port in the instance's security group.
 2. Create a monitoring user as described in [Postgres](/databases/postgres) or [MySQL](/databases/mysql).
-3. Open the instance's application in Coroot, go to the **Postgres** or **MySQL** tab, click **Configure**, and enter
+3. Open the instance's application in shards, go to the **Postgres** or **MySQL** tab, click **Configure**, and enter
    the credentials. RDS Postgres 15 and later rejects unencrypted connections by default, so set **sslmode** to
    `require`.
 
@@ -138,11 +138,11 @@ declared separately. Replicas are subject to the [tag filters](#tag-filters) lik
 
 The `rdsadmin` database that Amazon RDS creates on every Postgres instance is used by the service itself, so it is
 excluded from monitoring by default: its maintenance connections and queries don't show up among yours, see
-[`--exclude-databases`](/configuration/coroot-cluster-agent).
+[`--exclude-databases`](/configuration/shards-cluster).
 
 ## Configuration as code
 
-When Coroot is deployed by the [Kubernetes Operator](/installation/k8s-operator), the AWS integration and the database
+When shards is deployed by the [Kubernetes Operator](/installation/k8s-operator), the AWS integration and the database
 credentials can be declared in the Coroot custom resource instead of the UI. Secrets are referenced, never stored in
 the resource, and the settings take precedence over the UI:
 
@@ -155,14 +155,14 @@ spec:
       - type: postgres
         rds: my-db
         credentials:
-          usernameSecret: {name: my-db-coroot, key: username}
-          passwordSecret: {name: my-db-coroot, key: password}
+          usernameSecret: {name: my-db-shards, key: username}
+          passwordSecret: {name: my-db-shards, key: password}
         params: {sslmode: require}
       - type: redis
         elasticache: my-cache
 ```
 
-The operator renders these into the cluster-agent's [configuration file](/configuration/coroot-cluster-agent#configuration-file),
+The operator renders these into the cluster-agent's [configuration file](/configuration/shards-cluster#configuration-file),
 which can also be used directly for installations without the operator.
 
 ## Troubleshooting

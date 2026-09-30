@@ -67,7 +67,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 
 | Mode                                   | off    | 100%          | 50%           | 20%           | 0%            |
 |----------------------------------------|--------|---------------|---------------|---------------|---------------|
-| Spans received by Coroot, per second   | 0      | 1,993         | 997           | 399           | 0             |
+| Spans received by shards, per second   | 0      | 1,993         | 997           | 399           | 0             |
 | CPU usage, cores                       | 0.106  | 0.159 (+50%)  | 0.136 (+29%)  | 0.132 (+24%)  | 0.128 (+20%)  |
 | Memory (RSS), MB                       | 13.1   | 15.3          | 16.4          | 16.5          | 13.5          |
 | Trace export traffic, Mbit/s           | -      | 5.6           | 2.9           | 1.2           | 0             |
@@ -79,11 +79,11 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 * **Memory**: 1-3MB more. Nothing to worry about.
 * **Network**: about 350 bytes per span. The Go exporter doesn't compress by default, so 2,000 spans per second cost 5.6 Mbit/s.
 * **Latency**: no visible change.
-* Coroot received exactly two spans per sampled request. Nothing was dropped.
+* shards received exactly two spans per sampled request. Nothing was dropped.
 
 ### Where the CPU goes
 
-Coroot's eBPF profiler shows what the extra CPU time is spent on. The flame graph compares the app without the SDK (baseline) with the app tracing every request (comparison).
+shards' eBPF profiler shows what the extra CPU time is spent on. The flame graph compares the app without the SDK (baseline) with the app tracing every request (comparison).
 Red frames take a bigger share of CPU time with tracing on, green frames a smaller one.
 
 <img alt="CPU profile: Go without the SDK vs. 100% of traces" src="/img/docs/tracing/opentelemetry-overhead/go-profile.png" class="card w-1200"/>
@@ -128,7 +128,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 
 | Mode                                   | off    | 100%          | 50%           | 20%           | 0%            |
 |----------------------------------------|--------|---------------|---------------|---------------|---------------|
-| Spans received by Coroot, per second   | 0      | 1,992         | 996           | 398           | 0             |
+| Spans received by shards, per second   | 0      | 1,992         | 996           | 398           | 0             |
 | CPU usage, cores                       | 0.11   | 0.14 (+35%)   | 0.13 (+22%)   | 0.13 (+24%)   | 0.12 (+13%)   |
 | Memory (RSS), MB                       | 12.7   | 15.5          | 15.9          | 15.7          | 14.7          |
 | Trace export traffic, Mbit/s           | -      | 4.7           | 2.4           | 1.0           | 0             |

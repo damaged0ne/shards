@@ -40,7 +40,7 @@ Then, run the application with the instrumentation:
 ```bash
 export DJANGO_SETTINGS_MODULE=otel_django.settings \
   OTEL_RESOURCE_ATTRIBUTES="service.name=django-app" \
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://coroot.coroot:8080/v1/traces" \
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://shards.shards:8080/v1/traces" \
   OTEL_EXPORTER_OTLP_TRACES_PROTOCOL="http/protobuf" \
 && opentelemetry-instrument --traces_exporter otlp --metrics_exporter none ./manage.py runserver --noreload 8000
 ```
@@ -78,7 +78,7 @@ Then, run the application with the instrumentation:
 ```bash
 export DJANGO_SETTINGS_MODULE=otel_django.settings \
   OTEL_RESOURCE_ATTRIBUTES="service.name=django-app" \
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://coroot.coroot:8080/v1/traces" \
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://shards.shards:8080/v1/traces" \
   OTEL_EXPORTER_OTLP_TRACES_PROTOCOL="http/protobuf" \
 && opentelemetry-instrument --traces_exporter otlp --metrics_exporter none uvicorn main:app
 ```
@@ -119,7 +119,7 @@ Then, run the application with the instrumentation:
 ```bash
 export DJANGO_SETTINGS_MODULE=otel_django.settings \
   OTEL_RESOURCE_ATTRIBUTES="service.name=django-app" \
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://coroot.coroot:8080/v1/traces" \
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://shards.shards:8080/v1/traces" \
   OTEL_EXPORTER_OTLP_TRACES_PROTOCOL="http/protobuf" \
 && opentelemetry-instrument --traces_exporter otlp --metrics_exporter none flask run
 ```

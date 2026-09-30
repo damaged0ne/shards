@@ -4,9 +4,15 @@ sidebar_position: 7
 
 # Monitoring MySQL HeatWave and OCI Cache from OKE
 
-This guide connects Coroot running on Oracle Kubernetes Engine to your MySQL HeatWave, PostgreSQL and OCI Cache
+:::note Coroot operator
+This guide uses the [Coroot operator](/installation/k8s-operator), which is maintained by Coroot, Inc.
+Kubernetes resource names below (the `coroot` namespace, the `Coroot` custom resource and the `coroot-*` workloads it creates) follow the operator's conventions.
+To run shards, add the image overrides from [Using shards images](/installation/k8s-operator#using-shards-images) to the custom resource.
+:::
+
+This guide connects shards running on Oracle Kubernetes Engine to your MySQL HeatWave, PostgreSQL and OCI Cache
 instances. The cluster-agent authenticates to OCI through OKE Workload Identity, and database credentials come from a
-Kubernetes Secret referenced in the Coroot custom resource. No API key and no settings in the Coroot UI are needed.
+Kubernetes Secret referenced in the Coroot custom resource. No API key and no settings in the shards UI are needed.
 
 What you get: the DB systems and cache clusters in the Service Map, linked to the services that connect to them, with
 instance status, OS metrics from OCI Monitoring, logs, and database internals such as query statistics, locks and
@@ -15,7 +21,7 @@ described in detail on the [OCI](/configuration/oci) configuration page.
 
 ## Prerequisites
 
-- Coroot deployed on an OKE **enhanced** cluster via the [Kubernetes Operator](/installation/k8s-operator). Workload
+- shards deployed on an OKE **enhanced** cluster via the [Kubernetes Operator](/installation/k8s-operator). Workload
   Identity is not available on basic clusters.
 - `oci` and `kubectl` configured, with permissions to manage policies in the compartment of the databases
 
@@ -38,7 +44,7 @@ directly, no dynamic group is needed:
 WORKLOAD="request.principal.type='workload', request.principal.namespace='${NAMESPACE}', request.principal.service_account='coroot-cluster-agent', request.principal.cluster_id='${CLUSTER_ID}'"
 
 oci iam policy create --compartment-id ${COMPARTMENT_ID} --name coroot-cluster-agent \
-  --description "Coroot cluster-agent: discovery of managed databases and their metrics" \
+  --description "shards cluster-agent: discovery of managed databases and their metrics" \
   --statements "[
     \"Allow any-user to read mysql-family in compartment ${COMPARTMENT_NAME} where all {${WORKLOAD}}\",
     \"Allow any-user to read postgres-db-systems in compartment ${COMPARTMENT_NAME} where all {${WORKLOAD}}\",

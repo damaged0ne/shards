@@ -8,14 +8,14 @@ import TabItem from '@theme/TabItem';
 # Webhook
 
 In addition to built-in notification integrations like [Slack](/alerting/slack), [Microsoft Teams](/alerting/teams), 
-[Pagerduty](/alerting/pagerduty), and [Opsgenie](/alerting/opsgenie), Coroot can integrate with nearly any system using Webhooks.
+[Pagerduty](/alerting/pagerduty), and [Opsgenie](/alerting/opsgenie), shards can integrate with nearly any system using Webhooks.
 
 To configure a Webhook integration:
 
 * Go to the **Project Settings** → **Integrations**
 * Create a Webhook integration
 * Paste a Webhook URL to the form
-  <img alt="Coroot Webhook integration" src="/img/docs/webhook-integration.png" class="card w-800"/>
+  <img alt="shards Webhook integration" src="/img/docs/webhook-integration.png" class="card w-800"/>
 * Configure HTTP basic authentication and headers if required.
 * Add custom fields if you need static key-value pairs included in every notification (see [Custom fields](#custom-fields) below).
 * Define templates for incidents, deployments, and alerts.
@@ -24,7 +24,7 @@ To configure a Webhook integration:
 ## Template data
 
 Notification templates are based on the [Go templating](https://golang.org/pkg/text/template) system. 
-Coroot applies provided templates to the following data structures:
+shards applies provided templates to the following data structures:
 
 ```go
 type IncidentTemplateValues struct {
@@ -40,8 +40,8 @@ type IncidentTemplateValues struct {
         Message string // "error budget burn rate is 26x within 1 hour", "app containers have been restarted 11 times by the OOM killer", ...
     }
     URL             string // backlink to the incident page
-    RCASummary      string // AI-generated short summary of the root cause (empty if RCA is not available)
-    RCARemediations string // AI-generated remediation hints in Markdown (empty if RCA is not available)
+    RCASummary      string // always empty: shards does not include AI root cause analysis
+    RCARemediations string // always empty: shards does not include AI root cause analysis
 }
 ```
 
@@ -176,15 +176,10 @@ A sample of resulting incident message (assuming custom fields `environment` = `
       "message": "high network latency to 2 upstream services"
     }
   ],
-  "url": "http://127.0.0.1:8080/p/x0xwl4jz/app/default:Deployment:app1?incident=123ab456",
-  "rca_summary": "Dropped index on postgres-products caused CPU saturation on node2, degrading product-catalog latency",
-  "rca_remediations": "Recreate the dropped trigram index on the products table in postgres-products:\n```sql\nCREATE INDEX idx_products_name_trgm ON public.products USING gin (name gin_trgm_ops);\n```\nIf the pg_trgm extension is not already enabled:\n```sql\nCREATE EXTENSION IF NOT EXISTS pg_trgm;\n```\nThen revert the ArgoCD commit (52ebd518) that removed the index to prevent it from being dropped again on the next sync."
+  "url": "http://127.0.0.1:8080/p/x0xwl4jz/app/default:Deployment:app1?incident=123ab456"
 }
 ```
 
-:::note
-The `rca_summary` and `rca_remediations` fields are only present when AI Root Cause Analysis is available (Coroot Enterprise or Coroot Cloud integration).
-:::
 
 A sample of resulting deployment message:
 

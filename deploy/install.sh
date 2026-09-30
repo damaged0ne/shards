@@ -8,7 +8,7 @@ fi
 
 BIN_DIR=/usr/local/bin
 SYSTEMD_DIR=/etc/systemd/system
-DATA_DIR=/var/lib/coroot
+DATA_DIR=/var/lib/shards
 
 DOWNLOADER=
 GITHUB_URL=
@@ -18,6 +18,7 @@ SYSTEM_DESCRIPTION=
 FILE_SERVICE=
 FILE_ENV=
 REPO=
+ASSET=
 ARGS=
 
 info() {
@@ -65,7 +66,7 @@ verify_downloader() {
 }
 
 setup_tmp() {
-    TMP_DIR=$(mktemp -d -t coroot-install.XXXXXXXXXX)
+    TMP_DIR=$(mktemp -d -t shards-install.XXXXXXXXXX)
     TMP_BIN=${TMP_DIR}/${SYSTEM_NAME}
     cleanup() {
         code=$?
@@ -96,7 +97,7 @@ get_release_version() {
 
 download_binary() {
     info "Downloading binary"
-    URL="${GITHUB_URL}/download/${VERSION}/${REPO}-${ARCH}"
+    URL="${GITHUB_URL}/download/${VERSION}/${ASSET}-${ARCH}"
     set +e
     case $DOWNLOADER in
         curl)
@@ -129,27 +130,27 @@ download() {
 }
 
 create_uninstall() {
-    UNINSTALL_SH=${BIN_DIR}/coroot-uninstall.sh
+    UNINSTALL_SH=${BIN_DIR}/shards-uninstall.sh
     info "Creating uninstall script ${UNINSTALL_SH}"
     $SUDO tee ${UNINSTALL_SH} >/dev/null << EOF
 #!/bin/sh
 set -x
 [ \$(id -u) -eq 0 ] || exec sudo \$0 \$@
 
-systemctl stop coroot
-systemctl disable coroot
-systemctl reset-failed coroot
+systemctl stop shards
+systemctl disable shards
+systemctl reset-failed shards
 
-systemctl stop coroot-cluster-agent
-systemctl disable coroot-cluster-agent
-systemctl reset-failed coroot-cluster-agent
+systemctl stop shards-cluster-agent
+systemctl disable shards-cluster-agent
+systemctl reset-failed shards-cluster-agent
 
 systemctl daemon-reload
 
-rm -f ${SYSTEMD_DIR}/coroot.service
-rm -f ${SYSTEMD_DIR}/coroot.service.env
-rm -f ${SYSTEMD_DIR}/coroot-cluster-agent.service
-rm -f ${SYSTEMD_DIR}/coroot-cluster-agent.service.env
+rm -f ${SYSTEMD_DIR}/shards.service
+rm -f ${SYSTEMD_DIR}/shards.service.env
+rm -f ${SYSTEMD_DIR}/shards-cluster-agent.service
+rm -f ${SYSTEMD_DIR}/shards-cluster-agent.service.env
 
 remove_uninstall() {
     rm -f ${UNINSTALL_SH}
@@ -157,8 +158,8 @@ remove_uninstall() {
 trap remove_uninstall EXIT
 
 rm -rf ${DATA_DIR} || true
-rm -f ${BIN_DIR}/coroot
-rm -f ${BIN_DIR}/coroot-cluster-agent
+rm -f ${BIN_DIR}/shards
+rm -f ${BIN_DIR}/shards-cluster-agent
 EOF
     $SUDO chmod 755 ${UNINSTALL_SH}
     $SUDO chown root:root ${UNINSTALL_SH}
@@ -175,11 +176,11 @@ create_env_file() {
     $SUDO touch ${FILE_ENV}
     $SUDO chmod 0600 ${FILE_ENV}
     case $SYSTEM_NAME in
-        coroot)
-            env_vars="LICENSE_KEY|LISTEN|URL_BASE_PATH|CACHE_TTL|CACHE_GC_INTERVAL|TRACES_TTL|LOGS_TTL|PROFILES_TTL|PG_CONNECTION_STRING|DISABLE_USAGE_STATISTICS|READ_ONLY|BOOTSTRAP_PROMETHEUS_URL|BOOTSTRAP_REFRESH_INTERVAL|BOOTSTRAP_PROMETHEUS_EXTRA_SELECTOR|DO_NOT_CHECK_SLO|DO_NOT_CHECK_FOR_DEPLOYMENTS|DO_NOT_CHECK_FOR_UPDATES|BOOTSTRAP_CLICKHOUSE_ADDRESS|BOOTSTRAP_CLICKHOUSE_USER|BOOTSTRAP_CLICKHOUSE_PASSWORD|BOOTSTRAP_CLICKHOUSE_DATABASE"
+        shards)
+            env_vars="LISTEN|URL_BASE_PATH|CACHE_TTL|CACHE_GC_INTERVAL|TRACES_TTL|LOGS_TTL|PROFILES_TTL|PG_CONNECTION_STRING|DISABLE_USAGE_STATISTICS|READ_ONLY|BOOTSTRAP_PROMETHEUS_URL|BOOTSTRAP_REFRESH_INTERVAL|BOOTSTRAP_PROMETHEUS_EXTRA_SELECTOR|DO_NOT_CHECK_SLO|DO_NOT_CHECK_FOR_DEPLOYMENTS|DO_NOT_CHECK_FOR_UPDATES|BOOTSTRAP_CLICKHOUSE_ADDRESS|BOOTSTRAP_CLICKHOUSE_USER|BOOTSTRAP_CLICKHOUSE_PASSWORD|BOOTSTRAP_CLICKHOUSE_DATABASE"
             sh -c export | while read x v; do echo $v; done | grep -E "^(${env_vars})" | $SUDO tee ${FILE_ENV} >/dev/null
             ;;
-        coroot-cluster-agent)
+        shards-cluster-agent)
             host=$(sh -c export | sed -nr "s/.*LISTEN='(.+):.*'/\1/p")
             if [ -z $host ]; then
                 host=127.0.0.1
@@ -203,7 +204,7 @@ create_service_file() {
     $SUDO tee ${FILE_SERVICE} >/dev/null << EOF
 [Unit]
 Description=${SYSTEM_DESCRIPTION}
-Documentation=https://docs.coroot.com
+Documentation=https://github.com/damaged0ne/shards
 Wants=network-online.target
 After=network-online.target
 
@@ -243,11 +244,12 @@ install() {
     SYSTEM_NAME=$1
     SYSTEM_DESCRIPTION=$2
     REPO=$3
-    ARGS=$4
+    ASSET=$4
+    ARGS=$5
 
     FILE_SERVICE=${SYSTEMD_DIR}/${SYSTEM_NAME}.service
     FILE_ENV=${FILE_SERVICE}.env
-    GITHUB_URL="https://github.com/coroot/${REPO}/releases"
+    GITHUB_URL="https://github.com/${REPO}/releases"
 
     echo "*** INSTALLING ${SYSTEM_NAME} ***"
     download
@@ -264,10 +266,8 @@ install() {
 
     create_uninstall
 
-    if [ -n "$LICENSE_KEY" ]; then
-        install coroot "Coroot" coroot-ee "--data-dir=${DATA_DIR}"
-    else
-        install coroot "Coroot" coroot "--data-dir=${DATA_DIR}"
-    fi
-    install coroot-cluster-agent "Coroot Cluster Agent" coroot-cluster-agent "--metrics-wal-dir=${DATA_DIR}"
+    # shards server: release assets shards-<arch> of github.com/damaged0ne/shards
+    install shards "shards" damaged0ne/shards shards "--data-dir=${DATA_DIR}"
+    # cluster agent: release assets coroot-cluster-agent-<arch> of github.com/damaged0ne/shards-cluster
+    install shards-cluster-agent "shards cluster agent" damaged0ne/shards-cluster coroot-cluster-agent "--metrics-wal-dir=${DATA_DIR}"
 }

@@ -4,7 +4,13 @@ sidebar_position: 3
 
 # Using S3 Storage with ClickHouse
 
-This guide walks through configuring ClickHouse to use S3-compatible object storage for Coroot's telemetry data (logs, traces, profiles, and metrics).
+:::note Coroot operator
+This guide uses the [Coroot operator](/installation/k8s-operator), which is maintained by Coroot, Inc.
+Kubernetes resource names below (the `coroot` namespace, the `Coroot` custom resource and the `coroot-*` workloads it creates) follow the operator's conventions.
+To run shards, add the image overrides from [Using shards images](/installation/k8s-operator#using-shards-images) to the custom resource.
+:::
+
+This guide walks through configuring ClickHouse to use S3-compatible object storage for shards' telemetry data (logs, traces, profiles, and metrics).
 
 ## Overview
 
@@ -14,7 +20,7 @@ By default, ClickHouse stores all data on local disks. With S3 storage enabled, 
 - **Scale storage independently** from compute — no need to resize PVCs
 - **Store more data** without being limited by local disk capacity
 
-Coroot's operator supports two S3 storage modes:
+The Coroot operator supports two S3 storage modes:
 
 | Mode | Description | Best for |
 |------|-------------|----------|
@@ -23,7 +29,7 @@ Coroot's operator supports two S3 storage modes:
 
 ## Prerequisites
 
-- Coroot deployed via the [Kubernetes Operator](/installation/k8s-operator)
+- shards deployed via the [Kubernetes Operator](/installation/k8s-operator)
 - An S3-compatible bucket (AWS S3, MinIO, Ceph, etc.)
 - S3 credentials (access key + secret key) or IAM/IRSA configured
 
@@ -139,7 +145,7 @@ A local cache layer sits between ClickHouse and S3. Frequently accessed data is 
 
 ### Space Manager
 
-When S3 storage is configured, Coroot's [Space Manager](/configuration/clickhouse#space-manager) is automatically disabled. Instead of deleting old partitions to free disk space, ClickHouse moves data to S3, preserving it for the full TTL period.
+When S3 storage is configured, shards' [Space Manager](/configuration/clickhouse#space-manager) is automatically disabled. Instead of deleting old partitions to free disk space, ClickHouse moves data to S3, preserving it for the full TTL period.
 
 ## Using MinIO or other S3-compatible storage
 

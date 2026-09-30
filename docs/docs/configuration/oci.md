@@ -4,7 +4,7 @@ sidebar_position: 5.7
 
 # OCI
 
-The OCI integration lets Coroot discover the managed databases of one or more Oracle Cloud Infrastructure
+The OCI integration lets shards discover the managed databases of one or more Oracle Cloud Infrastructure
 compartments, MySQL HeatWave DB systems (with their read replicas), Database with PostgreSQL DB systems (with their
 standby instances) and OCI Cache clusters (Valkey), and collect their telemetry.
 Discovered instances appear in the Service Map as separate applications, linked to the services that connect to them
@@ -21,11 +21,11 @@ The integration adds:
 Database internals (query statistics, locks, replication) are collected separately, see
 [Database credentials](#database-credentials).
 
-All OCI API calls are made by the [cluster-agent](/installation/architecture), not by the Coroot server. The agent
+All OCI API calls are made by the [cluster-agent](/installation/architecture), not by the shards server. The agent
 polls the MySQL, PostgreSQL and OCI Cache APIs once a minute. Like the [GCP integration](/configuration/gcp), the OCI
-integration is configured only as code: in the Coroot custom resource when Coroot is deployed by the
+integration is configured only as code: in the Coroot custom resource when shards is deployed by the
 [Kubernetes Operator](/installation/k8s-operator), or in the cluster-agent's
-[configuration file](/configuration/coroot-cluster-agent#configuration-file). The **Cloud integrations** page of the
+[configuration file](/configuration/shards-cluster#configuration-file). The **Cloud integrations** page of the
 project settings shows the discovery status and the discovered instances, and warns when the cluster runs on OCI
 without the integration configured.
 
@@ -63,7 +63,7 @@ labels, and can be set explicitly with `region`.
 ## Replicas
 
 MySQL HeatWave read replicas and the standby instances of a Database with PostgreSQL DB system are discovered along
-with their primary, whatever their own tags, and grouped with it into one application in Coroot. Declaring the
+with their primary, whatever their own tags, and grouped with it into one application in shards. Declaring the
 primary in `databases` is enough: its replicas are monitored with the same credentials, so replication lag and the
 role of each instance come from the databases themselves.
 
@@ -107,9 +107,9 @@ oci logging log create --log-group-id <log group OCID> --log-type SERVICE --disp
 
 The cluster-agent finds the enabled service logs of the discovered instances in the log groups of the compartments
 (`inspect log-groups`) and reads their new entries every 30 seconds (`read log-content`), extracts the repeated
-patterns and forwards the messages to Coroot, so they appear in the **Logs** section of the instance's application.
+patterns and forwards the messages to shards, so they appear in the **Logs** section of the instance's application.
 The service log of a PostgreSQL DB system carries the entries of all its instances; the agent attributes them to the
-primary and the standby instances. The log entries are stored in Coroot, not read from OCI Logging on demand. OCI
+primary and the standby instances. The log entries are stored in shards, not read from OCI Logging on demand. OCI
 Logging bills the ingested volume, the first 10 GB per month are free, and the searches are free.
 
 MySQL HeatWave doesn't publish its logs to OCI Logging. The cluster-agent reads the error log of the MySQL DB systems
@@ -133,8 +133,8 @@ spec:
       - type: mysql
         ocidb: my-db
         credentials:
-          usernameSecret: {name: my-db-coroot, key: username}
-          passwordSecret: {name: my-db-coroot, key: password}
+          usernameSecret: {name: my-db-shards, key: username}
+          passwordSecret: {name: my-db-shards, key: password}
       - type: redis
         ocicache: my-cache
 ```

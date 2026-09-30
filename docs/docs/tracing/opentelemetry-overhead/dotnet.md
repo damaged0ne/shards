@@ -33,7 +33,7 @@ Two things to know about this stack:
   We had to set the endpoint and `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` explicitly.
 * The Redis instrumentation doesn't make spans while the request runs. It collects StackExchange.Redis profiling sessions and turns them into `Activity` objects
   on a background thread every 10 seconds (`FlushInterval`). At 1,000 requests per second that's 10,000 spans landing on the batch processor at once,
-  more than its default queue holds (2,048). So **the SDK dropped most of the Redis spans** ("dropped due to buffer full"): Coroot got 1,238 spans per second instead of 2,000.
+  more than its default queue holds (2,048). So **the SDK dropped most of the Redis spans** ("dropped due to buffer full"): shards got 1,238 spans per second instead of 2,000.
   We kept the defaults on purpose, because that's what you get out of the box. In production you'd raise `OTEL_BSP_MAX_QUEUE_SIZE` or shorten `FlushInterval`.
 
 ## Results
@@ -44,7 +44,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 
 | Mode                                   | off    | 100%          | 50%           | 20%           | 0%            |
 |----------------------------------------|--------|---------------|---------------|---------------|---------------|
-| Spans received by Coroot, per second   | 0      | 1,238         | 727           | 396           | 0             |
+| Spans received by shards, per second   | 0      | 1,238         | 727           | 396           | 0             |
 | CPU usage, cores                       | 0.35   | 0.34 (-2%)    | 0.38 (+11%)   | 0.34 (-3%)    | 0.29 (-17%)   |
 | Memory (RSS), MB                       | 41     | 75 (+86%)     | 73 (+80%)     | 67 (+65%)     | 64 (+57%)     |
 | Trace export traffic, Mbit/s           | -      | 2.8           | 1.7           | 0.9           | 0             |
@@ -57,7 +57,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 * **Memory**: the SDK adds 25-35MB.
 * **Network**: about 280 bytes per span.
 * **Latency**: no change.
-* **Dropped spans**: Coroot received 1,238 spans per second instead of 2,000 with every request traced, and 727 instead of 1,000 at 50%. See above for why.
+* **Dropped spans**: shards received 1,238 spans per second instead of 2,000 with every request traced, and 727 instead of 1,000 at 50%. See above for why.
 
 ## Takeaways
 

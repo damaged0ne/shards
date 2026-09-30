@@ -47,7 +47,7 @@ Then, run the application with the instrumentation:
 ```bash 
 export \
   OTEL_SERVICE_NAME="spring-demo" \
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://coroot.coroot:8080/v1/traces" \
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://shards.shards:8080/v1/traces" \
   OTEL_EXPORTER_OTLP_TRACES_PROTOCOL="http/protobuf" \
   OTEL_LOGS_EXPORTER="none" \
   OTEL_METRICS_EXPORTER="none" \

@@ -52,7 +52,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 
 | Mode                                   | off    | 100%          | 50%           | 20%           | 0%            |
 |----------------------------------------|--------|---------------|---------------|---------------|---------------|
-| Spans received by Coroot, per second   | 0      | 1,940         | 998           | 398           | 0             |
+| Spans received by shards, per second   | 0      | 1,940         | 998           | 398           | 0             |
 | CPU usage, cores                       | 0.113  | 0.147 (+30%)  | 0.141 (+25%)  | 0.134 (+19%)  | 0.125 (+11%)  |
 | Memory (RSS), MB                       | 310    | 459 (+48%)    | 466 (+50%)    | 482 (+56%)    | 466 (+50%)    |
 | Trace export traffic, Mbit/s           | -      | 6.3           | 3.3           | 1.3           | 0             |
@@ -63,11 +63,11 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 * **Memory**: the agent adds about 150MB, and the sampling rate makes no difference. That's the agent itself: its classes, the instrumented bytecode and the SDK.
 * **Network**: about 400 bytes per span, 6.3 Mbit/s for 2,000 spans per second.
 * **Latency**: no change.
-* At 100% sampling Coroot received 1,940 spans per second instead of 2,000: about 3% of the spans didn't make it. At 50% and below the count was exact.
+* At 100% sampling shards received 1,940 spans per second instead of 2,000: about 3% of the spans didn't make it. At 50% and below the count was exact.
 
 ## Where the CPU goes
 
-The eBPF profiler can't name JIT-compiled Java frames by itself, so for this flame graph coroot-node-agent was started with `--enable-java-async-profiler`,
+The eBPF profiler can't name JIT-compiled Java frames by itself, so for this flame graph shards-node-agent was started with `--enable-java-async-profiler`,
 which attaches [async-profiler](/profiling/java-profiling) to the JVM. It comes from a separate off → 100% run, so the numbers in the table above are not affected by it.
 Red frames take a bigger share of CPU time with the agent on, green frames a smaller one.
 

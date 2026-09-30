@@ -4,10 +4,10 @@ sidebar_position: 4
 
 # MongoDB
 
-Coroot leverages eBPF to monitor MongoDB queries between applications and databases, requiring no additional integration.
+shards leverages eBPF to monitor MongoDB queries between applications and databases, requiring no additional integration.
 While this approach provides a high-level view of database performance, it lacks the visibility needed to understand why issues occur within the database internals.
 
-To bridge this gap, Coroot also collects telemetry directly from every `mongod` instance: server status, per-query statistics,
+To bridge this gap, shards also collects telemetry directly from every `mongod` instance: server status, per-query statistics,
 replication and oplog state, in-flight operations, and per-collection storage statistics, complementing the eBPF-based metrics and traces.
 
 ## Prerequisites
@@ -16,7 +16,7 @@ The integration requires a monitoring user with the `clusterMonitor` role and re
 
 ```js
 db.getSiblingDB("admin").createUser({
-    user: "coroot",
+    user: "shards",
     pwd: "<PASSWORD>",
     roles: [
         { role: "clusterMonitor", db: "admin" },
@@ -25,13 +25,13 @@ db.getSiblingDB("admin").createUser({
 })
 ```
 
-To track index changes, Coroot reads the index definitions of all collections with a single `$listCatalog` aggregation (MongoDB 6.0+).
+To track index changes, shards reads the index definitions of all collections with a single `$listCatalog` aggregation (MongoDB 6.0+).
 It requires the `listCollections` and `listIndexes` privileges, which are not included in `clusterMonitor`.
 They can be granted with a custom role that gives access to the metadata only, not to the data:
 
 ```js
 db.getSiblingDB("admin").createRole({
-    role: "corootCatalog",
+    role: "shardsCatalog",
     privileges: [
         { resource: { db: "", collection: "" }, actions: ["listCollections", "listIndexes"] },
         { resource: { db: "", collection: "system.js" }, actions: ["listCollections", "listIndexes"] },
@@ -39,7 +39,7 @@ db.getSiblingDB("admin").createRole({
     ],
     roles: []
 })
-db.getSiblingDB("admin").grantRolesToUser("coroot", [{ role: "corootCatalog", db: "admin" }])
+db.getSiblingDB("admin").grantRolesToUser("shards", [{ role: "shardsCatalog", db: "admin" }])
 ```
 
 Without this role, everything else works, but index changes are not tracked, and the agent logs an authorization error.
@@ -61,7 +61,7 @@ operationProfiling:
 On upstream MongoDB (no `rateLimit` support), use `mode: slowOp` — the top-queries view then covers
 operations slower than `slowOpThresholdMs`.
 
-Without profiling enabled, Coroot still collects all instance-level metrics, but the top-queries view stays empty.
+Without profiling enabled, shards still collects all instance-level metrics, but the top-queries view stays empty.
 
 **Cost.** All other MongoDB metrics are cheap to collect (they come from in-memory counters via `serverStatus`
 and friends), but the profiler is different: with it enabled, `mongod` writes a document to `system.profile` for
@@ -83,31 +83,31 @@ Grants read access to everything the agent collects:
 - `system.profile` - per-query execution statistics (requires `operationProfiling` to be enabled).
 - `listDatabases`, `top`, `$collStats` - database sizes, and the sizes and storage fragmentation of the largest and the most actively written collections.
 
-**corootCatalog (optional custom role)**
+**shardsCatalog (optional custom role)**
 
 Grants `listCollections` and `listIndexes` on all databases, which `$listCatalog` requires to return index definitions.
-These privileges expose collection and index metadata only. Coroot uses them to detect index changes.
+These privileges expose collection and index metadata only. shards uses them to detect index changes.
 
 **read on local**
 
 Used to determine the oplog window (the time span between the oldest and the newest entries of `local.oplog.rs`) and the oplog size.
 
 :::note
-All access is **read-only**. Coroot never modifies any data or configuration on your MongoDB servers.
+All access is **read-only**. shards never modifies any data or configuration on your MongoDB servers.
 The query shapes collected from the profiler and `$currentOp` are normalized: literal values are replaced with `?`.
 :::
 
 ## Kubernetes (pod annotations)
 
-Coroot-cluster-agent automatically discovers and collects metrics from pods annotated with `coroot.com/mongodb-scrape` annotations.
-Coroot can retrieve database credentials from a Secret or be configured with plain-text credentials.
+shards-cluster automatically discovers and collects metrics from pods annotated with `coroot.com/mongodb-scrape` annotations.
+shards can retrieve database credentials from a Secret or be configured with plain-text credentials.
 
 ```yaml
 coroot.com/mongodb-scrape: "true"
 coroot.com/mongodb-scrape-port: "27017"
 
 # plain-text credentials
-coroot.com/mongodb-scrape-credentials-username: "coroot"
+coroot.com/mongodb-scrape-credentials-username: "shards"
 coroot.com/mongodb-scrape-credentials-password: "<PASSWORD>"
 
 # credentials from a secret
@@ -129,7 +129,7 @@ coroot.com/mongodb-scrape-tls-secret-cert-key: "tls.crt"
 coroot.com/mongodb-scrape-tls-secret-key-key: "tls.key"
 ```
 
-Note that Coroot checks only **Pod** annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
+Note that shards checks only **Pod** annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
 
 ## Percona Operator for MongoDB
 
@@ -175,14 +175,14 @@ certificate — `mongod` instances configured with a CA require one. Alternative
 
 ### Backups
 
-If backups are enabled through the operator (percona-backup-mongodb), Coroot automatically tracks the backup schedule,
+If backups are enabled through the operator (percona-backup-mongodb), shards automatically tracks the backup schedule,
 point-in-time recovery status, and recent backup runs from the `PerconaServerMongoDB` and `PerconaServerMongoDBBackup`
 custom resources. The [Backups inspection](/inspections/mongodb#backups) alerts on stale, failed, or overdue backups.
 
 ## Non-Kubernetes environments
 
-In non-Kubernetes environments, the MongoDB integration can be enabled via the Coroot UI.
-In this setup, coroot-cluster-agent retrieves MongoDB instance credentials from the Coroot configuration storage.
+In non-Kubernetes environments, the MongoDB integration can be enabled via the shards UI.
+In this setup, shards-cluster retrieves MongoDB instance credentials from the shards configuration storage.
 
 To configure the integration, go to the `MONGODB` tab and click the `Configure` button.
 <img alt="MongoDB Configuration" src="/img/docs/databases/mongodb/configure.png" class="card w-800"/>
@@ -190,12 +190,12 @@ To configure the integration, go to the `MONGODB` tab and click the `Configure` 
 Then, switch to `Manual Configuration`, complete the form, and click `Save`.
 <img alt="MongoDB Manual Configuration" src="/img/docs/databases/mongodb/manual.png" class="card w-600"/>
 
-Coroot-cluster-agent updates its configuration every minute and also takes some time to collect metrics. 
+shards-cluster updates its configuration every minute and also takes some time to collect metrics. 
 Please wait a few minutes for telemetry to appear.
 
 ### Configuration as code
 
-When Coroot is deployed by the [Kubernetes Operator](/installation/k8s-operator), remote MongoDB instances can be
+When shards is deployed by the [Kubernetes Operator](/installation/k8s-operator), remote MongoDB instances can be
 declared in the `clusterAgent.databases` section of the Coroot custom resource instead of the UI, with credentials
 referenced from a Kubernetes Secret. A hostname is re-resolved on every configuration update, and every resolved IP
 address is monitored, so DNS-based failover and multi-address names work without changes:
@@ -208,13 +208,13 @@ spec:
         host: mongo.example.internal
         port: "27017"
         credentials:
-          usernameSecret: {name: mongodb-coroot, key: username}
-          passwordSecret: {name: mongodb-coroot, key: password}
+          usernameSecret: {name: mongodb-shards, key: username}
+          passwordSecret: {name: mongodb-shards, key: password}
 ```
 
-Coroot attributes the collected metrics to the application it sees clients connecting to, by address. Settings in the
+shards attributes the collected metrics to the application it sees clients connecting to, by address. Settings in the
 custom resource take precedence over the UI. Installations without the operator can put the same `databases` list in
-the cluster-agent's [configuration file](/configuration/coroot-cluster-agent#configuration-file).
+the cluster-agent's [configuration file](/configuration/shards-cluster#configuration-file).
 
 ## What data is collected
 
@@ -246,10 +246,10 @@ With the default agent settings (15-second scrape interval, collection size and 
 
 - the latency of application queries did not change when the instrumentation was switched on and off;
 - the additional CPU usage of `mongod` was below the measurement noise, with no additional memory usage;
-- coroot-cluster-agent consumed about 0.015 CPU cores and less than 60MB of memory.
+- shards-cluster consumed about 0.015 CPU cores and less than 60MB of memory.
 
 See [Performance Impact](/installation/performance-impact#mongodb-instrumentation) for the lab setup and detailed results.
 
 ## Troubleshooting
 
-Check the coroot-cluster-agent logs if you encounter any issues.
+Check the shards-cluster logs if you encounter any issues.

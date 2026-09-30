@@ -4,9 +4,15 @@ sidebar_position: 6
 
 # Monitoring Cloud SQL and Memorystore from GKE
 
-This guide connects Coroot running on Google Kubernetes Engine to your Cloud SQL and Memorystore instances. The
+:::note Coroot operator
+This guide uses the [Coroot operator](/installation/k8s-operator), which is maintained by Coroot, Inc.
+Kubernetes resource names below (the `coroot` namespace, the `Coroot` custom resource and the `coroot-*` workloads it creates) follow the operator's conventions.
+To run shards, add the image overrides from [Using shards images](/installation/k8s-operator#using-shards-images) to the custom resource.
+:::
+
+This guide connects shards running on Google Kubernetes Engine to your Cloud SQL and Memorystore instances. The
 cluster-agent authenticates to GCP through Workload Identity, and database credentials come from a Kubernetes Secret
-referenced in the Coroot custom resource. No service account keys and no settings in the Coroot UI are needed.
+referenced in the Coroot custom resource. No service account keys and no settings in the shards UI are needed.
 
 What you get: Cloud SQL and Memorystore instances in the Service Map, linked to the services that connect to them,
 with instance status, OS metrics from Cloud Monitoring, database logs in the Logs tab, and database internals such
@@ -15,7 +21,7 @@ page.
 
 ## Prerequisites
 
-- Coroot deployed on a GKE Standard cluster via the [Kubernetes Operator](/installation/k8s-operator). Autopilot
+- shards deployed on a GKE Standard cluster via the [Kubernetes Operator](/installation/k8s-operator). Autopilot
   clusters don't allow the privileged node-agent.
 - [Workload Identity Federation for GKE](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
   enabled on the cluster (`--workload-pool=<project>.svc.id.goog`)

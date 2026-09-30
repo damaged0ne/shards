@@ -4,10 +4,10 @@ sidebar_position: 2
 
 # Application logs
 
-In the Application view, Coroot allows you to analyze and correlate application telemetry (availability, latency, CPU metrics, etc.) with raw logs and recurring log patterns.
+In the Application view, shards allows you to analyze and correlate application telemetry (availability, latency, CPU metrics, etc.) with raw logs and recurring log patterns.
 Logs are pre-filtered by application, eliminating the need to locate it manually in the main Logs view.
 
-<img alt="Coroot Log Monitoring" src="/img/docs/logs/application.png" class="card w-1200"/>
+<img alt="shards Log Monitoring" src="/img/docs/logs/application.png" class="card w-1200"/>
 
 
 ## Log patterns

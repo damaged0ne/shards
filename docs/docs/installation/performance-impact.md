@@ -5,20 +5,26 @@ sidebar_position: 10
 # Performance Impact
 
 Observability should never come at the expense of the applications being observed.
-Coroot gathers telemetry from many sources: eBPF, OpenTelemetry, continuous profiling, logs, cloud provider APIs,
+shards gathers telemetry from many sources: eBPF, OpenTelemetry, continuous profiling, logs, cloud provider APIs,
 and the statistics that databases report about themselves.
-Some of these collectors run right next to your workloads or send queries to your databases, so we benchmark them
+Some of these collectors run right next to your workloads or send queries to your databases, so they are benchmarked
 to make sure you get this visibility without paying for it in latency or resources.
 This page presents the results:
 
-* [eBPF-based monitoring](#ebpf-based-monitoring): the impact of coroot-node-agent on an application serving 10,000 requests per second.
-* [MySQL instrumentation](#mysql-instrumentation): the impact of coroot-cluster-agent on a busy MySQL server with 10,000 tables.
-* [Postgres instrumentation](#postgres-instrumentation): the impact of coroot-cluster-agent on a busy Postgres server with 100 databases and 10,000 tables.
-* [MongoDB instrumentation](#mongodb-instrumentation): the impact of coroot-cluster-agent on a busy MongoDB server with 100 databases and 10,000 collections.
+:::note
+These benchmarks were performed by the upstream Coroot project on the upstream agents (coroot-node-agent and coroot-cluster-agent),
+which shards-node-agent and shards-cluster are forked from. Version numbers below refer to the upstream releases.
+:::
+
+
+* [eBPF-based monitoring](#ebpf-based-monitoring): the impact of shards-node-agent on an application serving 10,000 requests per second.
+* [MySQL instrumentation](#mysql-instrumentation): the impact of shards-cluster on a busy MySQL server with 10,000 tables.
+* [Postgres instrumentation](#postgres-instrumentation): the impact of shards-cluster on a busy Postgres server with 100 databases and 10,000 tables.
+* [MongoDB instrumentation](#mongodb-instrumentation): the impact of shards-cluster on a busy MongoDB server with 100 databases and 10,000 collections.
 
 ## eBPF-based monitoring
 
-Coroot leverages eBPF to collect telemetry data, such as metrics and traces.
+shards leverages eBPF to collect telemetry data, such as metrics and traces.
 This approach involves running small observer programs in the kernel space.
 The Linux kernel guarantees that eBPF programs will not significantly interrupt kernel code execution by verifying each program before it runs:
 a program must have a finite complexity, and the verifier evaluates all possible execution paths within the configured complexity limit.
@@ -65,30 +71,30 @@ taskset -c 2-3 go run app.go
 
 It's important to note that tests for maximum throughput can be impacted by any additional CPU-consuming processes on the node. 
 Our approach involves measuring a baseline latency under a fixed number of requests per second (10,000 RPS) and then repeating 
-the experiment with the Coroot's agent enabled.
+the experiment with the shards agent enabled.
 
 ```bash
 # threads:4, connections: 100, test duration: 5 minute, CPU cores #4-7
 docker run --rm --cpuset-cpus 4-7 -ti cylab/wrk2 -t4 -c100 -d300s -R10000 --u_latency http://172.17.0.1:8090/
 ```
 
-#### coroot-node-agent
+#### shards-node-agent
 
 ```bash
 # CPU cores #0-1
-docker run -d --name coroot-node-agent \
+docker run -d --name shards-node-agent \
   --cpuset-cpus 0-1 \
   --privileged --pid host \
   -v /sys/kernel/debug:/sys/kernel/debug:rw \
   -v /sys/fs/cgroup:/host/sys/fs/cgroup:ro \
-  ghcr.io/coroot/coroot-node-agent --cgroupfs-root=/host/sys/fs/cgroup
+  ghcr.io/damaged0ne/shards-node-agent --cgroupfs-root=/host/sys/fs/cgroup
 ```
 
 ### Test Results
 
 ![Agent Performance Test](/img/docs/agent_performance_test.png)
 
-The latency difference with and without coroot-node-agent enabled falls within the margin of measurement error. 
+The latency difference with and without shards-node-agent enabled falls within the margin of measurement error. 
 During the test the agent consumed 200m CPU (20% of one CPU core).
 
 It's essential to understand that eBPF ensures that the observer program cannot impact kernel operations, 
@@ -98,17 +104,17 @@ In other words, this might result in some statistics not being entirely accurate
 
 ### Conclusion
 
-If you are running loads around 10,000 requests per second, you can be confident that Coroot will have no noticeable 
-impact on your application's performance or response time. In this scenario, the Coroot agent's CPU consumption will 
+If you are running loads around 10,000 requests per second, you can be confident that shards will have no noticeable 
+impact on your application's performance or response time. In this scenario, the shards agent's CPU consumption will 
 be approximately 20% of a single CPU core.
 
 If your workloads are significantly larger, we highly recommend conducting a similar load test. 
-The Coroot team is here to assist you with this, please feel free to reach out to us.
+The shards team is here to assist you with this, please feel free to reach out to us.
 
 ## MySQL instrumentation
 
 eBPF shows how a database behaves from the outside, but explaining *why* it is slow requires data from the inside.
-For [MySQL](/databases/mysql), coroot-cluster-agent gets it the same way a DBA would: it connects as a regular client and periodically
+For [MySQL](/databases/mysql), shards-cluster gets it the same way a DBA would: it connects as a regular client and periodically
 reads `performance_schema`, `information_schema` and the server status. These are ordinary SQL queries competing for the same resources as
 your application, so we tested them where they hurt the most - on a loaded server with thousands of tables - and measured the
 latency of application queries, the extra resources consumed by MySQL, and the footprint of the agent itself.
@@ -121,7 +127,7 @@ latency of application queries, the extra resources consumed by MySQL, and the f
   a fixed **500 transactions / 10,000 queries per second**, roughly half of what this server can handle.
 * **coroot-cluster-agent 1.11.3** on a separate machine, with the default settings: a 15-second scrape interval, and query, table I/O, schema and size tracking enabled.
   The monitoring user has the [recommended permissions](/databases/mysql#prerequisites).
-* **coroot-node-agent** on every machine. It stays enabled throughout the test and serves as the measuring tool: query latency is captured by eBPF
+* **shards-node-agent** on every machine. It stays enabled throughout the test and serves as the measuring tool: query latency is captured by eBPF
   on the client side, and the CPU and memory usage of `mysqld` and the agent come from container metrics.
 
 ```bash
@@ -179,11 +185,11 @@ Their cost is driven by the number of tables and statement digests rather than b
 | `information_schema.columns`, `statistics`, `tables`, `key_column_usage` (schema and size tracking) | every minute | 73,889 | 673ms in total |
 | everything else (server status and variables, lock waits, etc.) | every scrape | -            | ~20ms in total |
 
-#### coroot-cluster-agent resource usage
+#### shards-cluster resource usage
 
-<img alt="CPU usage of coroot-cluster-agent during the test" src="/img/docs/databases/mysql/overhead_agent_cpu.png" class="card w-800"/>
+<img alt="CPU usage of shards-cluster during the test" src="/img/docs/databases/mysql/overhead_agent_cpu.png" class="card w-800"/>
 
-<img alt="Memory usage of coroot-cluster-agent during the test" src="/img/docs/databases/mysql/overhead_agent_memory.png" class="card w-800"/>
+<img alt="Memory usage of shards-cluster during the test" src="/img/docs/databases/mysql/overhead_agent_memory.png" class="card w-800"/>
 
 | Phase                     | 1 (off) | 2 (on) | 3 (off) | 4 (on) | 5 (off) | 6 (on) |
 |---------------------------|---------|--------|---------|--------|---------|--------|
@@ -200,14 +206,14 @@ On a MySQL server with 100 databases, 10,000 tables, 500 client connections and 
 
 * enabling the instrumentation has **no measurable impact on the latency** of application queries;
 * MySQL spends about **0.07 CPU cores** (+2%) on the agent's queries, with no additional memory usage or disk I/O;
-* coroot-cluster-agent consumes about **0.01 CPU cores and less than 120MB of memory**.
+* shards-cluster consumes about **0.01 CPU cores and less than 120MB of memory**.
 
 If the defaults are still too heavy for your environment (for example, a server with hundreds of thousands of tables), schema and size tracking can be
 limited or turned off, and the scrape interval can be increased. See [what data is collected](/databases/mysql#what-data-is-collected) for the available options.
 
 ## Postgres instrumentation
 
-For [Postgres](/databases/postgres), coroot-cluster-agent reads `pg_stat_statements`, `pg_stat_activity` and other statistics views over a single connection to the `postgres` database.
+For [Postgres](/databases/postgres), shards-cluster reads `pg_stat_statements`, `pg_stat_activity` and other statistics views over a single connection to the `postgres` database.
 In addition, once a minute it briefly connects to **every database** on the server to track table sizes, schema changes, bloat and autovacuum statistics.
 This makes a server with many databases the most demanding case for the agent, so that is what we tested, using the same method as in the MySQL benchmark above.
 
@@ -219,7 +225,7 @@ This makes a server with many databases the most demanding case for the agent, s
   a fixed **800 transactions / 16,000 queries per second**, roughly half of what this server can handle.
 * **coroot-cluster-agent 1.11.3** on a separate machine, with the default settings: a 15-second scrape interval, and schema, size and bloat tracking enabled.
   The monitoring role has the [recommended permissions](/databases/postgres#prerequisites) (`pg_monitor`).
-* **coroot-node-agent** on every machine as the measuring tool: query latency is captured by eBPF on the client side,
+* **shards-node-agent** on every machine as the measuring tool: query latency is captured by eBPF on the client side,
   and the CPU and memory usage of Postgres and the agent come from container metrics.
 
 ```bash
@@ -274,11 +280,11 @@ about 970 statements per minute with a total execution time of **6.6 seconds per
 
 In other words, the per-database part takes about 60ms per database, or 6 seconds per minute for 100 databases, and accounts for most of the cost.
 
-#### coroot-cluster-agent resource usage
+#### shards-cluster resource usage
 
-<img alt="CPU usage of coroot-cluster-agent during the test" src="/img/docs/databases/postgres/overhead_agent_cpu.png" class="card w-800"/>
+<img alt="CPU usage of shards-cluster during the test" src="/img/docs/databases/postgres/overhead_agent_cpu.png" class="card w-800"/>
 
-<img alt="Memory usage of coroot-cluster-agent during the test" src="/img/docs/databases/postgres/overhead_agent_memory.png" class="card w-800"/>
+<img alt="Memory usage of shards-cluster during the test" src="/img/docs/databases/postgres/overhead_agent_memory.png" class="card w-800"/>
 
 | Phase                     | 1 (off) | 2 (on) | 3 (off) | 4 (on) | 5 (off) | 6 (on) |
 |---------------------------|---------|--------|---------|--------|---------|--------|
@@ -295,16 +301,16 @@ On a Postgres server with 100 databases, 10,000 tables, 500 client connections a
 
 * enabling the instrumentation has **no measurable impact on the latency** of application queries;
 * the additional CPU usage of Postgres is **below the measurement noise**: the agent's queries take about 6.6 seconds of execution time per minute;
-* coroot-cluster-agent consumes about **0.05 CPU cores and less than 310MB of memory**.
+* shards-cluster consumes about **0.05 CPU cores and less than 310MB of memory**.
 
 The cost grows with the number of databases rather than with the query rate. If the defaults are too heavy for your environment, schema, size and bloat tracking can be
 limited or turned off, and the scrape interval can be increased. See [what data is collected](/databases/postgres#what-data-is-collected) for the available options.
 
 ## MongoDB instrumentation
 
-For [MongoDB](/databases/mongodb), coroot-cluster-agent collects most of the metrics from in-memory counters (`serverStatus`, `replSetGetStatus`, `$currentOp`), which is cheap.
+For [MongoDB](/databases/mongodb), shards-cluster collects most of the metrics from in-memory counters (`serverStatus`, `replSetGetStatus`, `$currentOp`), which is cheap.
 The only expensive statistics are collection storage stats (`$collStats`): they cost MongoDB a few milliseconds *per collection*, no matter how small the collection is.
-Since Coroot only needs the largest and the fastest-growing collections, the agent doesn't walk all of them. On each round it looks at
+Since shards only needs the largest and the fastest-growing collections, the agent doesn't walk all of them. On each round it looks at
 the collections with the most writes (according to the `top` command) and the collections of the largest databases, up to 500 collections in total.
 Index definitions of all collections are fetched with a single `$listCatalog` aggregation.
 We tested this on a server with 10,000 collections, using the same method as in the benchmarks above.
@@ -317,9 +323,9 @@ We tested this on a server with 10,000 collections, using the same method as in 
 * **Load**: a load generator modeled after the `oltp_read_write` scenario of `sysbench`. Each event consists of 18 operations on a random collection:
   10 point reads, 4 range reads, 2 updates, a delete and an insert. 100 clients (one per database) on two other machines hold 500 connections and execute
   a fixed **400 events / 7,200 operations per second**. 20% of the documents are "hot", so the working set fits into the cache.
-* **coroot-cluster-agent** on a separate machine, with the default settings: a 15-second scrape interval, and collection size and index change tracking enabled.
+* **shards-cluster** on a separate machine, with the default settings: a 15-second scrape interval, and collection size and index change tracking enabled.
   The monitoring user has the [recommended permissions](/databases/mongodb#prerequisites), including the optional role for index change tracking.
-* **coroot-node-agent** on every machine as the measuring tool: query latency is captured by eBPF on the client side,
+* **shards-node-agent** on every machine as the measuring tool: query latency is captured by eBPF on the client side,
   and the CPU and memory usage of `mongod` and the agent come from container metrics.
 
 The test runs four 15-minute phases under the same load, with the instrumentation alternately disabled and enabled.
@@ -366,11 +372,11 @@ All commands are executed sequentially over a single connection:
 
 Collection tracking adds up to a few hundred commands per minute (about 350 in this test) regardless of the number of collections. Walking all 10,000 collections would take 20,000 commands and more than 30 seconds of execution time every minute.
 
-#### coroot-cluster-agent resource usage
+#### shards-cluster resource usage
 
-<img alt="CPU usage of coroot-cluster-agent during the test" src="/img/docs/databases/mongodb/overhead_agent_cpu.png" class="card w-800"/>
+<img alt="CPU usage of shards-cluster during the test" src="/img/docs/databases/mongodb/overhead_agent_cpu.png" class="card w-800"/>
 
-<img alt="Memory usage of coroot-cluster-agent during the test" src="/img/docs/databases/mongodb/overhead_agent_memory.png" class="card w-800"/>
+<img alt="Memory usage of shards-cluster during the test" src="/img/docs/databases/mongodb/overhead_agent_memory.png" class="card w-800"/>
 
 | Phase                     | 1 (off) | 2 (on) | 3 (off) | 4 (on) |
 |---------------------------|---------|--------|---------|--------|
@@ -386,7 +392,7 @@ On a MongoDB server with 100 databases, 10,000 collections, 500 client connectio
 
 * enabling the instrumentation has **no measurable impact on the latency** of application queries;
 * the additional CPU usage of `mongod` is **below the measurement noise**, with no additional memory usage;
-* coroot-cluster-agent consumes about **0.015 CPU cores and less than 60MB of memory**.
+* shards-cluster consumes about **0.015 CPU cores and less than 60MB of memory**.
 
 Note that this benchmark doesn't cover the cost of the MongoDB profiler itself: it was enabled during all phases, as writing profile entries
 is performed by `mongod` regardless of whether anything reads them. See [Prerequisites](/databases/mongodb#prerequisites) for how to keep it low.

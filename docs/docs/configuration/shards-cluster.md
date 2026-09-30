@@ -2,23 +2,23 @@
 sidebar_position: 12
 ---
 
-# Coroot-cluster-agent
+# shards-cluster
 
-Coroot-cluster-agent connects to Coroot to receive configuration and collects cluster-level telemetry data,
+shards-cluster connects to shards to receive configuration and collects cluster-level telemetry data,
 including metrics from databases, Kubernetes state metrics, and Kubernetes events.
 
 ## Cluster Agent Configuration
 
-You can configure coroot-cluster-agent using command-line flags or environment variables.
+You can configure shards-cluster using command-line flags or environment variables.
 
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
 | `--listen` | `LISTEN` | `127.0.0.1:10301` | Listen address - ip:port or :port |
-| `--coroot-url` | `COROOT_URL` | – | Coroot URL (required) |
-| `--api-key` | `API_KEY` | – | Coroot API key |
-| `--config-update-interval` | `CONFIG_UPDATE_INTERVAL` | `60s` | Interval between configuration updates from Coroot |
+| `--coroot-url` | `COROOT_URL` | – | shards URL (required) |
+| `--api-key` | `API_KEY` | – | shards API key |
+| `--config-update-interval` | `CONFIG_UPDATE_INTERVAL` | `60s` | Interval between configuration updates from shards |
 | `--config-update-timeout` | `CONFIG_UPDATE_TIMEOUT` | `10s` | Timeout for configuration update requests |
-| `--config-file` | `CONFIG_FILE` | – | Path to a YAML file with static configuration (see [Configuration file](#configuration-file)), merged with the configuration received from Coroot |
+| `--config-file` | `CONFIG_FILE` | – | Path to a YAML file with static configuration (see [Configuration file](#configuration-file)), merged with the configuration received from shards |
 | `--metrics-scrape-interval` | `METRICS_SCRAPE_INTERVAL` | – | Interval between metrics scrapes |
 | `--metrics-scrape-timeout` | `METRICS_SCRAPE_TIMEOUT` | `10s` | Timeout for metrics scrape requests |
 | `--metrics-wal-dir` | `METRICS_WAL_DIR` | `/tmp` | Directory for the metrics write-ahead log |
@@ -39,13 +39,13 @@ You can configure coroot-cluster-agent using command-line flags or environment v
 
 ## Configuration file
 
-Besides the configuration it receives from Coroot, the agent can read a static YAML file given by `--config-file`.
+Besides the configuration it receives from shards, the agent can read a static YAML file given by `--config-file`.
 This is how the [Kubernetes Operator](/installation/k8s-operator) passes the `clusterAgent.aws` and
 `clusterAgent.databases` sections of the Coroot custom resource to the agent. Environment variable references
 (`${VAR}`) in the file are expanded when it is read, so credentials can be kept out of the file.
 
 ```yaml
-# AWS integration settings. When present, they replace the settings made in the Coroot UI.
+# AWS integration settings. When present, they replace the settings made in the shards UI.
 aws:
   region: us-east-1               # Optional: defaults to the region the agent runs in.
   accessKeyId: ${AWS_KEY_ID}      # Optional: leave both keys out to use the IAM role of the pod or the EC2 instance profile.
@@ -72,34 +72,34 @@ oci:
   dbTagFilters: {team: payments}
   cacheTagFilters: {}
 
-# Databases to collect metrics from, in addition to those configured in Coroot. Exactly one of host, rds, elasticache, cloudsql, memorystore, ocidb or ocicache per entry.
+# Databases to collect metrics from, in addition to those configured in shards. Exactly one of host, rds, elasticache, cloudsql, memorystore, ocidb or ocicache per entry.
 databases:
   - type: postgres                # postgres, mysql, redis, memcached or mongodb.
     rds: my-db                    # An RDS instance discovered by the AWS integration: its endpoint is used.
-    credentials: {username: coroot, password: ${PG_PASSWORD}}
+    credentials: {username: shards, password: ${PG_PASSWORD}}
     params: {sslmode: require}
   - type: redis
     elasticache: my-cache         # An ElastiCache cluster: every node is monitored.
   - type: postgres
     cloudsql: my-db               # A Cloud SQL instance discovered by the GCP integration.
-    credentials: {username: coroot, password: ${PG_PASSWORD}}
+    credentials: {username: shards, password: ${PG_PASSWORD}}
     params: {sslmode: require}
   - type: redis
     memorystore: my-cache         # A Memorystore instance discovered by the GCP integration.
   - type: mysql
     ocidb: my-db                  # A DB system discovered by the OCI integration.
     credentials:
-      username: coroot
+      username: shards
       password: ${MYSQL_PASSWORD}
   - type: redis
     ocicache: my-cache            # An OCI Cache cluster discovered by the OCI integration.
   - type: mysql
     host: mysql.example.internal  # Re-resolved on every configuration update; every resolved IP address is monitored.
     port: "3306"
-    credentials: {username: coroot, password: ${MYSQL_PASSWORD}}
+    credentials: {username: shards, password: ${MYSQL_PASSWORD}}
 ```
 
-Targets defined in the file take precedence over the same `ip:port` targets configured in Coroot. Metrics are
+Targets defined in the file take precedence over the same `ip:port` targets configured in shards. Metrics are
 attributed to applications by address, so a database configured here shows up under the RDS, ElastiCache, or external
-service application that Coroot already sees clients connecting to.
+service application that shards already sees clients connecting to.
 

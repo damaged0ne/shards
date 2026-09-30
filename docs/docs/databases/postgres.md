@@ -4,25 +4,25 @@ sidebar_position: 1
 
 # Postgres
 
-Coroot leverages eBPF to monitor Postgres queries between applications and databases, requiring no additional integration. 
+shards leverages eBPF to monitor Postgres queries between applications and databases, requiring no additional integration. 
 While this approach provides a high-level view of database performance, it lacks the visibility needed to understand why issues occur within the database internals.
 
-To bridge this gap, Coroot also collects statistics from Postgres system views such as `pg_stat_statements` and `pg_stat_activity`, complementing the eBPF-based metrics and traces.
+To bridge this gap, shards also collects statistics from Postgres system views such as `pg_stat_statements` and `pg_stat_activity`, complementing the eBPF-based metrics and traces.
 
 ## Prerequisites
 
 This integration requires a database user with the `pg_monitor` role and the `pg_stat_statements` extension enabled.
 
 ```sql
-CREATE ROLE coroot WITH LOGIN PASSWORD '<PASSWORD>';
-GRANT pg_monitor TO coroot;
+CREATE ROLE shards WITH LOGIN PASSWORD '<PASSWORD>';
+GRANT pg_monitor TO shards;
 CREATE EXTENSION pg_stat_statements;
 ```
 
 The `pg_stat_statements` extension must be loaded via the `shared_preload_libraries` server setting.
 
 :::tip
-Enable `track_io_timing` so Coroot can attribute disk I/O to specific queries. Without it, the per-query I/O time reported by `pg_stat_statements` is always zero.
+Enable `track_io_timing` so shards can attribute disk I/O to specific queries. Without it, the per-query I/O time reported by `pg_stat_statements` is always zero.
 
 ```sql
 ALTER SYSTEM SET track_io_timing = on;
@@ -31,14 +31,14 @@ SELECT pg_reload_conf();
 
 Make sure the setting is persisted in the server configuration so it survives restarts. `ALTER SYSTEM` writes to `postgresql.auto.conf`, but if your Postgres is managed by an operator or a cloud provider (e.g., CloudNativePG, RDS), set `track_io_timing` in that platform's configuration instead — a runtime change may be reverted on the next restart or reconciliation.
 
-Coroot shows a reminder on the Postgres page when this setting is off. `track_io_timing` adds negligible overhead on modern systems where the OS provides a fast clock source.
+shards shows a reminder on the Postgres page when this setting is off. `track_io_timing` adds negligible overhead on modern systems where the OS provides a fast clock source.
 :::
 
 ### Required privileges explained
 
 **pg_monitor role**
 
-The `pg_monitor` role includes `pg_read_all_stats` and `pg_read_all_settings`, which grant read access to all the monitoring views Coroot uses:
+The `pg_monitor` role includes `pg_read_all_stats` and `pg_read_all_settings`, which grant read access to all the monitoring views shards uses:
 - `pg_settings` - server configuration.
 - `pg_stat_statements` - query performance statistics (requires the extension).
 - `pg_stat_activity` - current connections, active queries, and lock information.
@@ -47,21 +47,21 @@ The `pg_monitor` role includes `pg_read_all_stats` and `pg_read_all_settings`, w
 
 **Connection to the postgres database**
 
-Coroot connects to the `postgres` database by default. For schema and size tracking, it also connects to each user database individually (Postgres isolates catalog data per database).
+shards connects to the `postgres` database by default. For schema and size tracking, it also connects to each user database individually (Postgres isolates catalog data per database).
 
 **Schema and size tracking**
 
-Schema tracking queries `pg_catalog` system catalogs (`pg_class`, `pg_namespace`, `pg_attribute`, `pg_attrdef`, `pg_constraint`, `pg_indexes`) and calls `pg_total_relation_size()` for table sizes. The `pg_monitor` role provides sufficient access to these catalogs. Coroot connects to each user database to read its schema, so the monitoring user must have `CONNECT` privilege on the databases it should track (granted to `PUBLIC` by default in Postgres).
+Schema tracking queries `pg_catalog` system catalogs (`pg_class`, `pg_namespace`, `pg_attribute`, `pg_attrdef`, `pg_constraint`, `pg_indexes`) and calls `pg_total_relation_size()` for table sizes. The `pg_monitor` role provides sufficient access to these catalogs. shards connects to each user database to read its schema, so the monitoring user must have `CONNECT` privilege on the databases it should track (granted to `PUBLIC` by default in Postgres).
 
 :::note
-All access is **read-only**. Coroot never modifies any data, schema, or configuration on your Postgres server.
+All access is **read-only**. shards never modifies any data, schema, or configuration on your Postgres server.
 :::
 
 ## What data is collected
 
 ### Server version and settings
 
-**Always collected.** Coroot reads `pg_settings` on each scrape to collect:
+**Always collected.** shards reads `pg_settings` on each scrape to collect:
 
 - **`server_version`** - identify the instance.
 - All settings with integer, real, or boolean values are exported as metrics (e.g., `max_connections`, `shared_buffers`, `work_mem`).
@@ -71,14 +71,14 @@ All access is **read-only**. Coroot never modifies any data, schema, or configur
 
 **Enabled by default.** Controlled by `--track-database-changes` / `TRACK_DATABASE_CHANGES` (default: `true`).
 
-Coroot compares successive `pg_settings` snapshots to detect configuration changes and surfaces them in the change timeline. Session-level and client-level overrides are excluded from tracking.
+shards compares successive `pg_settings` snapshots to detect configuration changes and surfaces them in the change timeline. Session-level and client-level overrides are excluded from tracking.
 
 ### Query performance
 
-**Always collected.** Coroot reads `pg_stat_statements` (joined with `pg_roles` and `pg_database`) to get per-query statistics:
+**Always collected.** shards reads `pg_stat_statements` (joined with `pg_roles` and `pg_database`) to get per-query statistics:
 
 - **`datname`**, **`rolname`** - associate queries with a database and user.
-- **`query`** - normalized query text. Postgres replaces literal values with parameter placeholders (e.g., `SELECT * FROM users WHERE id = $1`), and Coroot performs additional obfuscation to ensure that sensitive query arguments never appear in the collected telemetry data.
+- **`query`** - normalized query text. Postgres replaces literal values with parameter placeholders (e.g., `SELECT * FROM users WHERE id = $1`), and shards performs additional obfuscation to ensure that sensitive query arguments never appear in the collected telemetry data.
 - **`queryid`** - unique identifier for the normalized query.
 - **`calls`** - query execution rate (calls/sec).
 - **`total_plan_time + total_exec_time`** - total execution time rate (seconds/sec). On Postgres < 13, uses `total_time`.
@@ -88,7 +88,7 @@ The top 20 queries by execution time are reported each scrape interval.
 
 ### Connections and locks
 
-**Always collected.** Coroot reads `pg_stat_activity` (joined with `pg_database`) to collect:
+**Always collected.** shards reads `pg_stat_activity` (joined with `pg_database`) to collect:
 
 - **`datname`**, **`usename`**, **`state`**, **`wait_event_type`** - connection counts broken down by database, user, state, and wait event type.
 - **`query`**, **`query_start`** - active query text and start time for latency estimation.
@@ -99,7 +99,7 @@ Query text from `pg_stat_activity` is also obfuscated before being stored.
 
 ### Replication status
 
-**Always collected.** Coroot calls `pg_is_in_recovery()` to determine the instance role and then collects:
+**Always collected.** shards calls `pg_is_in_recovery()` to determine the instance role and then collects:
 
 On a **primary**:
 - **`pg_current_wal_lsn()`** - current WAL write position.
@@ -115,7 +115,7 @@ On Postgres < 10, the older `xlog` function names are used automatically.
 
 ### Checkpoints and background writer
 
-**Always collected.** Coroot tracks checkpoint activity to spot checkpoints that fall behind and to estimate crash-recovery time:
+**Always collected.** shards tracks checkpoint activity to spot checkpoints that fall behind and to estimate crash-recovery time:
 
 - **`pg_stat_checkpointer`** (Postgres >= 17; **`pg_stat_bgwriter`** on older versions) - checkpoints by trigger (timed vs. requested by `max_wal_size`), completed restartpoints on replicas (Postgres >= 17), and buffers written by the checkpointer.
 - **`pg_control_checkpoint()`** - WAL written since the last checkpoint (how much must be replayed after a crash) and time since the last checkpoint.
@@ -135,7 +135,7 @@ Metrics: `pg_wal_throughput`, `pg_wal_size_bytes`, `pg_wal_archived_segments_tot
 
 ### Transaction ID age (wraparound)
 
-**Always collected.** Coroot monitors how close each database is to transaction-ID and multixact wraparound, and attributes the oldest un-freezable transaction to what is holding it back:
+**Always collected.** shards monitors how close each database is to transaction-ID and multixact wraparound, and attributes the oldest un-freezable transaction to what is holding it back:
 
 - **`pg_database`** - `age(datfrozenxid)` and `mxid_age(datminmxid)` per database.
 - **Oldest xmin holder** (Postgres >= 10) - a running query, a standby (`walsender`), a replication slot, or a prepared transaction - so you can see what is preventing vacuum from advancing the freeze horizon.
@@ -146,7 +146,7 @@ Metrics: `pg_xid_age`, `pg_multixact_age`, `pg_oldest_xmin_age`.
 
 **Enabled by default.** Controlled by `--track-database-bloat` / `TRACK_DATABASE_BLOAT` (default: `true`).
 
-Coroot estimates wasted space (bloat) for tables and indexes from planner statistics (`pg_class.reltuples`/`relpages` and `pg_stats` column widths), without scanning table data. Because it relies on statistics, keep autovacuum/`ANALYZE` current for accurate results — the estimates are approximate.
+shards estimates wasted space (bloat) for tables and indexes from planner statistics (`pg_class.reltuples`/`relpages` and `pg_stats` column widths), without scanning table data. Because it relies on statistics, keep autovacuum/`ANALYZE` current for accurate results — the estimates are approximate.
 
 This is collected on a slower interval than the basic per-scrape metrics (alongside schema and size tracking), and respects `--max-tables-per-database` and `--exclude-databases`. Only the top tables and indexes by estimated bloat are reported per database. TOAST relations are excluded.
 
@@ -156,7 +156,7 @@ Metrics: `pg_db_table_bloat_bytes`, `pg_db_index_bloat_bytes`, `pg_table_bloat_b
 
 **Enabled by default.** Collected with size tracking (`--track-database-sizes`).
 
-Coroot reports **dead rows** — row versions left behind by `UPDATE`/`DELETE` that vacuum has not yet reclaimed — per table (top tables only). This is the leading indicator that **autovacuum is falling behind**, and it is distinct from bloat (dead rows are reclaimed by `VACUUM` for reuse; bloat is the accumulated space only `pg_repack`/`VACUUM FULL` return to the OS).
+shards reports **dead rows** — row versions left behind by `UPDATE`/`DELETE` that vacuum has not yet reclaimed — per table (top tables only). This is the leading indicator that **autovacuum is falling behind**, and it is distinct from bloat (dead rows are reclaimed by `VACUUM` for reuse; bloat is the accumulated space only `pg_repack`/`VACUUM FULL` return to the OS).
 
 The "Postgres autovacuum" check uses two signals that each cover the other's blind spot:
 
@@ -201,7 +201,7 @@ Metrics: `pg_table_mods_since_analyze`, `pg_table_reltuples`, `pg_table_seconds_
 
 **Enabled by default.** Controlled by `--track-database-changes` / `TRACK_DATABASE_CHANGES` (default: `true`).
 
-Coroot connects to each user database and queries `pg_catalog` to reconstruct table DDL and detect schema changes over time:
+shards connects to each user database and queries `pg_catalog` to reconstruct table DDL and detect schema changes over time:
 
 - **`pg_class`** + **`pg_namespace`** + **`pg_attribute`** + **`pg_attrdef`** - column name, data type, nullability, default value.
 - **`pg_constraint`** - primary keys, foreign keys, unique constraints, check constraints.
@@ -213,7 +213,7 @@ System schemas (`pg_catalog`, `information_schema`) are excluded.
 
 **Enabled by default.** Controlled by `--track-database-sizes` / `TRACK_DATABASE_SIZES` (default: `true`).
 
-Coroot reads `pg_database_size()` for per-database sizes and `pg_total_relation_size()` (via `pg_class`) for per-table sizes including indexes and TOAST data. Template databases and databases that don't allow connections are skipped.
+shards reads `pg_database_size()` for per-database sizes and `pg_total_relation_size()` (via `pg_class`) for per-table sizes including indexes and TOAST data. Template databases and databases that don't allow connections are skipped.
 
 ### Common options for schema, size, and bloat tracking
 
@@ -230,7 +230,7 @@ Each capability can be toggled independently:
 
 ## Performance impact
 
-Coroot collects most of the statistics over a single persistent connection to the `postgres` database. Once a minute it also connects to each database,
+shards collects most of the statistics over a single persistent connection to the `postgres` database. Once a minute it also connects to each database,
 one at a time, for schema, size and bloat tracking, so the agent never runs more than one query at a time.
 
 We benchmarked the integration on a Postgres 18 server with 100 databases, 10,000 tables and 500 client connections executing 16,000 queries per second.
@@ -238,7 +238,7 @@ With the default agent settings (15-second scrape interval; schema, size and blo
 
 - the latency of application queries did not change when the instrumentation was switched on and off;
 - the additional CPU usage of Postgres was below the measurement noise: the agent's queries took about 6.6 seconds of execution time per minute;
-- coroot-cluster-agent consumed about 0.05 CPU cores and less than 310MB of memory.
+- shards-cluster consumed about 0.05 CPU cores and less than 310MB of memory.
 
 See [Performance Impact](/installation/performance-impact#postgres-instrumentation) for the lab setup and detailed results.
 
@@ -246,17 +246,17 @@ See [Performance Impact](/installation/performance-impact#postgres-instrumentati
 
 The Kubernetes approach to monitoring databases typically involves running metric exporters as sidecar containers within database instance Pods.
 However, this method can be challenging for certain use cases.
-Coroot has a dedicated coroot-cluster-agent that can discover and gather metrics from databases without requiring a separate container for each database instance.
+shards has a dedicated cluster agent (shards-cluster) that can discover and gather metrics from databases without requiring a separate container for each database instance.
 
-Coroot-cluster-agent automatically discovers and collects metrics from pods annotated with `coroot.com/postgres-scrape` annotations.
-Coroot can retrieve database credentials from a Secret or be configured with plain-text credentials.
+shards-cluster automatically discovers and collects metrics from pods annotated with `coroot.com/postgres-scrape` annotations.
+shards can retrieve database credentials from a Secret or be configured with plain-text credentials.
 
 ```yaml
 coroot.com/postgres-scrape: "true"
 coroot.com/postgres-scrape-port: "5432"
 
 # plain-text credentials
-coroot.com/postgres-scrape-credentials-username: "coroot"
+coroot.com/postgres-scrape-credentials-username: "shards"
 coroot.com/postgres-scrape-credentials-password: "<PASSWORD>"
 
 # credentials from a secret
@@ -277,7 +277,7 @@ coroot.com/postgres-scrape-tls-secret-cert-key: "tls.crt"
 coroot.com/postgres-scrape-tls-secret-key-key: "tls.key"
 ```
 
-Note that Coroot checks only **Pod** annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
+Note that shards checks only **Pod** annotations, not higher-level Kubernetes objects like Deployments or StatefulSets.
 
 ### CloudNativePG (CNPG)
 
@@ -313,7 +313,7 @@ spec:
 ### Percona Operator for PostgreSQL
 
 Put the annotations on `spec.instances[].metadata`, **not** `spec.metadata`, which would also
-annotate the PgBouncer Pods and would make Coroot try to scrape them as Postgres. A few operator
+annotate the PgBouncer Pods and would make shards try to scrape them as Postgres. A few operator
 specifics:
 
 - The monitoring user's Secret is named `<cluster>-pguser-<user>` and its keys are `user` and
@@ -324,7 +324,7 @@ specifics:
   grant `pg_monitor` to the role manually.
 - `pg_stat_statements` is enabled via `extensions.builtin`. This adds it to
   `shared_preload_libraries` and creates the extension in the app and `template1` databases but
-  not the `postgres` maintenance database Coroot connects to. Run `CREATE EXTENSION pg_stat_statements;`
+  not the `postgres` maintenance database shards connects to. Run `CREATE EXTENSION pg_stat_statements;`
   in `postgres` once if the per-query stats are missing.
 
 ```yaml
@@ -350,13 +350,13 @@ spec:
         annotations:
           coroot.com/postgres-scrape: "true"
           coroot.com/postgres-scrape-param-sslmode: "require"
-          coroot.com/postgres-scrape-credentials-secret-name: "pg-app-pguser-coroot"
+          coroot.com/postgres-scrape-credentials-secret-name: "pg-app-pguser-shards"
           coroot.com/postgres-scrape-credentials-secret-username-key: "user"
           coroot.com/postgres-scrape-credentials-secret-password-key: "password"
   users:
     # dedicated monitoring user. spec.users is reconciled continuously, so the operator
     # creates/updates it on an already-running cluster too.
-    - name: coroot
+    - name: shards
       databases:
         - postgres
       options: "SUPERUSER"
@@ -393,18 +393,18 @@ spec:
   volume:
     size: 10Gi
   users:
-    coroot:
+    shards:
       - superuser
       - login
   podAnnotations:
     coroot.com/postgres-scrape: "true"
     coroot.com/postgres-scrape-param-sslmode: "require"
-    coroot.com/postgres-scrape-credentials-secret-name: "coroot.acid-app.credentials.postgresql.acid.zalan.do"
+    coroot.com/postgres-scrape-credentials-secret-name: "shards.acid-app.credentials.postgresql.acid.zalan.do"
     coroot.com/postgres-scrape-credentials-secret-username-key: "username"
     coroot.com/postgres-scrape-credentials-secret-password-key: "password"
 ```
 
-CloudNativePG and the Percona Operator also expose backup state to Coroot automatically, with no
+CloudNativePG and the Percona Operator also expose backup state to shards automatically, with no
 extra configuration beyond the operator's own backup setup (see
 [Postgres backups](/metrics/cluster-agent#postgres-backups)). The Zalando operator does not expose
 its WAL-G backup state in any Kubernetes resource, so for Zalando clusters backup health is
@@ -412,8 +412,8 @@ covered by the WAL archiving check rather than the Backups section.
 
 ## Non-Kubernetes environments
 
-In non-Kubernetes environments, the Postgres integration can be enabled via the Coroot UI.
-In this setup, coroot-cluster-agent retrieves Postgres instance credentials from the Coroot configuration storage.
+In non-Kubernetes environments, the Postgres integration can be enabled via the shards UI.
+In this setup, shards-cluster retrieves Postgres instance credentials from the shards configuration storage.
 
 To configure the integration, go to the `POSTGRES` tab and click the `Configure` button. 
 <img alt="Postgres Configuration" src="/img/docs/databases/postgres/configure.png" class="card w-800"/>
@@ -421,12 +421,12 @@ To configure the integration, go to the `POSTGRES` tab and click the `Configure`
 Then, switch to `Manual Configuration`, complete the form, and click `Save`.
 <img alt="Postgres Manual Configuration" src="/img/docs/databases/postgres/manual.png" class="card w-600"/>
 
-Coroot-cluster-agent updates its configuration every minute and also takes some time to collect metrics.
+shards-cluster updates its configuration every minute and also takes some time to collect metrics.
 Please wait a few minutes for telemetry to appear.
 
 ### Configuration as code
 
-When Coroot is deployed by the [Kubernetes Operator](/installation/k8s-operator), remote Postgres instances can be
+When shards is deployed by the [Kubernetes Operator](/installation/k8s-operator), remote Postgres instances can be
 declared in the `clusterAgent.databases` section of the Coroot custom resource instead of the UI, with credentials
 referenced from a Kubernetes Secret. A hostname is re-resolved on every configuration update, and every resolved IP
 address is monitored, so DNS-based failover and multi-address names work without changes:
@@ -439,16 +439,16 @@ spec:
         host: db.example.internal        # or `rds: <DBInstanceIdentifier>` (AWS integration) / `cloudsql: <instance name>` (GCP integration) / `ocidb: <display name>` (OCI integration)
         port: "5432"
         credentials:
-          usernameSecret: {name: postgres-coroot, key: username}
-          passwordSecret: {name: postgres-coroot, key: password}
+          usernameSecret: {name: postgres-shards, key: username}
+          passwordSecret: {name: postgres-shards, key: password}
         params:
           sslmode: require               # required by RDS Postgres 15+ and any server with `ssl = on` enforced in pg_hba.conf
 ```
 
-Coroot attributes the collected metrics to the application it sees clients connecting to, by address. Settings in the
+shards attributes the collected metrics to the application it sees clients connecting to, by address. Settings in the
 custom resource take precedence over the UI. Installations without the operator can put the same `databases` list in
-the cluster-agent's [configuration file](/configuration/coroot-cluster-agent#configuration-file).
+the cluster-agent's [configuration file](/configuration/shards-cluster#configuration-file).
 
 ## Troubleshooting
 
-Check the coroot-cluster-agent logs if you encounter any issues.
+Check the shards-cluster logs if you encounter any issues.

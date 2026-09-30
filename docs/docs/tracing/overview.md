@@ -11,7 +11,7 @@ which can help identify performance bottlenecks, latency issues, and errors.
 While most distributed tracing tools are good at visualizing individual request traces, many struggle to provide a 
 comprehensive overview of system performance.
 
-At Coroot, we've addressed this challenge by creating a new interface that allows you to easily explore and understand 
+At shards, we've addressed this challenge by creating a new interface that allows you to easily explore and understand 
 system performance with just a few clicks.
 
 ## Traces overview
@@ -36,7 +36,7 @@ By selecting any area on the chart, we can view relevant traces or even summarie
 <img alt="Tracing Error Reasons" src="/img/docs/tracing_error_reasons.png" class="card w-1200"/>
 
 Now, we're certain that in this specific scenario, 100% of errors were triggered by our intentionally introduced error. 
-It works similarly to manual trace analysis, but Coroot goes a step further by automatically analyzing ALL affected 
+It works similarly to manual trace analysis, but shards goes a step further by automatically analyzing ALL affected 
 requests and pinpointing only those spans where errors originated.
 
 Of course, you still have the option to manually analyze any trace and crosscheck.
@@ -45,7 +45,7 @@ Of course, you still have the option to manually analyze any trace and crosschec
 
 
 ## Attributes comparison
-Another question that may arise is how requests within an anomaly differ from other requests. With Coroot you can 
+Another question that may arise is how requests within an anomaly differ from other requests. With shards you can 
 compare trace attributes within a selected area of the chart with other requests.
 
 This is extremely useful in cases where the system behaves differently when handling requests with specific input data, 
@@ -53,19 +53,19 @@ such as requests from a particular customer or browser type.
 
 <img alt="Tracing Attribute Comparison" src="/img/docs/tracing_attribute_comparison.png" class="card w-1200"/>
 
-As you can see, Coroot has identified that the selected requests have the attribute indicating that the feature flag was enabled. 
+As you can see, shards has identified that the selected requests have the attribute indicating that the feature flag was enabled. 
 The coolest thing here is that this feature works without any configuration, making it applicable for any custom attributes.
 
 ## Slow requests
-With Coroot's HeatMap, it's easy to identify an anomaly in request processing: certain requests are taking longer than usual.
+With shards' HeatMap, it's easy to identify an anomaly in request processing: certain requests are taking longer than usual.
 
 <img alt="Tracing Latency Explorer" src="/img/docs/tracing_latency_explorer.png" class="card w-1200"/>
 
-Instead of manually analyzing each trace within the anomaly, Coroot can analyze ALL of them and automatically compare 
+Instead of manually analyzing each trace within the anomaly, shards can analyze ALL of them and automatically compare 
 operation durations with other requests in just a few seconds.
 
 The screenshot shows a latency FlameGraph. A wider frame means more time is spent on that tracing span. 
-In the comparison mode, Coroot highlights operations in red that take longer than before. 
+In the comparison mode, shards highlights operations in red that take longer than before. 
 This makes it easy to spot changes in the system's behavior at a glance.
 
 ## How it works
@@ -76,7 +76,7 @@ and tooling for collecting and exporting telemetry data.
 
 OpenTelemetry provides SDKs for many popular programming [languages](https://opentelemetry.io/docs/instrumentation/).
 
-At Coroot, we consider [ClickHouse](https://github.com/ClickHouse/ClickHouse) to be the best open-source storage option 
+At shards, we consider [ClickHouse](https://github.com/ClickHouse/ClickHouse) to be the best open-source storage option 
 for traces due to its low-latency querying, effective data compression, and rich SQL interface.
 
 

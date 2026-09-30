@@ -249,6 +249,8 @@ func main() {
 
 	// shards does not phone home: the UI's update check (which called the vendor's cloud) is always off.
 	indexHtml := readIndexHtml(cfg.UrlBasePath, version, instanceUuid, false, cfg.DefaultTimeRange, cfg.DeveloperMode)
+	// unknown API paths (e.g. removed endpoints) must fail cleanly instead of returning the SPA page
+	r.PathPrefix("/api/").HandlerFunc(http.NotFound)
 	r.PathPrefix("").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(indexHtml)
 	})

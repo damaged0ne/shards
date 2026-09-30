@@ -83,9 +83,16 @@ func (api *Api) isConfigServiceAccount(u *db.User) bool {
 	return false
 }
 
+// GetUserByApiKey authenticates a request with a per-user API key, passed either as
+// "Authorization: Bearer <key>" or as "X-Api-Key: <key>". This is how operator agents
+// authenticate against the REST API and the MCP endpoint; the returned user has ApiKey set
+// to the key's description, which is recorded as the agent name in timelines.
 func (api *Api) GetUserByApiKey(r *http.Request) *db.User {
 	key, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if !ok || key == "" {
+		key = r.Header.Get(collector.ApiKeyHeader)
+	}
+	if key == "" {
 		return nil
 	}
 	user, err := api.db.GetUserByApiKey(key)

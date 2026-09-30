@@ -121,6 +121,7 @@ func (db *DB) Migrate(extraTables ...Table) error {
 		&User{},
 		&AlertingRule{},
 		&Alert{},
+		&Comment{},
 	}
 	return db.Migrator().Migrate(append(defaultTables, extraTables...)...)
 }

@@ -120,6 +120,13 @@ var Checks = struct {
 	MysqlGroupReplication      CheckConfig
 	MysqlLatency               CheckConfig
 	MysqlBackups               CheckConfig
+
+	// shards fork
+	DockerContainerHealth   CheckConfig
+	DockerContainerState    CheckConfig
+	DockerContainerRestarts CheckConfig
+	NodeDiskSpace           CheckConfig
+	NodeFilesystemReadonly  CheckConfig
 }{
 	index: map[CheckId]*CheckConfig{},
 
@@ -613,6 +620,49 @@ var Checks = struct {
 		Unit:                    CheckUnitSecond,
 		MessageTemplate:         `backups are failing or stale on {{.Items "mysql cluster"}}`,
 		ConditionFormatTemplate: "no successful backup within <threshold>, the last backup failed, or the scheduled backup is overdue",
+	},
+
+	// shards fork: Docker-level container state and node filesystems reported by the shards node agent
+	DockerContainerHealth: CheckConfig{
+		Category:                AuditReportInstances,
+		Type:                    CheckTypeItemBased,
+		Title:                   "Container health",
+		DefaultThreshold:        0,
+		MessageTemplate:         `{{.ItemsWithToBe "container"}} unhealthy`,
+		ConditionFormatTemplate: "the Docker healthcheck of a container reports unhealthy",
+	},
+	DockerContainerState: CheckConfig{
+		Category:                AuditReportInstances,
+		Type:                    CheckTypeItemBased,
+		Title:                   "Container state",
+		DefaultThreshold:        0,
+		MessageTemplate:         `{{.ItemsWithHave "container"}} stopped abnormally`,
+		ConditionFormatTemplate: "a stopped container was OOM-killed, is dead or exited with a non-zero code (other than 130/143 of a graceful stop)",
+	},
+	DockerContainerRestarts: CheckConfig{
+		Category:                AuditReportInstances,
+		Type:                    CheckTypeEventBased,
+		Title:                   "Docker restarts",
+		DefaultThreshold:        2,
+		MessageTemplate:         `dockerd restarted the containers {{.Count "time"}}`,
+		ConditionFormatTemplate: "the number of container restarts done by dockerd (restart policy) > <threshold>",
+	},
+	NodeDiskSpace: CheckConfig{
+		Category:                AuditReportStorage,
+		Type:                    CheckTypeItemBased,
+		Title:                   "Node disk space",
+		DefaultThreshold:        90,
+		Unit:                    CheckUnitPercent,
+		MessageTemplate:         `{{.ItemsWithToBe "node filesystem"}} over {{.ThresholdPercent}} full, max usage: {{.ValuePercent}}`,
+		ConditionFormatTemplate: "the space or inode usage of a filesystem of the app's nodes > <threshold>",
+	},
+	NodeFilesystemReadonly: CheckConfig{
+		Category:                AuditReportStorage,
+		Type:                    CheckTypeItemBased,
+		Title:                   "Node filesystem read-only",
+		DefaultThreshold:        0,
+		MessageTemplate:         `{{.ItemsWithHave "node filesystem"}} been remounted read-only`,
+		ConditionFormatTemplate: "a filesystem of the app's nodes has been remounted read-only",
 	},
 }
 

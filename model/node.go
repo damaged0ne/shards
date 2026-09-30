@@ -98,6 +98,8 @@ type Node struct {
 	Fargate           bool
 	Price             *NodePrice
 	DataTransferPrice *DataTransferPrice
+
+	Shards *NodeShards // shards fork: see shards.go
 }
 
 type NodePrice struct {
@@ -136,6 +138,7 @@ func NewNode(clusterId string, id NodeId) *Node {
 		Disks:          map[string]*DiskStats{},
 		CpuUsageByMode: map[string]*timeseries.TimeSeries{},
 		GPUs:           map[string]*GPU{},
+		Shards:         NewNodeShards(),
 	}
 }
 

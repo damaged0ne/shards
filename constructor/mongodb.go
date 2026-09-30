@@ -21,8 +21,8 @@ func mongodb(instance *model.Instance, queryName string, m *model.MetricValues, 
 	case "mongo_up":
 		mongo.Up = merge(mongo.Up, m.Values, timeseries.Any)
 	case "mongo_scrape_error":
-		mongo.Error.Update(m.Values, m.Labels["error"])
-		mongo.Warning.Update(m.Values, m.Labels["warning"])
+		mongo.Error.Update(m.Values, model.HumanizeScrapeError(m.Labels["error"]))
+		mongo.Warning.Update(m.Values, model.HumanizeScrapeError(m.Labels["warning"]))
 	case "mongo_info":
 		mongo.Version.Update(m.Values, m.Labels["server_version"])
 		mongo.Flavor.Update(m.Values, m.Labels["flavor"])

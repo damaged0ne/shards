@@ -119,6 +119,7 @@ func (c *Constructor) loadNodes(w *model.World, metrics map[string][]*model.Metr
 			}
 		}
 	}
+	loadNodesShards(metrics, nodes) // shards fork
 	if c.pricing != nil {
 		for _, n := range w.Nodes {
 			n.Price = c.pricing.GetNodePrice(project.Settings.CustomCloudPricing, n)

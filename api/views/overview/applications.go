@@ -102,6 +102,13 @@ func renderApplications(w *model.World) []*ApplicationStatus {
 					if ch.Count() > 0 {
 						a.Restarts.Value = fmt.Sprintf("%d", ch.Count())
 					}
+				case model.Checks.DockerContainerRestarts.Id: // shards fork: restarts done by dockerd
+					if ch.Status > a.Restarts.Status {
+						a.Restarts.Status = ch.Status
+					}
+					if ch.Count() > 0 && a.Restarts.Value == "" {
+						a.Restarts.Value = fmt.Sprintf("%d", ch.Count())
+					}
 				case model.Checks.CPUNode.Id:
 					if ch.Status >= model.WARNING && sloIsViolating {
 						a.CPU.Status = model.WARNING

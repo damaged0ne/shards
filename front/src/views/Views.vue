@@ -41,6 +41,7 @@ export const views = {
     kubernetes: { name: 'Kubernetes', icon: 'mdi-ship-wheel', group: 'infrastructure', tile: 'info' },
     costs: { name: 'Costs', icon: 'mdi-currency-usd', group: 'infrastructure', tile: 'success' },
     risks: { name: 'Risks', icon: 'mdi-weather-lightning', group: 'infrastructure', tile: 'pink' },
+    uptime: { name: 'Uptime', icon: 'mdi-pulse', group: 'infrastructure', tile: 'success' },
     dashboards: { name: 'Dashboards', icon: 'mdi-view-dashboard-outline', group: 'explore', tile: 'purple' },
 };
 

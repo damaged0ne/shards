@@ -90,6 +90,13 @@
                             <div>Webhook</div>
                             <v-btn small color="secondary" class="ml-2" @click="test({ incident: { webhook: {} } })">Test</v-btn>
                         </div>
+                        <template v-for="c in shardsChannels">
+                            <div v-if="form.notification_settings.incidents[c.id]" :key="c.id" class="d-flex align-center mt-2">
+                                <v-checkbox v-model="form.notification_settings.incidents[c.id].enabled" dense hide-details class="mt-0 pt-0" />
+                                <div>{{ c.title }}</div>
+                                <v-btn small color="secondary" class="ml-2" @click="test({ incident: { [c.id]: {} } })">Test</v-btn>
+                            </div>
+                        </template>
                         <div v-if="!hasConfiguredIntegration(form.notification_settings.incidents)" class="ml-5 grey--text">
                             No notification integrations configured.
                         </div>
@@ -214,6 +221,13 @@
                             <div>Webhook</div>
                             <v-btn small color="secondary" class="ml-2" @click="test({ alert: { webhook: {} } })">Test</v-btn>
                         </div>
+                        <template v-for="c in shardsChannels">
+                            <div v-if="form.notification_settings.alerts[c.id]" :key="c.id" class="d-flex align-center mt-2">
+                                <v-checkbox v-model="form.notification_settings.alerts[c.id].enabled" dense hide-details class="mt-0 pt-0" />
+                                <div>{{ c.title }}</div>
+                                <v-btn small color="secondary" class="ml-2" @click="test({ alert: { [c.id]: {} } })">Test</v-btn>
+                            </div>
+                        </template>
                         <div v-if="!hasConfiguredIntegration(form.notification_settings.alerts)" class="ml-5 grey--text">
                             No notification integrations configured.
                         </div>
@@ -261,6 +275,13 @@ export default {
             message: '',
             valid: false,
             form: null,
+            // shards fork: Telegram, Discord, Mattermost and Email (incidents and alerts only)
+            shardsChannels: [
+                { id: 'telegram', title: 'Telegram' },
+                { id: 'discord', title: 'Discord' },
+                { id: 'mattermost', title: 'Mattermost' },
+                { id: 'email', title: 'Email' },
+            ],
         };
     },
 
@@ -333,7 +354,7 @@ export default {
             });
         },
         hasConfiguredIntegration(s) {
-            return s.slack || s.teams || s.pagerduty || s.opsgenie || s.webhook;
+            return s.slack || s.teams || s.pagerduty || s.opsgenie || s.webhook || this.shardsChannels.some((c) => s[c.id]);
         },
     },
 };

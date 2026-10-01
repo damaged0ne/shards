@@ -18,6 +18,10 @@
                 <IntegrationFormPagerduty v-if="type === 'pagerduty'" :form="form" />
                 <IntegrationFormOpsgenie v-if="type === 'opsgenie'" :form="form" />
                 <IntegrationFormWebhook v-if="type === 'webhook'" :form="form" />
+                <IntegrationFormTelegram v-if="type === 'telegram'" :form="form" />
+                <IntegrationFormDiscord v-if="type === 'discord'" :form="form" />
+                <IntegrationFormMattermost v-if="type === 'mattermost'" :form="form" />
+                <IntegrationFormEmail v-if="type === 'email'" :form="form" />
 
                 <v-alert v-if="error" color="error" icon="mdi-alert-octagon-outline" outlined text class="my-4">
                     {{ error }}
@@ -47,6 +51,10 @@ import IntegrationFormTeams from '../components/IntegrationFormTeams.vue';
 import IntegrationFormPagerduty from '../components/IntegrationFormPagerduty.vue';
 import IntegrationFormOpsgenie from '../components/IntegrationFormOpsgenie.vue';
 import IntegrationFormWebhook from '../components/IntegrationFormWebhook.vue';
+import IntegrationFormTelegram from '../components/IntegrationFormTelegram.vue';
+import IntegrationFormDiscord from '../components/IntegrationFormDiscord.vue';
+import IntegrationFormMattermost from '../components/IntegrationFormMattermost.vue';
+import IntegrationFormEmail from '../components/IntegrationFormEmail.vue';
 
 export default {
     props: {
@@ -55,7 +63,17 @@ export default {
         title: String,
     },
 
-    components: { IntegrationFormSlack, IntegrationFormTeams, IntegrationFormPagerduty, IntegrationFormOpsgenie, IntegrationFormWebhook },
+    components: {
+        IntegrationFormSlack,
+        IntegrationFormTeams,
+        IntegrationFormPagerduty,
+        IntegrationFormOpsgenie,
+        IntegrationFormWebhook,
+        IntegrationFormTelegram,
+        IntegrationFormDiscord,
+        IntegrationFormMattermost,
+        IntegrationFormEmail,
+    },
 
     data() {
         return {

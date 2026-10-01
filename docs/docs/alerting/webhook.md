@@ -7,7 +7,7 @@ import TabItem from '@theme/TabItem';
 
 # Webhook
 
-In addition to built-in notification integrations like [Slack](/alerting/slack), [Microsoft Teams](/alerting/teams), 
+In addition to built-in notification integrations like [Slack](/alerting/slack), [Microsoft Teams](/alerting/teams), [Telegram](/alerting/telegram), [Discord](/alerting/discord), [Mattermost](/alerting/mattermost), [Email](/alerting/email), 
 [Pagerduty](/alerting/pagerduty), and [Opsgenie](/alerting/opsgenie), shards can integrate with nearly any system using Webhooks.
 
 To configure a Webhook integration:

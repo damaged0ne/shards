@@ -40,7 +40,11 @@ To configure Application Categories, go to the **Project Settings**, click on **
 built-in categories or create your own custom ones. 
 Each category is defined by a set of [glob patterns](https://en.wikipedia.org/wiki/Glob_(programming)) in the `<namespace>/<application_name>` format.
 
-shards also includes several pre-defined categories, such as `monitoring` and `control-plane`.
+shards also includes several pre-defined categories, such as `monitoring`, `control-plane` and `system`.
+`system` holds well-known host infrastructure units (`docker`, `containerd`, `ssh`, `chrony`, `cron`, `rsyslog`, …)
+and is checked before the other built-ins; custom patterns always take precedence over built-in ones.
+How each category is drawn on the service map (expanded, collapsed, muted or hidden) is configured separately,
+see [Service Map](./service-map#map-modes).
 
 <img alt="Configuring Application Categories" src="/img/docs/categories_configuration.png" class="card w-1200"/>
 

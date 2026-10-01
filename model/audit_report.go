@@ -33,6 +33,11 @@ const (
 	AuditReportDeployments AuditReportName = "Deployments"
 	AuditReportProfiling   AuditReportName = "Profiling"
 	AuditReportTracing     AuditReportName = "Tracing"
+
+	// shards fork: cluster agent targets
+	AuditReportKafka         AuditReportName = "Kafka"
+	AuditReportClickHouse    AuditReportName = "ClickHouse"
+	AuditReportElasticsearch AuditReportName = "Elasticsearch"
 )
 
 type ConfigurationHint struct {

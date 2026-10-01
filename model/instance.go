@@ -69,6 +69,11 @@ type Instance struct {
 	Mongodb   *Mongodb
 	Memcached *Memcached
 	Mysql     *Mysql
+
+	// shards fork: targets of the shards cluster agent
+	Kafka         *Kafka
+	ClickHouse    *ClickHouse
+	Elasticsearch *Elasticsearch
 }
 
 func NewInstance(name string, owner *Application) *Instance {
@@ -108,6 +113,7 @@ func (instance *Instance) ApplicationTypes() map[ApplicationType]bool {
 	if t := instance.OCICache.ApplicationType(); t != ApplicationTypeUnknown {
 		res[t] = true
 	}
+	instance.addClusterTargetTypes(res) // shards fork
 	return res
 }
 
@@ -128,7 +134,7 @@ func (instance *Instance) InstrumentedType() ApplicationType {
 	case instance.Memcached != nil:
 		return ApplicationTypeMemcached
 	}
-	return ApplicationTypeUnknown
+	return instance.clusterTargetType() // shards fork
 }
 
 func (instance *Instance) GetOrCreateContainer(id, name string) *Container {

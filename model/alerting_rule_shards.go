@@ -5,7 +5,7 @@ import "github.com/coroot/coroot/timeseries"
 // shardsBuiltinAlertingRules are the built-in rules for the checks added by the shards fork.
 // They are created for existing projects on startup (see db.InitBuiltinAlertingRules).
 func shardsBuiltinAlertingRules() []AlertingRule {
-	return []AlertingRule{
+	return append([]AlertingRule{
 		{
 			Id:   "docker-container-health",
 			Name: "Unhealthy container",
@@ -89,5 +89,5 @@ func shardsBuiltinAlertingRules() []AlertingRule {
 			Enabled: true,
 			Builtin: true,
 		},
-	}
+	}, clusterTargetAlertingRules()...)
 }

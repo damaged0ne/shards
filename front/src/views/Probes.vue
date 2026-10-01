@@ -153,7 +153,7 @@ export default {
                 { value: 'cert_days_left', text: 'Certificate' },
                 { value: 'application', text: 'Application', sortable: false },
                 { value: 'last_error', text: 'Last error', sortable: false },
-                { value: 'actions', text: '', sortable: false, width: '72px' },
+                { value: 'actions', text: '', sortable: false, width: '64px' },
             ].filter((h) => h.value !== 'actions' || this.editable);
         },
         items() {
@@ -319,7 +319,7 @@ export default {
     font-family: var(--mono);
     font-size: 12px;
     color: var(--text-2);
-    max-width: 32ch;
+    max-width: 28ch;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -353,7 +353,7 @@ export default {
 }
 .error-text {
     display: inline-block;
-    max-width: 26ch;
+    max-width: 22ch;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

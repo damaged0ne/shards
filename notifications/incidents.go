@@ -29,6 +29,7 @@ func (n *IncidentNotifier) Enqueue(project *db.Project, app *model.Application, 
 	if muteIncidentNotification(n.db, project, app, incident, now) { // shards fork: maintenance windows
 		return
 	}
+	notifyAgentsIncident(project, app, incident) // shards fork
 	categorySettings := project.GetApplicationCategories()[app.Category]
 	if categorySettings == nil {
 		return

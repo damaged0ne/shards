@@ -284,6 +284,13 @@ func (api *Api) MaintenanceWindow(w http.ResponseWriter, r *http.Request, u *db.
 	}
 }
 
+func init() {
+	// agent scopes of the REST write endpoints (see agents_scope_shards.go); approvals and the
+	// approval policy stay admin-only for agents (and humans-only in the handlers)
+	RegisterAgentRESTScope("POST", `/api/project/[^/]+/incident/[^/]+/workflow$`, db.AgentScopeTriage)
+	RegisterAgentRESTScope("POST,PUT,DELETE", `/api/project/[^/]+/maintenance(/\d+(/end)?)?$`, db.AgentScopeOperator)
+}
+
 // RegisterWorkflowRoutes registers the shards fork's incident workflow, maintenance, approval and home endpoints.
 func (api *Api) RegisterWorkflowRoutes(r *mux.Router) {
 	get, post, put, del := http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete

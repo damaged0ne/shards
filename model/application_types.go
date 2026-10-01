@@ -123,6 +123,12 @@ func (at ApplicationType) AuditReport() AuditReportName {
 		return AuditReportPython
 	case ApplicationTypeNodeJS:
 		return AuditReportNodejs
+	case ApplicationTypeKafka: // shards fork
+		return AuditReportKafka
+	case ApplicationTypeClickHouse:
+		return AuditReportClickHouse
+	case ApplicationTypeElasticsearch, ApplicationTypeOpensearch:
+		return AuditReportElasticsearch
 	}
 	return ""
 }

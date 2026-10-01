@@ -3,7 +3,7 @@
         <div class="d-flex flex-wrap align-center mb-3" style="gap: 12px">
             <div class="caption" style="max-width: 760px">
                 Maintenance windows mute notifications for planned work (deployments, restarts, migrations). Alerts and incidents are still created
-                and shown as <span class="status-chip info">maintenance</span>, but nothing is sent to Slack, PagerDuty, webhooks, etc.
+                and shown as <Chip tone="info">maintenance</Chip>, but nothing is sent to Slack, PagerDuty, webhooks, etc.
             </div>
             <v-spacer />
             <v-checkbox v-model="showEnded" label="Show ended" dense hide-details class="mt-0" @change="get" />
@@ -14,8 +14,8 @@
 
         <div class="list">
             <div v-if="!loading && !windows.length" class="empty">No maintenance windows{{ showEnded ? '' : ' scheduled' }}.</div>
-            <div v-for="w in windows" :key="w.id" class="row" :class="{ dim: w.status === 'ended' || w.status === 'expired' }">
-                <span class="status-chip" :class="statusChip(w.status)">{{ w.status }}</span>
+            <div v-for="w in windows" :key="w.id" class="list-row" :class="{ dim: w.status === 'ended' || w.status === 'expired' }">
+                <Chip :tone="statusChip(w.status)" class="st">{{ w.status }}</Chip>
                 <div class="grow">
                     <div class="name">
                         {{ w.name }}
@@ -66,11 +66,12 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import MaintenanceForm from '@/components/MaintenanceForm.vue';
 import { maintenanceScheduleText, maintenanceScopeText, maintenanceStatusChip } from '@/utils/workflow';
 
 export default {
-    components: { MaintenanceForm },
+    components: { Chip, MaintenanceForm },
 
     data() {
         return {
@@ -166,16 +167,16 @@ export default {
     font-size: 13px;
     color: var(--text-3);
 }
-.row {
+.list-row {
     display: flex;
     align-items: flex-start;
     gap: 12px;
     padding: 10px 14px;
 }
-.row + .row {
+.list-row + .list-row {
     border-top: 1px solid var(--border-soft);
 }
-.row .status-chip {
+.list-row .st {
     margin-top: 2px;
     min-width: 78px;
     justify-content: center;
@@ -217,7 +218,7 @@ export default {
     gap: 4px;
 }
 @media (max-width: 700px) {
-    .row {
+    .list-row {
         flex-wrap: wrap;
     }
     .by {

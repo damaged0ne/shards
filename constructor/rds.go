@@ -142,6 +142,8 @@ func (c *Constructor) loadRds(w *model.World, metrics map[string][]*model.Metric
 				case "aws_rds_net_tx_bytes_per_second":
 					stat.TxBytes = merge(stat.TxBytes, m.Values, timeseries.Any)
 				}
+			default:
+				rdsExt(instance, q.Name, m) // shards fork: Aurora
 			}
 		}
 	}

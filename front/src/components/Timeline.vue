@@ -4,8 +4,12 @@
             <span class="font-weight-medium">Timeline</span>
             <span v-if="entries.length" class="caption grey--text ml-2">{{ entries.length }}</span>
             <v-spacer />
+            <v-btn v-if="askable" x-small outlined class="mr-1" @click="ask = true" title="Dispatch a task to an operator agent">
+                <v-icon x-small left>mdi-robot-outline</v-icon>Ask agent
+            </v-btn>
             <v-btn icon x-small :loading="loading" @click="load" title="Refresh"><v-icon small>mdi-refresh</v-icon></v-btn>
         </div>
+        <AskAgentDialog v-if="askable" v-model="ask" :target-type="targetType" :target-id="targetId" @sent="load" />
 
         <v-alert v-if="error" color="error" icon="mdi-alert-octagon-outline" outlined text dense class="mb-2">
             {{ error }}
@@ -26,18 +30,20 @@
 
             <div class="flex-grow-1 min-width-0">
                 <div class="d-flex align-center flex-wrap header">
-                    <span class="font-weight-medium">{{ e.author || 'unknown' }}</span>
+                    <router-link v-if="agentLink(e)" :to="agentLink(e)" class="font-weight-medium">{{ e.author }}</router-link>
+                    <span v-else class="font-weight-medium">{{ e.author || 'unknown' }}</span>
                     <v-chip v-if="e.author_kind === 'agent'" x-small label color="primary" outlined class="ml-1">agent</v-chip>
                     <v-chip v-else-if="e.author_kind === 'system'" x-small label outlined class="ml-1">system</v-chip>
                     <span v-if="e.kind === 'action'" class="ml-1">{{ actionText(e) }}</span>
+                    <router-link v-if="askedAgentLink(e)" :to="askedAgentLink(e)" class="ml-1 mono">@{{ e.meta.agent }}</router-link>
                     <span class="caption grey--text ml-2" :title="$format.date(e.created_at, '{MMM} {DD}, {HH}:{mm}:{ss}')">
                         {{ $format.timeSinceNow(e.created_at) }} ago
                     </span>
                     <span v-if="e.edited_at" class="caption grey--text ml-1">(edited)</span>
                     <span v-if="e.meta && e.meta.via === 'mcp'" class="caption grey--text ml-1">via MCP</span>
-                    <span v-if="e.meta && e.meta.approved_by" class="status-chip ok ml-1" title="Executed after a human approval">
+                    <Chip v-if="e.meta && e.meta.approved_by" tone="success" class="ml-1" title="Executed after a human approval">
                         <v-icon size="12">mdi-account-check-outline</v-icon> approved by {{ e.meta.approved_by }}
-                    </span>
+                    </Chip>
                     <v-spacer />
                     <template v-if="e.editable && editing !== e.id">
                         <v-btn v-if="e.kind === 'comment'" icon x-small @click="startEdit(e)" title="Edit"><v-icon x-small>mdi-pencil</v-icon></v-btn>
@@ -70,7 +76,7 @@
                 @keydown.meta.enter="submit"
             />
             <div class="d-flex align-center mt-1">
-                <span class="caption grey--text">Ctrl+Enter to send</span>
+                <span class="caption grey--text">Ctrl+Enter to send · @agent-name wakes an agent up</span>
                 <v-spacer />
                 <v-btn small color="primary" :disabled="!body.trim()" :loading="posting" @click="submit">Comment</v-btn>
             </div>
@@ -79,9 +85,11 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import Markdown from '@/components/Markdown.vue';
 import ApprovalCard from '@/components/ApprovalCard.vue';
 import { agentActionName } from '@/utils/workflow';
+import AskAgentDialog from '@/components/AskAgentDialog.vue';
 
 const actionIcons = {
     resolved: 'mdi-check',
@@ -106,12 +114,13 @@ const actionIcons = {
     approval_approved: 'mdi-account-check-outline',
     approval_rejected: 'mdi-account-cancel-outline',
     approval_denied: 'mdi-cancel',
+    asked_agent: 'mdi-robot-outline',
 };
 
 const targetNames = { incident: 'the incident', alert: 'the alert', alerting_rule: 'the rule', maintenance_window: 'the maintenance window' };
 
 export default {
-    components: { Markdown, ApprovalCard },
+    components: { Chip, Markdown, ApprovalCard, AskAgentDialog },
 
     props: {
         targetType: { type: String, required: true },
@@ -131,7 +140,14 @@ export default {
             editBody: '',
             saving: false,
             deleting: null,
+            ask: false,
         };
+    },
+
+    computed: {
+        askable() {
+            return this.targetType === 'incident' || this.targetType === 'alert';
+        },
     },
 
     watch: {
@@ -230,6 +246,19 @@ export default {
         actionIcon(e) {
             return actionIcons[(e.meta && e.meta.action) || ''] || 'mdi-information-variant';
         },
+        agentLink(e) {
+            // shards fork: registered agents link to their page in the Agents area
+            if (e.author_kind !== 'agent' || !e.meta || !e.meta.agent_id) {
+                return null;
+            }
+            return { name: 'overview', params: { view: 'agents', id: e.meta.agent_id }, query: this.$utils.contextQuery() };
+        },
+        askedAgentLink(e) {
+            if (!e.meta || e.meta.action !== 'asked_agent' || !e.meta.agent_id) {
+                return null;
+            }
+            return { name: 'overview', params: { view: 'agents', id: e.meta.agent_id }, query: this.$utils.contextQuery() };
+        },
         actionText(e) {
             const m = e.meta || {};
             const requested = agentActionName(m.requested_action).toLowerCase();
@@ -256,6 +285,9 @@ export default {
                     return `was denied by the project policy to ${requested}`;
             }
             const action = m.action || 'updated';
+            if (action === 'asked_agent') {
+                return 'asked an agent to look at ' + (targetNames[e.target_type] || 'this');
+            }
             let text = `${action} ${targetNames[e.target_type] || ''}`.trim();
             if (action === 'updated' && e.meta && e.meta.changed) {
                 text += ` (${e.meta.changed.split(',').join(', ')})`;

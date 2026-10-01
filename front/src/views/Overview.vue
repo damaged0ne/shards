@@ -51,6 +51,11 @@
             <Dashboard v-if="id" :id="id" />
             <Dashboards v-else />
         </template>
+
+        <template v-if="view === 'agents'">
+            <Agent v-if="id" :id="id" />
+            <Agents v-else />
+        </template>
     </div>
 </template>
 
@@ -71,6 +76,8 @@ import Dashboards from '@/views/dashboards/Dashboards.vue';
 import Dashboard from '@/views/dashboards/Dashboard.vue';
 import Kubernetes from '@/views/Kubernetes.vue';
 import Home from '@/views/Home.vue';
+import Agents from '@/views/agents/Agents.vue';
+import Agent from '@/views/agents/Agent.vue';
 
 export default {
     components: {
@@ -90,6 +97,8 @@ export default {
         Risks,
         Dashboards,
         Dashboard,
+        Agents,
+        Agent,
     },
     props: {
         view: String,

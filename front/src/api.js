@@ -442,4 +442,41 @@ export default class Api {
     deleteAlertingRule(ruleId, cb) {
         this.del(this.projectPath(`alerting-rules/${ruleId}`), cb);
     }
+
+    // shards fork: Agents area and playbooks
+    getAgents(cb) {
+        this.get(this.projectPath('agents'), {}, cb);
+    }
+
+    createAgent(form, cb) {
+        this.post(this.projectPath('agents'), form, cb);
+    }
+
+    getAgent(id, cb) {
+        this.get(this.projectPath(`agents/${id}`), {}, cb);
+    }
+
+    updateAgent(id, form, cb) {
+        this.put(this.projectPath(`agents/${id}`), form, cb);
+    }
+
+    deleteAgent(id, cb) {
+        this.del(this.projectPath(`agents/${id}`), cb);
+    }
+
+    agentAction(id, action, form, cb) {
+        if (form) {
+            this.post(this.projectPath(`agents/${id}/${action}`), form, cb);
+        } else {
+            this.get(this.projectPath(`agents/${id}/${action}`), {}, cb);
+        }
+    }
+
+    getPlaybook(targetType, targetId, cb) {
+        this.get(this.projectPath('playbooks'), { target_type: targetType, target_id: targetId }, cb);
+    }
+
+    savePlaybook(targetType, targetId, body, cb) {
+        this.put(this.projectPath('playbooks'), { target_type: targetType, target_id: targetId, body }, cb);
+    }
 }

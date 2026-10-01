@@ -2,25 +2,16 @@
     <div class="workflow">
         <div v-if="wf" class="bar">
             <div class="facts">
-                <span class="status-chip" :class="statusChip">{{ statusName }}</span>
+                <Chip :tone="statusChip">{{ statusName }}</Chip>
                 <span v-if="wf.status === 'resolved'" class="fact">
                     {{ wf.resolved_kind === 'auto' ? 'automatically (SLO is met again)' : 'by ' + wf.resolved_by }}
                 </span>
-                <span
-                    v-if="wf.severity_override"
-                    class="status-chip"
-                    :class="wf.severity_override === 'critical' ? 'critical' : 'warning'"
-                    title="Severity set manually"
-                >
+                <Chip v-if="wf.severity_override" :tone="wf.severity_override === 'critical' ? 'danger' : 'warning'" title="Severity set manually">
                     {{ wf.severity_override }} (manual)
-                </span>
-                <span
-                    v-if="wf.maintenance"
-                    class="status-chip info"
-                    :title="`Notifications muted by the maintenance window '${wf.maintenance.window_name}'`"
-                >
+                </Chip>
+                <Chip v-if="wf.maintenance" tone="info" :title="`Notifications muted by the maintenance window '${wf.maintenance.window_name}'`">
                     <v-icon size="12">mdi-wrench-clock</v-icon> maintenance: {{ wf.maintenance.window_name }}
-                </span>
+                </Chip>
                 <span class="fact">
                     <span class="k">Assignee</span>
                     <template v-if="wf.assignee">
@@ -156,13 +147,14 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import ApprovalCard from '@/components/ApprovalCard.vue';
 import Markdown from '@/components/Markdown.vue';
 import CopyButton from '@/components/CopyButton.vue';
 import { incidentStatusChip, incidentStatusName } from '@/utils/workflow';
 
 export default {
-    components: { ApprovalCard, Markdown, CopyButton },
+    components: { Chip, ApprovalCard, Markdown, CopyButton },
 
     inject: ['shell'],
 

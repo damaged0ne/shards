@@ -47,17 +47,17 @@
                             <router-link :to="link('incidents')" class="more">All incidents</router-link>
                         </header>
                         <div v-if="!home.incidents.length" class="empty">No open incidents.</div>
-                        <router-link v-for="i in home.incidents" :key="i.key" class="row" :to="incidentLink(i.key)">
+                        <router-link v-for="i in home.incidents" :key="i.key" class="list-row" :to="incidentLink(i.key)">
                             <span class="sev" :class="i.severity" />
                             <span class="key mono">i-{{ i.key }}</span>
                             <span class="grow">
                                 <span class="primary-text">{{ $utils.appId(i.application_id).name }}</span>
                                 <span class="secondary-text">{{ i.short_description }}</span>
                             </span>
-                            <span v-if="i.in_maintenance" class="status-chip info" title="Notifications muted by a maintenance window">
+                            <Chip v-if="i.in_maintenance" tone="info" title="Notifications muted by a maintenance window">
                                 <v-icon size="12">mdi-wrench-clock</v-icon>
-                            </span>
-                            <span class="status-chip" :class="statusChip(i.status)">{{ statusName(i.status) }}</span>
+                            </Chip>
+                            <Chip :tone="statusChip(i.status)">{{ statusName(i.status) }}</Chip>
                             <span class="assignee" :title="i.assignee ? 'Assignee' : ''">{{ i.assignee || 'unassigned' }}</span>
                             <span class="age">{{ $format.timeSinceNow(i.opened_at) }}</span>
                         </router-link>
@@ -74,17 +74,17 @@
                             <router-link :to="link('alerts')" class="more">All alerts</router-link>
                         </header>
                         <div v-if="!home.alerts.length" class="empty">No critical or warning alerts.</div>
-                        <router-link v-for="a in home.alerts" :key="a.id" class="row" :to="alertLink(a.id)">
-                            <span class="status-chip" :class="a.severity === 'critical' ? 'critical' : 'warning'">{{ a.severity }}</span>
+                        <router-link v-for="a in home.alerts" :key="a.id" class="list-row" :to="alertLink(a.id)">
+                            <Chip :tone="a.severity === 'critical' ? 'danger' : 'warning'">{{ a.severity }}</Chip>
                             <span class="grow">
                                 <span class="primary-text">{{ a.summary }}</span>
                                 <span class="secondary-text">
                                     <template v-if="a.application_id">{{ $utils.appId(a.application_id).name }} · </template>{{ a.rule_name }}
                                 </span>
                             </span>
-                            <span v-if="a.in_maintenance" class="status-chip info" title="Notifications muted by a maintenance window">
+                            <Chip v-if="a.in_maintenance" tone="info" title="Notifications muted by a maintenance window">
                                 <v-icon size="12">mdi-wrench-clock</v-icon> maintenance
-                            </span>
+                            </Chip>
                             <span class="age">{{ $format.timeSinceNow(a.opened_at) }}</span>
                         </router-link>
                     </section>
@@ -112,8 +112,8 @@
                             <router-link :to="link('alerts', 'maintenance')" class="more">Maintenance</router-link>
                         </header>
                         <div v-if="!home.maintenance.length" class="empty">No active maintenance windows.</div>
-                        <router-link v-for="w in home.maintenance" :key="w.id" class="row" :to="link('alerts', 'maintenance')">
-                            <span class="status-chip warning">active</span>
+                        <router-link v-for="w in home.maintenance" :key="w.id" class="list-row" :to="link('alerts', 'maintenance')">
+                            <Chip tone="warning">active</Chip>
                             <span class="grow">
                                 <span class="primary-text">{{ w.name }}</span>
                                 <span class="secondary-text">{{ scopeText(w.scope) }}</span>
@@ -130,7 +130,7 @@
                             <span>Recent agent activity</span>
                         </header>
                         <div v-if="!home.activity.length" class="empty">No agent activity yet.</div>
-                        <router-link v-for="c in home.activity" :key="c.id" class="row activity" :to="targetLink(c)">
+                        <router-link v-for="c in home.activity" :key="c.id" class="list-row activity" :to="targetLink(c)">
                             <span class="bot"><v-icon size="13">mdi-robot-outline</v-icon></span>
                             <span class="grow">
                                 <span class="primary-text">
@@ -149,12 +149,13 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import Views from '@/views/Views.vue';
 import ApprovalCard from '@/components/ApprovalCard.vue';
 import { incidentStatusChip, incidentStatusName, maintenanceScopeText, targetRoute } from '@/utils/workflow';
 
 export default {
-    components: { Views, ApprovalCard },
+    components: { Chip, Views, ApprovalCard },
 
     data() {
         return { home: null, loading: false, error: '' };
@@ -336,7 +337,7 @@ export default {
     font-size: 13px;
     color: var(--text-3);
 }
-.row {
+.list-row {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -345,7 +346,7 @@ export default {
     color: var(--text-1) !important;
     border-top: 1px solid var(--border-soft);
 }
-.row:hover {
+.list-row:hover {
     background: var(--hover);
     text-decoration: none !important;
 }

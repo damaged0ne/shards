@@ -112,7 +112,8 @@
             <h1 class="text-h5 my-5">Cloud integrations</h1>
             <p style="max-width: 800px">
                 shards discovers the managed databases of your cloud provider and monitors them alongside your own services: RDS and ElastiCache on
-                AWS, Cloud SQL and Memorystore on GCP, MySQL HeatWave, PostgreSQL and OCI Cache on Oracle Cloud.
+                AWS, Cloud SQL and Memorystore on GCP, MySQL HeatWave, PostgreSQL and OCI Cache on Oracle Cloud, PostgreSQL and MySQL flexible servers
+                and Azure Cache for Redis on Azure.
             </p>
             <h2 class="mt-8 mb-3">
                 <img :src="`${$coroot.base_path}static/img/icons/aws${$vuetify.theme.dark ? '-dark' : ''}.svg`" height="28" alt="AWS" />
@@ -124,6 +125,8 @@
             <IntegrationGCP />
             <h2 class="mt-10 mb-3"><img :src="`${$coroot.base_path}static/img/icons/oci.svg`" height="22" alt="Oracle Cloud" /></h2>
             <IntegrationOCI />
+            <h2 class="mt-10 mb-3 d-flex align-center"><v-icon large color="#0078d4" class="mr-2">mdi-microsoft-azure</v-icon>Microsoft Azure</h2>
+            <IntegrationAzure />
         </template>
 
         <template v-if="tab === 'applications'">
@@ -211,6 +214,7 @@ import IntegrationClickhouse from './IntegrationClickhouse.vue';
 import IntegrationAWS from './IntegrationAWS.vue';
 import IntegrationGCP from './IntegrationGCP.vue';
 import IntegrationOCI from './IntegrationOCI.vue';
+import IntegrationAzure from './IntegrationAzure.vue';
 import CustomApplications from './CustomApplications.vue';
 import Users from './Users.vue';
 import RBAC from './RBAC.vue';
@@ -230,6 +234,7 @@ export default {
         IntegrationAWS,
         IntegrationGCP,
         IntegrationOCI,
+        IntegrationAzure,
         ProjectApiKeys,
         ProjectDelete,
         ApplicationCategories,

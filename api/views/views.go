@@ -79,6 +79,10 @@ func OCI(w *model.World) *cloud.View {
 	return cloud.OCI(w)
 }
 
+func Azure(w *model.World) *cloud.View { // shards fork
+	return cloud.Azure(w)
+}
+
 func Roles(rs []rbac.Role) *roles.View {
 	return roles.Render(rs)
 }

@@ -41,7 +41,7 @@ func AWS(w *model.World, configured bool) *View {
 		case i.Elasticache != nil:
 			return i.Elasticache.Status, i.Elasticache.Engine, i.Elasticache.EngineVersion, true
 		}
-		return model.LabelLastValue{}, model.LabelLastValue{}, model.LabelLastValue{}, false
+		return awsServices(i) // shards fork
 	})
 	return v
 }

@@ -29,19 +29,19 @@ const (
 
 const mcpApprovalNote = " Subject to the project's agent approval policy: the result may be {status: 'pending', approval_id} instead — nothing is changed until a human approves; poll get_approval_status."
 
-// runGated executes a gated action for an agent and renders the result (or the pending approval).
-func (h *MCPHandler) runGated(project *db.Project, a actor, action string, args any, summary string, target gatedTarget, reason string) (*mcp.CallToolResult, error) {
-	res, ap, err := h.Api.runAgentAction(project, a, action, args, summary, target, reason)
-	if err != nil {
-		return mcpTargetError(err), nil
-	}
-	if ap != nil {
-		return MCPJSON(newPendingApproval(ap))
-	}
-	return MCPJSON(res)
-}
-
 func (h *MCPHandler) registerWorkflowTools() {
+	MCPApprovalGate = h.approvalGate
+	for tool, scope := range map[string]db.AgentScope{
+		"get_incident_context":      db.AgentScopeRead,
+		"get_incident_postmortem":   db.AgentScopeRead,
+		"list_maintenance_windows":  db.AgentScopeRead,
+		"get_approval_status":       db.AgentScopeRead,
+		"update_incident":           db.AgentScopeTriage,
+		"create_maintenance_window": db.AgentScopeOperator,
+		"end_maintenance_window":    db.AgentScopeOperator,
+	} {
+		SetMCPToolScope(tool, scope)
+	}
 	readOnly := []mcp.ToolOption{
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithDestructiveHintAnnotation(false),
@@ -146,44 +146,44 @@ func (h *MCPHandler) loadIncident(ctx context.Context, req mcp.CallToolRequest, 
 }
 
 type mcpCtxIncident struct {
-	Key              string `json:"key"`
-	ApplicationId    string `json:"application_id"`
-	Summary          string `json:"summary"`
-	Severity         string `json:"severity"`
-	OpenedAt         string `json:"opened_at"`
-	ResolvedAt       string `json:"resolved_at,omitempty"`
-	Duration         string `json:"duration"`
-	FailedPercent    string `json:"failed_requests,omitempty"`
-	SlowPercent      string `json:"slow_requests,omitempty"`
-	RCASummary       string `json:"rca_summary,omitempty"`
-	RCARootCause     string `json:"rca_root_cause,omitempty"`
-	Status           string `json:"status"`
-	Assignee         string `json:"assignee,omitempty"`
-	AcknowledgedBy   string `json:"acknowledged_by,omitempty"`
-	MitigatedBy      string `json:"mitigated_by,omitempty"`
-	ResolvedBy       string `json:"resolved_by,omitempty"`
-	Resolution       string `json:"resolution,omitempty"`
-	RootCause        string `json:"root_cause,omitempty"`
-	InMaintenance    string `json:"in_maintenance,omitempty"`
-	PendingApprovals []int  `json:"pending_approvals,omitempty"`
+	Key              string        `json:"key"`
+	ApplicationId    string        `json:"application_id"`
+	Summary          string        `json:"summary"`
+	Severity         string        `json:"severity"`
+	OpenedAt         string        `json:"opened_at"`
+	ResolvedAt       string        `json:"resolved_at,omitempty"`
+	Duration         string        `json:"duration"`
+	FailedPercent    string        `json:"failed_requests,omitempty"`
+	SlowPercent      string        `json:"slow_requests,omitempty"`
+	RCASummary       string        `json:"rca_summary,omitempty"`
+	RCARootCause     string        `json:"rca_root_cause,omitempty"`
+	Status           string        `json:"status"`
+	Assignee         string        `json:"assignee,omitempty"`
+	AcknowledgedBy   string        `json:"acknowledged_by,omitempty"`
+	MitigatedBy      string        `json:"mitigated_by,omitempty"`
+	ResolvedBy       string        `json:"resolved_by,omitempty"`
+	Resolution       *MCPUntrusted `json:"resolution,omitempty"`
+	RootCause        *MCPUntrusted `json:"root_cause,omitempty"`
+	InMaintenance    string        `json:"in_maintenance,omitempty"`
+	PendingApprovals []int         `json:"pending_approvals,omitempty"`
 }
 
 type mcpCtxEntry struct {
-	At     string `json:"at"`
-	Author string `json:"author"`
-	Kind   string `json:"kind,omitempty"` // agent | system (omitted for humans)
-	Action string `json:"action,omitempty"`
-	Body   string `json:"body,omitempty"`
+	At     string        `json:"at"`
+	Author string        `json:"author"`
+	Kind   string        `json:"kind,omitempty"` // agent | system (omitted for humans)
+	Action string        `json:"action,omitempty"`
+	Body   *MCPUntrusted `json:"body,omitempty"`
 }
 
 type mcpCtxAlert struct {
-	Id       string `json:"id"`
-	App      string `json:"app,omitempty"`
-	Rule     string `json:"rule"`
-	Severity string `json:"severity"`
-	Summary  string `json:"summary"`
-	Since    string `json:"since"`
-	Muted    bool   `json:"muted,omitempty"`
+	Id       string       `json:"id"`
+	App      string       `json:"app,omitempty"`
+	Rule     string       `json:"rule"`
+	Severity string       `json:"severity"`
+	Summary  MCPUntrusted `json:"summary"`
+	Since    string       `json:"since"`
+	Muted    bool         `json:"muted,omitempty"`
 }
 
 type mcpCtxDeployment struct {
@@ -194,13 +194,13 @@ type mcpCtxDeployment struct {
 }
 
 type mcpCtxSimilar struct {
-	Key        string `json:"key"`
-	OpenedAt   string `json:"opened_at"`
-	Duration   string `json:"duration"`
-	Severity   string `json:"severity"`
-	Summary    string `json:"summary,omitempty"`
-	Resolution string `json:"resolution,omitempty"`
-	RootCause  string `json:"root_cause,omitempty"`
+	Key        string        `json:"key"`
+	OpenedAt   string        `json:"opened_at"`
+	Duration   string        `json:"duration"`
+	Severity   string        `json:"severity"`
+	Summary    *MCPUntrusted `json:"summary,omitempty"`
+	Resolution *MCPUntrusted `json:"resolution,omitempty"`
+	RootCause  *MCPUntrusted `json:"root_cause,omitempty"`
 }
 
 type mcpCtxWindow struct {
@@ -243,7 +243,7 @@ func (h *MCPHandler) toolGetIncidentContext(ctx context.Context, req mcp.CallToo
 		Key: i.Key, ApplicationId: i.ApplicationId.String(), Summary: i.ShortDescription(), Severity: effectiveIncidentSeverity(i, wf),
 		OpenedAt: MCPFormatTime(i.OpenedAt), ResolvedAt: MCPFormatTime(i.ResolvedAt), Duration: fmtDuration(end.Sub(i.OpenedAt)),
 		Status: string(e.Status), Assignee: e.Assignee, AcknowledgedBy: e.AcknowledgedBy, MitigatedBy: e.MitigatedBy,
-		Resolution: mcpTruncate(e.Resolution, mcpContextBodyRunes), RootCause: mcpTruncate(e.RootCause, mcpContextBodyRunes),
+		Resolution: mcpUntrustedPtr(e.Resolution, mcpContextBodyRunes), RootCause: mcpUntrustedPtr(e.RootCause, mcpContextBodyRunes),
 	}
 	if e.Status == db.IncidentStatusResolved {
 		inc.ResolvedBy = e.ResolvedBy
@@ -275,7 +275,7 @@ func (h *MCPHandler) toolGetIncidentContext(ctx context.Context, req mcp.CallToo
 			comments = comments[len(comments)-mcpContextMaxTimeline:]
 		}
 		for _, c := range comments {
-			en := mcpCtxEntry{At: MCPFormatTime(c.CreatedAt), Author: c.Author, Action: c.Meta["action"], Body: mcpTruncate(c.Body, mcpContextBodyRunes)}
+			en := mcpCtxEntry{At: MCPFormatTime(c.CreatedAt), Author: c.Author, Action: c.Meta["action"], Body: mcpUntrustedPtr(c.Body, mcpContextBodyRunes)}
 			if c.AuthorKind != db.CommentAuthorUser {
 				en.Kind = string(c.AuthorKind)
 			}
@@ -320,7 +320,7 @@ func (h *MCPHandler) toolGetIncidentContext(ctx context.Context, req mcp.CallToo
 				}
 				res.Alerts = append(res.Alerts, mcpCtxAlert{
 					Id: a.Id, App: a.ApplicationId.StringWithoutClusterId(), Rule: rules[a.RuleId], Severity: a.Severity.String(),
-					Summary: mcpTruncate(a.Summary, 200), Since: MCPFormatTime(a.OpenedAt), Muted: marks[a.Id] != nil,
+					Summary: MCPUntrusted(mcpTruncate(a.Summary, 200)), Since: MCPFormatTime(a.OpenedAt), Muted: marks[a.Id] != nil,
 				})
 			}
 		}
@@ -361,11 +361,11 @@ func (h *MCPHandler) toolGetIncidentContext(ctx context.Context, req mcp.CallToo
 			}
 			sim := mcpCtxSimilar{Key: s.Key, OpenedAt: MCPFormatTime(s.OpenedAt), Duration: fmtDuration(send.Sub(s.OpenedAt)), Severity: effectiveIncidentSeverity(s, wfs[s.Key])}
 			if w := wfs[s.Key]; w != nil {
-				sim.Resolution = mcpTruncate(w.Resolution, 300)
-				sim.RootCause = mcpTruncate(w.RootCause, 300)
+				sim.Resolution = mcpUntrustedPtr(w.Resolution, 300)
+				sim.RootCause = mcpUntrustedPtr(w.RootCause, 300)
 			}
-			if sim.Resolution == "" && s.RCA != nil {
-				sim.Summary = mcpTruncate(s.RCA.ShortSummary, 200)
+			if sim.Resolution == nil && s.RCA != nil {
+				sim.Summary = mcpUntrustedPtr(s.RCA.ShortSummary, 200)
 			}
 			res.Similar = append(res.Similar, sim)
 		}
@@ -381,28 +381,24 @@ func (h *MCPHandler) toolGetIncidentContext(ctx context.Context, req mcp.CallToo
 }
 
 func (h *MCPHandler) toolUpdateIncident(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	_, project, t, errResult := h.loadIncident(ctx, req, true)
+	user, project, t, errResult := h.loadIncident(ctx, req, true)
 	if errResult != nil {
 		return errResult, nil
 	}
-	user := mcpUserFromContext(ctx)
+	c, errResult := h.mcpGatedCall(project, "update_incident", req)
+	if errResult != nil {
+		return errResult, nil
+	}
+	a := newActor(user, viaMCP)
+	if c != nil { // resolve
+		return h.mcpToolGated(user, project, "update_incident", req)
+	}
 	form := incidentActionForm{
 		Action:       req.GetString("action", ""),
 		Assignee:     req.GetString("assignee", ""),
 		AssigneeKind: req.GetString("assignee_kind", ""),
 		Severity:     req.GetString("severity", ""),
-		Resolution:   req.GetString("resolution", ""),
-		RootCause:    req.GetString("root_cause", ""),
-		FollowUps:    req.GetStringSlice("follow_ups", nil),
 		Comment:      req.GetString("comment", ""),
-	}
-	if err := form.validate(); err != nil {
-		return mcpTargetError(err), nil
-	}
-	a := newActor(user, viaMCP)
-	if form.Action == incidentActionResolve {
-		return h.runGated(project, a, db.AgentActionResolveIncident, incidentResolveArgs{Key: t.id, Form: form},
-			"Resolve incident "+t.id+": "+utils.Truncate(form.Resolution, 200), gatedTarget{typ: db.CommentTargetIncident, id: t.id, title: "Incident " + t.id}, form.Comment)
 	}
 	v, err := h.Api.incidentAction(project, a, t.id, form)
 	if err != nil {
@@ -421,7 +417,8 @@ func (h *MCPHandler) toolGetIncidentPostmortem(ctx context.Context, req mcp.Call
 		klog.Errorln("mcp: get_incident_postmortem:", err)
 		return mcp.NewToolResultError("failed to generate the postmortem"), nil
 	}
-	return mcp.NewToolResultText(md), nil
+	// the draft quotes comments and summaries written by people and agents
+	return MCPJSON(map[string]any{"format": "markdown", "postmortem": mcpUntrustedValue{md}})
 }
 
 func (h *MCPHandler) requireAlerts(ctx context.Context, edit bool) (*db.User, *db.Project, *mcp.CallToolResult) {
@@ -456,13 +453,17 @@ func (h *MCPHandler) toolListMaintenanceWindows(ctx context.Context, req mcp.Cal
 		return mcp.NewToolResultError("failed to load maintenance windows"), nil
 	}
 	now := timeseries.Now()
-	out := []maintenanceWindowView{}
+	type mcpWindow struct {
+		maintenanceWindowView
+		Comment *MCPUntrusted `json:"comment,omitempty"`
+	}
+	out := []mcpWindow{}
 	for _, w := range windows {
 		v := renderMaintenanceWindow(w, now)
 		if (state == "active" && v.Status != "active") || (state == "current" && v.Status != "active" && v.Status != "scheduled") {
 			continue
 		}
-		out = append(out, v)
+		out = append(out, mcpWindow{maintenanceWindowView: v, Comment: mcpUntrustedPtr(w.Comment, 1000)})
 	}
 	return mcpJSONList(out, "only the newest windows are returned")
 }
@@ -472,39 +473,7 @@ func (h *MCPHandler) toolCreateMaintenanceWindow(ctx context.Context, req mcp.Ca
 	if errResult != nil {
 		return errResult, nil
 	}
-	now := timeseries.Now()
-	form := maintenanceForm{DurationMinutes: req.GetInt("duration_minutes", 0)}
-	form.Name = req.GetString("name", "")
-	form.Comment = req.GetString("comment", "")
-	if s := req.GetString("starts_at", ""); s != "" {
-		form.StartsAt = utils.ParseTime(now, s, now)
-	}
-	if s := req.GetString("ends_at", ""); s != "" {
-		form.EndsAt = utils.ParseTime(now, s, 0)
-	}
-	if days, ok := req.GetArguments()["weekdays"].([]any); ok && len(days) > 0 {
-		r := &db.MaintenanceRecurrence{StartTime: req.GetString("start_time", ""), DurationMinutes: req.GetInt("recurring_duration_minutes", 0), Timezone: req.GetString("timezone", "")}
-		for _, d := range days {
-			if f, ok := d.(float64); ok {
-				r.Weekdays = append(r.Weekdays, int(f))
-			}
-		}
-		form.Recurrence = r
-	}
-	form.Scope = db.MaintenanceScope{
-		ApplicationPatterns: req.GetStringSlice("application_patterns", nil),
-		Categories:          req.GetStringSlice("categories", nil),
-		NodePatterns:        req.GetStringSlice("node_patterns", nil),
-		AlertingRuleIds:     req.GetStringSlice("alerting_rule_ids", nil),
-	}
-	if form.DurationMinutes == 0 && form.EndsAt == 0 && form.Recurrence == nil {
-		return mcp.NewToolResultError("give duration_minutes, ends_at or a weekly schedule"), nil
-	}
-	w, err := form.window(now)
-	if err != nil {
-		return mcpTargetError(err), nil
-	}
-	return h.runGated(project, newActor(user, viaMCP), db.AgentActionCreateMaintenanceWindow, maintenanceCreateArgs{Window: w}, maintenanceSummary(w), gatedTarget{}, w.Comment)
+	return h.mcpToolGated(user, project, "create_maintenance_window", req)
 }
 
 func (h *MCPHandler) toolEndMaintenanceWindow(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -512,30 +481,20 @@ func (h *MCPHandler) toolEndMaintenanceWindow(ctx context.Context, req mcp.CallT
 	if errResult != nil {
 		return errResult, nil
 	}
-	id := req.GetInt("id", 0)
-	w, err := h.Api.db.GetMaintenanceWindow(project.Id, id)
-	if err != nil {
-		if errors.Is(err, db.ErrNotFound) {
-			return mcp.NewToolResultError("maintenance window not found"), nil
-		}
-		return mcpTargetError(err), nil
-	}
-	comment := req.GetString("comment", "")
-	return h.runGated(project, newActor(user, viaMCP), db.AgentActionEndMaintenanceWindow, maintenanceEndArgs{Id: id, Comment: comment},
-		"End the maintenance window \""+w.Name+"\"", gatedTarget{typ: db.CommentTargetMaintenanceWindow, id: req.GetString("id", ""), title: w.Name}, comment)
+	return h.mcpToolGated(user, project, "end_maintenance_window", req)
 }
 
 type mcpApprovalStatus struct {
-	Id              int    `json:"id"`
-	Action          string `json:"action"`
-	Summary         string `json:"summary,omitempty"`
-	Status          string `json:"status"`
-	RequestedBy     string `json:"requested_by"`
-	RequestedAt     string `json:"requested_at"`
-	DecidedBy       string `json:"decided_by,omitempty"`
-	DecidedAt       string `json:"decided_at,omitempty"`
-	DecisionComment string `json:"decision_comment,omitempty"`
-	Result          string `json:"result,omitempty"`
+	Id              int           `json:"id"`
+	Action          string        `json:"action"`
+	Summary         string        `json:"summary,omitempty"`
+	Status          string        `json:"status"`
+	RequestedBy     string        `json:"requested_by"`
+	RequestedAt     string        `json:"requested_at"`
+	DecidedBy       string        `json:"decided_by,omitempty"`
+	DecidedAt       string        `json:"decided_at,omitempty"`
+	DecisionComment *MCPUntrusted `json:"decision_comment,omitempty"`
+	Result          string        `json:"result,omitempty"`
 }
 
 func (h *MCPHandler) toolGetApprovalStatus(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -552,6 +511,15 @@ func (h *MCPHandler) toolGetApprovalStatus(ctx context.Context, req mcp.CallTool
 	}
 	return MCPJSON(mcpApprovalStatus{
 		Id: ap.Id, Action: ap.Action, Summary: ap.Summary, Status: ap.Status, RequestedBy: ap.RequestedBy, RequestedAt: MCPFormatTime(ap.CreatedAt),
-		DecidedBy: ap.DecidedBy, DecidedAt: MCPFormatTime(ap.DecidedAt), DecisionComment: ap.DecisionComment, Result: ap.Result,
+		DecidedBy: ap.DecidedBy, DecidedAt: MCPFormatTime(ap.DecidedAt), DecisionComment: mcpUntrustedPtr(ap.DecisionComment, 2000), Result: ap.Result,
 	})
+}
+
+// mcpUntrustedPtr wraps user-written text (nil when empty), cut to maxRunes.
+func mcpUntrustedPtr(s string, maxRunes int) *MCPUntrusted {
+	if s == "" {
+		return nil
+	}
+	u := MCPUntrusted(mcpTruncate(s, maxRunes))
+	return &u
 }

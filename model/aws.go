@@ -15,6 +15,8 @@ type Rds struct {
 	EngineVersion LabelLastValue
 	MultiAz       LabelLastValue
 
+	Aurora *Aurora // shards fork: Aurora role, replica lag and Serverless v2 capacity
+
 	LifeSpan *timeseries.TimeSeries
 }
 

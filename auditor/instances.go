@@ -92,6 +92,8 @@ func (a *appAuditor) instances() {
 			default:
 				status.SetStatus(model.OK, i.OCICache.Status.Value())
 			}
+		} else if i.Cloud != nil { // shards fork
+			status = cloudServiceStatus(i.Cloud)
 		} else if i.Pod == nil {
 			if i.IsUp() {
 				status.SetStatus(model.OK, "ok")

@@ -165,6 +165,33 @@ spec:
 The operator renders these into the cluster-agent's [configuration file](/configuration/shards-cluster#configuration-file),
 which can also be used directly for installations without the operator.
 
+## Aurora, ElastiCache Serverless and MemoryDB
+
+**Aurora.** Aurora instances are discovered as RDS instances (grouped by their cluster). In addition, shards uses
+`aws_rds_cluster_role` (writer/reader, shown as the primary/replica role), `aws_rds_aurora_replica_lag_seconds`
+(CloudWatch `AuroraReplicaLag`) and, for Serverless v2 instances, `aws_rds_serverless_capacity_acu`,
+`aws_rds_serverless_acu_utilization_percent` and `aws_rds_serverless_{min,max}_capacity_acu`.
+
+**ElastiCache Serverless** caches become `ElasticacheServerless` applications (`aws_elasticache_serverless_info`,
+`_status`, `_ecpu_per_second`, `_ecpu_limit_per_second`, `_used_bytes`, `_data_storage_limit_bytes`, `_connections`).
+
+**MemoryDB** clusters become `MemoryDB` applications with an instance per node (`aws_memorydb_info`,
+`aws_memorydb_status`, `aws_memorydb_node_info`).
+
+These apps get a **Cloud** report with CPU, memory, storage, connections, replica lag and capacity charts, and the checks:
+
+| Check | Default condition | Built-in alert |
+|---|---|---|
+| Managed database replica lag | `AuroraReplicaLag` of a reader is more than 30s | warning, after 5 minutes |
+| Managed service capacity | Aurora Serverless ACU utilization, ElastiCache Serverless ECPU or data storage usage is above 90% of the limit | warning, after 10 minutes |
+
+The usual CPU and disk space checks apply to the RDS instances as before; for managed databases the disk space check
+becomes **critical** above 90% (it warns at 80%).
+
+The endpoints of the ElastiCache Serverless caches and MemoryDB nodes are host names, so the Redis/Valkey metrics
+collected through them (`elasticache: <name>` / `memorydb: <name>` targets) can't be attached to these applications by IP
+address yet: they are shown only if a node agent sees the endpoint.
+
 ## Troubleshooting
 
 The cluster-agent logs the effective region, the credential source, and the IAM identity it runs as whenever the

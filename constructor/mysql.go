@@ -263,6 +263,8 @@ func mysql(instance *model.Instance, queryName string, m *model.MetricValues) {
 	case "mysql_table_size_growth_bytes_per_second":
 		key := model.DbTableKey{Db: m.Labels["db"], Table: m.Labels["table"]}
 		instance.Mysql.TableSizeGrowth[key] = merge(instance.Mysql.TableSizeGrowth[key], m.Values, timeseries.Any)
+	default:
+		mysqlExt(instance.Mysql, queryName, m) // shards fork
 	}
 }
 

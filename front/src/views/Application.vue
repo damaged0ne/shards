@@ -34,6 +34,8 @@
             </v-alert>
 
             <Dashboard v-if="r" :name="r.name" :widgets="r.widgets" />
+
+            <PlaybookEditor target-type="application" :target-id="id" collapsible class="mt-4" />
         </div>
         <NoData v-else-if="!loading && !error" />
     </Views>
@@ -48,6 +50,7 @@ import Check from '../components/Check';
 import Led from '../components/Led';
 import ApplicationInstrumentation from '../components/ApplicationInstrumentation.vue';
 import MaintenanceQuick from '../components/MaintenanceQuick.vue';
+import PlaybookEditor from '../components/PlaybookEditor.vue';
 
 export default {
     props: {
@@ -55,7 +58,7 @@ export default {
         report: String,
     },
 
-    components: { Views, AppMap, Dashboard, NoData, Check, Led, ApplicationInstrumentation, MaintenanceQuick },
+    components: { Views, AppMap, Dashboard, NoData, Check, Led, ApplicationInstrumentation, MaintenanceQuick, PlaybookEditor },
 
     data() {
         return {

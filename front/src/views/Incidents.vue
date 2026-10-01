@@ -45,10 +45,10 @@
 
             <template #item.workflow="{ item }">
                 <div v-if="item.workflow" class="d-flex align-center text-no-wrap" style="gap: 6px">
-                    <span class="status-chip" :class="statusChip(item.workflow.status)">{{ statusName(item.workflow.status) }}</span>
-                    <span v-if="item.workflow.in_maintenance" class="status-chip info" title="Notifications muted by a maintenance window">
+                    <Chip :tone="statusChip(item.workflow.status)">{{ statusName(item.workflow.status) }}</Chip>
+                    <Chip v-if="item.workflow.in_maintenance" tone="info" title="Notifications muted by a maintenance window">
                         <v-icon size="12">mdi-wrench-clock</v-icon>
-                    </span>
+                    </Chip>
                     <span v-if="item.workflow.assignee" class="caption">{{ item.workflow.assignee }}</span>
                 </div>
             </template>
@@ -117,6 +117,7 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import Views from '@/views/Views.vue';
 import ApplicationFilter from '../components/ApplicationFilter.vue';
 import CheckForm from '@/components/CheckForm.vue';
@@ -129,7 +130,7 @@ const statuses = {
 };
 
 export default {
-    components: { Views, CheckForm, ApplicationFilter },
+    components: { Chip, Views, CheckForm, ApplicationFilter },
 
     data() {
         return {

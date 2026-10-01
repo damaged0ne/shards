@@ -335,7 +335,11 @@ func (api *Api) decideApproval(u *db.User, project *db.Project, id int, approve 
 		if ap.TargetType != "" {
 			api.recordAction(human, project.Id, ap.TargetType, ap.TargetId, actionApprovalRejected, comment, meta)
 		}
-		return api.db.GetApproval(project.Id, id)
+		decided, err := api.db.GetApproval(project.Id, id)
+		if err == nil {
+			api.notifyApprovalDecided(project, decided)
+		}
+		return decided, err
 	}
 	if ap.TargetType != "" {
 		api.recordAction(human, project.Id, ap.TargetType, ap.TargetId, actionApprovalApproved, comment, meta)
@@ -359,7 +363,31 @@ func (api *Api) decideApproval(u *db.User, project *db.Project, id int, approve 
 	if err = api.db.SetApprovalResult(project.Id, id, resultStatus, result); err != nil {
 		klog.Errorln(err)
 	}
-	return api.db.GetApproval(project.Id, id)
+	decided, err := api.db.GetApproval(project.Id, id)
+	if err == nil {
+		api.notifyApprovalDecided(project, decided)
+	}
+	return decided, err
+}
+
+// notifyApprovalDecided wakes the requesting agent up (if it is a registered agent with dispatch on).
+func (api *Api) notifyApprovalDecided(project *db.Project, ap *db.Approval) {
+	agentId, err := strconv.Atoi(ap.RequestedMeta["agent_id"])
+	if err != nil || agentId == 0 {
+		return
+	}
+	ev := AgentEvent{
+		Type: db.AgentEventApprovalDecided,
+		Approval: map[string]string{
+			"id": strconv.Itoa(ap.Id), "decision": ap.Status, "tool": ap.Action, "action": ap.Action,
+			"decided_by": ap.DecidedBy, "summary": ap.Summary,
+		},
+		TargetType: string(ap.TargetType),
+		TargetId:   ap.TargetId,
+	}
+	if err = api.DispatchAgentEvent(project, agentId, ev); err != nil && !errors.Is(err, db.ErrNotFound) {
+		klog.Errorln("failed to dispatch approval_decided:", err)
+	}
 }
 
 // Approvals handles GET /api/project/{project}/approvals?status=&target_type=&target_id=

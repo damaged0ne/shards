@@ -278,14 +278,15 @@ func TestMaintenanceWindowsAPIAndContext(t *testing.T) {
 	require.Len(t, ic.Alerts, 1)
 	assert.Equal(t, "al1", ic.Alerts[0].Id)
 	require.Len(t, ic.Similar, 1)
-	assert.Equal(t, "scaled up the pool", ic.Similar[0].Resolution)
+	require.NotNil(t, ic.Similar[0].Resolution)
+	assert.Equal(t, "scaled up the pool", string(*ic.Similar[0].Resolution))
 	assert.Len(t, ic.Maintenance, 0) // the quick window was ended, the weekly one isn't active (most likely)
 	assert.Less(t, len(resultText(res)), 3000, "the context bundle must stay compact")
 
 	// postmortem via MCP
 	res = e.call(ctx, e.h.toolGetIncidentPostmortem, map[string]any{"incident": "cur"})
 	require.False(t, res.IsError, resultText(res))
-	assert.True(t, strings.HasPrefix(resultText(res), "# Postmortem"))
+	assert.True(t, strings.HasPrefix(resultText(res), `{"format":"markdown","postmortem":{"untrusted_data":"# Postmortem`), resultText(res))
 
 	// home
 	w = e.rest(e.h.Api.Home, u, http.MethodGet, "/", nil, nil)
@@ -297,4 +298,50 @@ func TestMaintenanceWindowsAPIAndContext(t *testing.T) {
 	require.Len(t, home.Data.Incidents, 2)
 	assert.Equal(t, 2, home.Data.AlertsTotal)
 	assert.NotEmpty(t, home.Data.Activity, "agent actions show up as recent agent activity")
+}
+
+func TestRegisteredAgentApprovalGate(t *testing.T) {
+	e := newMCPTestEnv(t)
+	ctx, agent, _ := e.agentCtx("ops-bot", db.AgentScopeOperator, rbac.RoleEditor)
+	agent.Dispatch = &db.AgentDispatchConfig{Enabled: true, URL: "http://127.0.0.1:1/hook", Secret: "s", Events: []string{db.AgentEventApprovalDecided}}
+	require.NoError(t, e.db.UpdateAgent(agent))
+	rule := &model.AlertingRule{Name: "Noisy", Severity: model.WARNING, Enabled: true, Source: model.AlertSource{Type: model.AlertSourceTypePromQL, PromQL: &model.PromQLSource{Expression: "up == 0"}},
+		Selector: model.AppSelector{Type: model.AppSelectorTypeAll}, NotificationCategory: model.ApplicationCategoryApplication}
+	require.NoError(t, e.h.Api.createAlertingRule(e.project.Id, rule, actor{name: "alice", kind: db.CommentAuthorUser}))
+
+	// through the MCP server: scope check, then the approval gate short-circuits the call
+	out := e.rpc(ctx, "tools/call", map[string]any{"name": "update_alerting_rule", "arguments": map[string]any{"id": string(rule.Id), "enabled": false}})
+	assert.Contains(t, string(out), "pending approval")
+	stored, err := e.db.GetAlertingRule(e.project.Id, rule.Id)
+	require.NoError(t, err)
+	assert.True(t, stored.Enabled)
+	aps, err := e.db.GetApprovals(e.project.Id, db.ApprovalsQuery{Status: db.ApprovalStatusPending})
+	require.NoError(t, err)
+	require.Len(t, aps, 1)
+	assert.Equal(t, db.AgentActionDisableAlertingRule, aps[0].Action)
+	assert.Equal(t, strconv.Itoa(agent.Id), aps[0].RequestedMeta["agent_id"])
+
+	// auto actions pass the gate and run
+	out = e.rpc(ctx, "tools/call", map[string]any{"name": "create_maintenance_window", "arguments": map[string]any{"name": "deploy", "duration_minutes": float64(15)}})
+	assert.Contains(t, string(out), `\"status\":\"active\"`)
+
+	// the decision wakes the agent up
+	ap, err := e.h.Api.decideApproval(human(), e.project, aps[0].Id, true, "")
+	require.NoError(t, err)
+	assert.Equal(t, db.ApprovalStatusExecuted, ap.Status)
+	stored, err = e.db.GetAlertingRule(e.project.Id, rule.Id)
+	require.NoError(t, err)
+	assert.False(t, stored.Enabled)
+	dls, err := e.db.GetAgentDeliveries(agent.Id, 10)
+	require.NoError(t, err)
+	require.Len(t, dls, 1)
+	assert.Equal(t, db.AgentEventApprovalDecided, dls[0].Event)
+
+	// a triage agent can acknowledge incidents but not create maintenance windows
+	tctx, _, _ := e.agentCtx("triage-bot", db.AgentScopeTriage, rbac.RoleEditor)
+	e.incident("inc1", "payments", timeseries.Now().Add(-timeseries.Hour))
+	out = e.rpc(tctx, "tools/call", map[string]any{"name": "update_incident", "arguments": map[string]any{"incident": "inc1", "action": "acknowledge"}})
+	assert.NotContains(t, string(out), `"isError":true`)
+	out = e.rpc(tctx, "tools/call", map[string]any{"name": "create_maintenance_window", "arguments": map[string]any{"name": "x", "duration_minutes": float64(15)}})
+	assert.Contains(t, string(out), "forbidden")
 }

@@ -30,6 +30,7 @@ func (n *AlertNotifier) Enqueue(project *db.Project, app *model.Application, ale
 	if muteAlertNotification(n.db, project, app, alert, now) { // shards fork: maintenance windows
 		return
 	}
+	notifyAgentsAlert(project, app, alert, rule) // shards fork
 	category := model.ApplicationCategoryApplication
 	if app != nil {
 		category = app.Category

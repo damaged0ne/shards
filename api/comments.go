@@ -75,6 +75,10 @@ func newActor(u *db.User, via string) actor {
 			a.meta["api_key"] = u.ApiKey
 			a.meta["user"] = userDisplayName(u)
 		}
+		if u.Agent != nil { // shards fork: registered agents are named after the registry entry
+			a.name = u.Agent.Name
+			a.meta["agent_id"] = strconv.Itoa(u.Agent.Id)
+		}
 	}
 	return a
 }
@@ -235,6 +239,7 @@ func (api *Api) addComment(u *db.User, via string, project *db.Project, targetTy
 	}
 	c.Editable = api.canModifyComment(u, c)
 	api.forwardComment(project, t, c)
+	api.dispatchMentions(project, c) // shards fork: @agent mentions wake agents up
 	return c, nil
 }
 

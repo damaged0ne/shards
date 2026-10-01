@@ -11,7 +11,7 @@
                 <div class="summary">{{ a.summary }}</div>
                 <div v-if="a.reason" class="reason">“{{ a.reason }}”</div>
                 <div class="meta">
-                    <span class="status-chip" :class="statusChip">{{ a.status }}</span>
+                    <Chip :tone="statusChip">{{ a.status }}</Chip>
                     <span>#{{ a.id }}</span>
                     <span :title="$format.date(a.created_at, '{MMM} {DD}, {HH}:{mm}:{ss}')">{{ $format.timeSinceNow(a.created_at) }} ago</span>
                     <router-link v-if="showTarget && target" :to="target">{{ a.target_title || a.target_id }}</router-link>
@@ -43,9 +43,12 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import { agentActionName, approvalStatuses, targetRoute } from '@/utils/workflow';
 
 export default {
+    components: { Chip },
+
     props: {
         a: { type: Object, required: true },
         showTarget: { type: Boolean, default: true },

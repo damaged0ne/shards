@@ -953,7 +953,7 @@ func (api *Api) Integration(w http.ResponseWriter, r *http.Request, u *db.User) 
 		return
 	}
 	t := db.IntegrationType(vars["type"])
-	if t == db.IntegrationTypeGCP || t == db.IntegrationTypeOCI {
+	if t == db.IntegrationTypeGCP || t == db.IntegrationTypeOCI || t == db.IntegrationTypeAzure {
 		if r.Method != http.MethodGet {
 			http.Error(w, "this integration is configured in the Coroot custom resource or the cluster-agent config file", http.StatusMethodNotAllowed)
 			return
@@ -965,6 +965,9 @@ func (api *Api) Integration(w http.ResponseWriter, r *http.Request, u *db.User) 
 		view := views.GCP(world)
 		if t == db.IntegrationTypeOCI {
 			view = views.OCI(world)
+		}
+		if t == db.IntegrationTypeAzure { // shards fork
+			view = views.Azure(world)
 		}
 		utils.WriteJson(w, struct {
 			View any `json:"view"`

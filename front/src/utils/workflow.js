@@ -1,14 +1,14 @@
-// shards fork: shared helpers for the incident workflow, maintenance windows and agent approvals.
+// shards fork: shared helpers (chip values are tones of views/agents/Chip.vue) for the incident workflow, maintenance windows and agent approvals.
 
 export const incidentStatuses = {
-    triggered: { name: 'Triggered', chip: 'critical' },
+    triggered: { name: 'Triggered', chip: 'danger' },
     acknowledged: { name: 'Acknowledged', chip: 'warning' },
     mitigated: { name: 'Mitigated', chip: 'info' },
-    resolved: { name: 'Resolved', chip: 'ok' },
+    resolved: { name: 'Resolved', chip: 'success' },
 };
 
 export function incidentStatusChip(status) {
-    return (incidentStatuses[status] || {}).chip || '';
+    return (incidentStatuses[status] || {}).chip || 'neutral';
 }
 
 export function incidentStatusName(status) {
@@ -33,9 +33,9 @@ export function agentActionName(action) {
 export const approvalStatuses = {
     pending: 'warning',
     approved: 'info',
-    executed: 'ok',
+    executed: 'success',
     failed: 'danger',
-    rejected: '',
+    rejected: 'neutral',
 };
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -72,7 +72,7 @@ export function maintenanceScheduleText(w, format) {
 }
 
 export function maintenanceStatusChip(status) {
-    return { active: 'warning', scheduled: 'info', ended: '', expired: '' }[status] || '';
+    return { active: 'warning', scheduled: 'info' }[status] || 'neutral';
 }
 
 // targetRoute returns the page of a timeline target (incident, alert, alerting rule, maintenance window).

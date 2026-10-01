@@ -43,6 +43,7 @@ export const views = {
     costs: { name: 'Costs', icon: 'mdi-currency-usd', group: 'infrastructure', tile: 'success' },
     risks: { name: 'Risks', icon: 'mdi-weather-lightning', group: 'infrastructure', tile: 'pink' },
     dashboards: { name: 'Dashboards', icon: 'mdi-view-dashboard-outline', group: 'explore', tile: 'purple' },
+    agents: { name: 'Agents', icon: 'mdi-robot-outline', group: 'automation', tile: 'accent' }, // shards fork
 };
 
 export default {

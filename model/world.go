@@ -30,6 +30,10 @@ type World struct {
 	GCP GCP
 	OCI OCI
 
+	// shards fork
+	Azure        Azure
+	ClusterAgent ClusterAgentStatus
+
 	IntegrationStatus IntegrationStatus
 
 	ProjectNamesById map[string]string
@@ -42,6 +46,7 @@ func NewWorld(from, to timeseries.Time, step, rawStep timeseries.Duration) *Worl
 		AWS:              AWS{DiscoveryErrors: map[string]bool{}},
 		GCP:              GCP{DiscoveryErrors: map[string]bool{}},
 		OCI:              OCI{DiscoveryErrors: map[string]bool{}},
+		Azure:            Azure{DiscoveryErrors: map[string]bool{}},
 		ProjectNamesById: map[string]string{},
 	}
 }

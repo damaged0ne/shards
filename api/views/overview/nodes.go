@@ -72,6 +72,8 @@ func RenderNodes(w *model.World, project *db.Project) []Node {
 				t, version = i.OCIDB.ApplicationType(), i.OCIDB.EngineVersion.Value()
 			case i.OCICache != nil:
 				t, version = i.OCICache.ApplicationType(), i.OCICache.EngineVersion.Value()
+			case i.Cloud != nil: // shards fork
+				t, version = i.Cloud.ApplicationType(), i.Cloud.EngineVersion.Value()
 			default:
 				continue
 			}

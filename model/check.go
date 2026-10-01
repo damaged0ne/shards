@@ -749,6 +749,7 @@ type Check struct {
 	value           float32
 	values          *timeseries.TimeSeries
 	fired           bool
+	critical        bool // shards fork: see Escalate
 }
 
 func (ch *Check) AddWidget(w *Widget) {
@@ -855,6 +856,15 @@ func (ch *Check) Calc() {
 		return
 	}
 	ch.SetStatus(WARNING, "%s", buf.String())
+	if ch.critical { // shards fork
+		ch.Status = CRITICAL
+	}
+}
+
+// Escalate makes the check report CRITICAL instead of WARNING if it fires (shards fork).
+// Alerts of the check are raised with the CRITICAL severity even if their rule says WARNING.
+func (ch *Check) Escalate() {
+	ch.critical = true
 }
 
 type CheckConfigSource string

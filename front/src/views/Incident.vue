@@ -53,7 +53,9 @@
                     </div>
                 </div>
 
-                <v-simple-table dense class="mt-5 table">
+                <IncidentWorkflow :incident-key="$route.query.incident" class="mt-4 pt-3 workflow" @changed="changed" />
+
+                <v-simple-table v-if="incident.availability_slo || incident.latency_slo" dense class="mt-5 table">
                     <thead>
                         <tr>
                             <th>Service Level Objective (SLO)</th>
@@ -148,7 +150,7 @@
                     </div>
                 </template>
                 <v-card v-if="$route.query.incident" outlined class="my-5 pa-4">
-                    <Timeline target-type="incident" :target-id="$route.query.incident" />
+                    <Timeline ref="timeline" target-type="incident" :target-id="$route.query.incident" :show-approvals="false" />
                 </v-card>
             </template>
 
@@ -167,9 +169,10 @@ import Widget from '@/components/Widget.vue';
 import CheckForm from '@/components/CheckForm.vue';
 import AppTraces from '@/views/AppTraces.vue';
 import Timeline from '@/components/Timeline.vue';
+import IncidentWorkflow from '@/components/IncidentWorkflow.vue';
 
 export default {
-    components: { Views, AppTraces, CheckForm, Widget, NoData, Timeline },
+    components: { Views, AppTraces, CheckForm, Widget, NoData, Timeline, IncidentWorkflow },
 
     computed: {
         availabilityBurnRate() {
@@ -225,6 +228,12 @@ export default {
                 this.incident = data;
             });
         },
+        changed() {
+            this.get();
+            if (this.$refs.timeline) {
+                this.$refs.timeline.load();
+            }
+        },
         edit(check_id, check_title) {
             this.editing = { active: true, appId: this.incident.application_id, check: { id: check_id, title: check_title } };
         },
@@ -263,6 +272,10 @@ export default {
     opacity: 100%;
     border-bottom: 2px solid red !important;
     background-color: unset !important;
+}
+
+.workflow {
+    border-top: 1px solid var(--border-soft);
 }
 
 .field-name {

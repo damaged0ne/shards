@@ -43,6 +43,16 @@
                 </div>
             </template>
 
+            <template #item.workflow="{ item }">
+                <div v-if="item.workflow" class="d-flex align-center text-no-wrap" style="gap: 6px">
+                    <Chip :tone="statusChip(item.workflow.status)">{{ statusName(item.workflow.status) }}</Chip>
+                    <Chip v-if="item.workflow.in_maintenance" tone="info" title="Notifications muted by a maintenance window">
+                        <v-icon size="12">mdi-wrench-clock</v-icon>
+                    </Chip>
+                    <span v-if="item.workflow.assignee" class="caption">{{ item.workflow.assignee }}</span>
+                </div>
+            </template>
+
             <template #item.opened_at="{ item }">
                 <div class="d-flex text-no-wrap" :class="{ 'grey--text': item.resolved_at }">
                     {{ $format.date(item.opened_at, '{MMM} {DD}, {HH}:{mm}:{ss}') }}
@@ -107,9 +117,11 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import Views from '@/views/Views.vue';
 import ApplicationFilter from '../components/ApplicationFilter.vue';
 import CheckForm from '@/components/CheckForm.vue';
+import { incidentStatusChip, incidentStatusName } from '@/utils/workflow';
 
 const statuses = {
     critical: { name: 'Critical', color: 'red lighten-1' },
@@ -118,12 +130,13 @@ const statuses = {
 };
 
 export default {
-    components: { Views, CheckForm, ApplicationFilter },
+    components: { Chip, Views, CheckForm, ApplicationFilter },
 
     data() {
         return {
             limit: Number(this.$route.query.limit) || 50,
             incidents: [],
+            workflow: {},
             filter: new Set(),
             search: '',
             showResolved: false,
@@ -153,6 +166,7 @@ export default {
         headers() {
             const headers = [
                 { value: 'incident', text: 'Incident', sortable: false },
+                { value: 'workflow', text: 'Status', sortable: false },
                 { value: 'application', text: 'Application', sortable: false },
                 { value: 'cluster', text: 'Cluster', sortable: true },
                 { value: 'description', text: 'Description', sortable: false },
@@ -202,6 +216,7 @@ export default {
             return filtered.map((i) => {
                 return {
                     ...i,
+                    workflow: this.workflow[i.key],
                     color: statuses[i.resolved_at ? 'ok' : i.severity].color,
                 };
             });
@@ -227,7 +242,14 @@ export default {
                 }
                 this.incidents = data || [];
             });
+            this.$api.getIncidentsWorkflow((data, error) => {
+                if (!error) {
+                    this.workflow = data || {};
+                }
+            });
         },
+        statusChip: incidentStatusChip,
+        statusName: incidentStatusName,
         changeLimit(limit) {
             this.limit = limit;
             this.get();

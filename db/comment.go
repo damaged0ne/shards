@@ -16,11 +16,13 @@ const (
 	CommentTargetIncident     CommentTargetType = "incident"
 	CommentTargetAlert        CommentTargetType = "alert"
 	CommentTargetAlertingRule CommentTargetType = "alerting_rule"
+	// shards fork
+	CommentTargetMaintenanceWindow CommentTargetType = "maintenance_window"
 )
 
 func (t CommentTargetType) Valid() bool {
 	switch t {
-	case CommentTargetIncident, CommentTargetAlert, CommentTargetAlertingRule:
+	case CommentTargetIncident, CommentTargetAlert, CommentTargetAlertingRule, CommentTargetMaintenanceWindow:
 		return true
 	}
 	return false

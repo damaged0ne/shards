@@ -27,6 +27,9 @@ func NewAlertNotifier(database *db.DB) *AlertNotifier {
 }
 
 func (n *AlertNotifier) Enqueue(project *db.Project, app *model.Application, alert *model.Alert, rule *model.AlertingRule, now timeseries.Time) {
+	if muteAlertNotification(n.db, project, app, alert, now) { // shards fork: maintenance windows
+		return
+	}
 	notifyAgentsAlert(project, app, alert, rule) // shards fork
 	category := model.ApplicationCategoryApplication
 	if app != nil {
@@ -220,6 +223,9 @@ func EnqueueResolvedAlerts(database *db.DB, project *db.Project, alerts []*model
 	now := timeseries.Now()
 	for _, alert := range alerts {
 		alert.ResolvedAt = now
+		if muteAlertNotification(database, project, nil, alert, now) { // shards fork: maintenance windows
+			continue
+		}
 		category := alert.ApplicationCategory
 		if category == "" {
 			if rule.NotificationCategory != "" {

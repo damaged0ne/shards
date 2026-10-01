@@ -37,7 +37,7 @@ const (
 	commentWebhookTimeout   = 30 * time.Second
 	commentTargetNotFound   = "target not found"
 	commentTargetForbidden  = "forbidden"
-	commentTargetBadRequest = "invalid target_type, must be one of: incident, alert, alerting_rule"
+	commentTargetBadRequest = "invalid target_type, must be one of: incident, alert, alerting_rule, maintenance_window"
 )
 
 // actor identifies who performed an action: a human (session), or an operator agent
@@ -172,6 +172,17 @@ func (api *Api) resolveCommentTarget(u *db.User, project *db.Project, targetType
 		}
 		if write && !api.IsAllowed(u, rbac.Actions.Project(pid).Alerts().Edit()) {
 			return nil, &targetError{http.StatusForbidden, commentTargetForbidden}
+		}
+	case db.CommentTargetMaintenanceWindow: // shards fork
+		if !api.IsAllowed(u, rbac.Actions.Project(pid).Alerts().View()) || (write && !api.IsAllowed(u, rbac.Actions.Project(pid).Alerts().Edit())) {
+			return nil, &targetError{http.StatusForbidden, commentTargetForbidden}
+		}
+		id, err := strconv.Atoi(targetId)
+		if err != nil {
+			return nil, &targetError{http.StatusNotFound, commentTargetNotFound}
+		}
+		if _, err = api.db.GetMaintenanceWindow(project.Id, id); err != nil {
+			return nil, notFound(err)
 		}
 	case db.CommentTargetAlertingRule:
 		if !api.IsAllowed(u, rbac.Actions.Project(pid).AlertingRules().View()) {

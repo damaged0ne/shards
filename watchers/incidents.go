@@ -79,6 +79,9 @@ func (w *Incidents) Check(project *db.Project, world *model.World) {
 			continue
 		}
 		needNotify := false
+		if incident == nil && status > model.OK && w.inHumanResolveCooldown(project, app.Id, now) { // shards fork
+			continue
+		}
 		switch {
 		case incident == nil && status <= model.OK:
 			continue
@@ -105,6 +108,7 @@ func (w *Incidents) Check(project *db.Project, world *model.World) {
 					klog.Errorln(err)
 					continue
 				}
+				w.onIncidentAutoResolved(project, incident) // shards fork
 				needNotify = true
 			} else {
 				escalated := status > incident.Severity // shards fork
@@ -130,6 +134,7 @@ func (w *Incidents) Check(project *db.Project, world *model.World) {
 		}
 	}
 	w.resolveIncidentsForMissingApps(project, world, now)
+	w.notifier.ReleaseMaintenance(project, world, now) // shards fork: notify incidents still open after a maintenance window
 
 	klog.Infof("%s: checked %d apps in %s", project.Id, apps, time.Since(start).Truncate(time.Millisecond))
 }
@@ -148,6 +153,8 @@ func (w *Incidents) resolveIncidentsForMissingApps(project *db.Project, world *m
 		incident.Severity = model.OK
 		if err := w.db.ResolveIncident(project.Id, incident); err != nil {
 			klog.Errorln("failed to resolve incident for missing app:", err)
+		} else {
+			w.onIncidentAutoResolved(project, incident) // shards fork
 		}
 	}
 }

@@ -2,6 +2,9 @@
     <Views :loading="loading" :error="error">
         <template v-if="name" #subtitle>{{ name }}</template>
 
+        <div class="d-flex justify-end mb-n2">
+            <MaintenanceQuick :app-id="id" />
+        </div>
         <div v-if="app">
             <AppMap v-if="app.app_map" :map="app.app_map" class="py-2" />
 
@@ -46,6 +49,7 @@ import NoData from '../components/NoData';
 import Check from '../components/Check';
 import Led from '../components/Led';
 import ApplicationInstrumentation from '../components/ApplicationInstrumentation.vue';
+import MaintenanceQuick from '../components/MaintenanceQuick.vue';
 import PlaybookEditor from '../components/PlaybookEditor.vue';
 
 export default {
@@ -54,7 +58,7 @@ export default {
         report: String,
     },
 
-    components: { Views, AppMap, Dashboard, NoData, Check, Led, ApplicationInstrumentation, PlaybookEditor },
+    components: { Views, AppMap, Dashboard, NoData, Check, Led, ApplicationInstrumentation, MaintenanceQuick, PlaybookEditor },
 
     data() {
         return {

@@ -51,9 +51,18 @@ The MCP endpoint is served at `/mcp` on your shards instance. All tools are incl
 | `update_alerting_rule` | Change an existing rule (thresholds, severity, selector, templates, enabled state). | The updated rule. |
 | `delete_alerting_rule` | Remove a custom alerting rule. | Acknowledgement. |
 | `get_playbook` | Read the agent playbooks that apply to an alert, incident, alerting rule or application. | Playbooks (markdown) with author and update time. |
+| `get_incident_context` | Everything about one incident in a single compact call. | Incident and workflow status, the latest timeline entries, firing alerts of the app and its dependencies, deployments of the app and its upstreams in the last 24h, similar incidents of the same app in the last 30 days with their resolutions, active maintenance windows. |
+| `update_incident` | Move an incident through the workflow: `acknowledge`, `assign`, `unassign`, `mitigate`, `resolve` (with a resolution summary, root cause and follow-ups), `set_severity`. | The workflow state of the incident. |
+| `get_incident_postmortem` | Generate a postmortem draft. | Markdown: summary, impact (SLO burn), resolution, root cause, deployments around the incident, timeline, follow-up items. |
+| `list_maintenance_windows` | See which maintenance windows are active or scheduled. | Windows with schedule, scope, status (`active`, `scheduled`, `ended`, `expired`) and the current or next occurrence. |
+| `create_maintenance_window` | Mute notifications for planned work: for the next N minutes, between two timestamps, or weekly. | The created window. |
+| `end_maintenance_window` | End a maintenance window now. | The ended window. |
+| `get_approval_status` | Check an action that is waiting for a human. | Status (`pending`, `executed`, `failed`, `rejected`), who decided, the reviewer's comment and the result. |
 
 :::note
-The comment, suppress/reopen and alerting-rule tools above, as well as the optional comment on `resolve_alerts`, are shards additions for [operator agents](/agents/operator-agents).
+The comment, suppress/reopen, alerting-rule, incident-workflow, maintenance and approval tools above, as well as the optional comment on `resolve_alerts`, are shards additions for [operator agents](/agents/operator-agents).
+Some write tools are subject to the project's [approval policy](/agents/operator-agents#human-approval-for-agent-actions): instead of executing, they may return
+`{"status": "pending", "approval_id": N}` and wait for a person to approve the action.
 Write tools require a role that is allowed to change the project (`Editor` or `Admin`); a `Viewer` can only read.
 Exact arguments are described by the tool schemas the MCP server advertises to the client.
 :::

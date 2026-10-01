@@ -191,6 +191,7 @@ func main() {
 	r.HandleFunc("/api/project/{project}/alerts/reopen", a.Auth(a.ReopenAlerts)).Methods(http.MethodPost)
 	r.HandleFunc("/api/project/{project}/comments", a.Auth(a.Comments)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/comments/{id}", a.Auth(a.Comment)).Methods(http.MethodPut, http.MethodDelete)
+	a.RegisterWorkflowRoutes(r) // shards fork: incident workflow, maintenance windows, approvals, home
 	a.RegisterAgentRoutes(r) // shards fork: Agents area + playbooks
 	r.HandleFunc("/api/project/{project}/alerting-rules", a.Auth(a.AlertingRules)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/alerting-rules/export", a.Auth(a.AlertingRulesExport)).Methods(http.MethodGet)

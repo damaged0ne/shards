@@ -15,6 +15,10 @@
             {{ error }}
         </v-alert>
 
+        <div v-if="showApprovals && approvals.length" class="approvals mb-2">
+            <ApprovalCard v-for="a in approvals" :key="a.id" :a="a" :show-target="false" @decided="load" />
+        </div>
+
         <div v-if="!loading && !entries.length" class="caption grey--text mb-2">No comments or actions yet.</div>
 
         <div v-for="e in entries" :key="e.id" class="entry d-flex" :class="{ action: e.kind === 'action' }">
@@ -37,6 +41,9 @@
                     </span>
                     <span v-if="e.edited_at" class="caption grey--text ml-1">(edited)</span>
                     <span v-if="e.meta && e.meta.via === 'mcp'" class="caption grey--text ml-1">via MCP</span>
+                    <Chip v-if="e.meta && e.meta.approved_by" tone="success" class="ml-1" title="Executed after a human approval">
+                        <v-icon size="12">mdi-account-check-outline</v-icon> approved by {{ e.meta.approved_by }}
+                    </Chip>
                     <v-spacer />
                     <template v-if="e.editable && editing !== e.id">
                         <v-btn v-if="e.kind === 'comment'" icon x-small @click="startEdit(e)" title="Edit"><v-icon x-small>mdi-pencil</v-icon></v-btn>
@@ -78,7 +85,10 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import Markdown from '@/components/Markdown.vue';
+import ApprovalCard from '@/components/ApprovalCard.vue';
+import { agentActionName } from '@/utils/workflow';
 import AskAgentDialog from '@/components/AskAgentDialog.vue';
 
 const actionIcons = {
@@ -90,22 +100,38 @@ const actionIcons = {
     enabled: 'mdi-toggle-switch',
     disabled: 'mdi-toggle-switch-off',
     deleted: 'mdi-delete',
+    acknowledged: 'mdi-hand-back-right-outline',
+    assigned: 'mdi-account-arrow-left-outline',
+    unassigned: 'mdi-account-remove-outline',
+    mitigated: 'mdi-shield-check-outline',
+    severity_changed: 'mdi-alert-outline',
+    resolution_updated: 'mdi-pencil',
+    auto_resolved: 'mdi-check-all',
+    muted: 'mdi-wrench-clock',
+    unmuted: 'mdi-bell-ring-outline',
+    ended: 'mdi-stop',
+    approval_requested: 'mdi-account-clock-outline',
+    approval_approved: 'mdi-account-check-outline',
+    approval_rejected: 'mdi-account-cancel-outline',
+    approval_denied: 'mdi-cancel',
     asked_agent: 'mdi-robot-outline',
 };
 
-const targetNames = { incident: 'the incident', alert: 'the alert', alerting_rule: 'the rule' };
+const targetNames = { incident: 'the incident', alert: 'the alert', alerting_rule: 'the rule', maintenance_window: 'the maintenance window' };
 
 export default {
-    components: { Markdown, AskAgentDialog },
+    components: { Chip, Markdown, ApprovalCard, AskAgentDialog },
 
     props: {
         targetType: { type: String, required: true },
         targetId: { type: String, required: true },
+        showApprovals: { type: Boolean, default: true },
     },
 
     data() {
         return {
             entries: [],
+            approvals: [],
             loading: false,
             error: '',
             body: '',
@@ -146,6 +172,11 @@ export default {
                 this.error = '';
                 this.entries = Array.isArray(data) ? data : [];
             });
+            if (this.showApprovals) {
+                this.$api.getApprovals({ status: 'pending', target_type: this.targetType, target_id: this.targetId }, (data, error) => {
+                    this.approvals = !error && Array.isArray(data) ? data : [];
+                });
+            }
         },
         submit() {
             const body = this.body.trim();
@@ -229,7 +260,31 @@ export default {
             return { name: 'overview', params: { view: 'agents', id: e.meta.agent_id }, query: this.$utils.contextQuery() };
         },
         actionText(e) {
-            const action = (e.meta && e.meta.action) || 'updated';
+            const m = e.meta || {};
+            const requested = agentActionName(m.requested_action).toLowerCase();
+            switch (m.action) {
+                case 'assigned':
+                    return `assigned ${targetNames[e.target_type]} to ${m.assignee}`;
+                case 'severity_changed':
+                    return `set the severity to ${m.severity}`;
+                case 'resolution_updated':
+                    return 'updated the resolution';
+                case 'auto_resolved':
+                    return 'resolved the incident automatically: the SLO is met again';
+                case 'muted':
+                    return 'muted notifications';
+                case 'unmuted':
+                    return 'sent the postponed notifications';
+                case 'approval_requested':
+                    return `asked for approval to ${requested} (#${m.approval_id})`;
+                case 'approval_approved':
+                    return `approved ${m.requested_by}'s request to ${requested} (#${m.approval_id})`;
+                case 'approval_rejected':
+                    return `rejected ${m.requested_by}'s request to ${requested} (#${m.approval_id})`;
+                case 'approval_denied':
+                    return `was denied by the project policy to ${requested}`;
+            }
+            const action = m.action || 'updated';
             if (action === 'asked_agent') {
                 return 'asked an agent to look at ' + (targetNames[e.target_type] || 'this');
             }
@@ -246,6 +301,11 @@ export default {
 <style scoped>
 .entry {
     padding: 6px 0;
+}
+.approvals {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 .entry.action {
     padding: 4px 0 4px 3px;

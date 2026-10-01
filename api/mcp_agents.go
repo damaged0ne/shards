@@ -195,6 +195,7 @@ func (h *MCPHandler) registerAgentTools() {
 		),
 		h.toolDeleteAlertingRule,
 	)
+	h.registerWorkflowTools() // shards fork
 }
 
 func mcpRuleFieldOptions(update bool) []mcp.ToolOption {
@@ -293,18 +294,11 @@ func (h *MCPHandler) alertIdsAndComment(ctx context.Context, req mcp.CallToolReq
 }
 
 func (h *MCPHandler) toolSuppressAlerts(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	user, project, ids, comment, errResult := h.alertIdsAndComment(ctx, req)
+	user, project, _, _, errResult := h.alertIdsAndComment(ctx, req)
 	if errResult != nil {
 		return errResult, nil
 	}
-	a := newActor(user, viaMCP)
-	notified, err := h.Api.suppressAlerts(project, ids, a.name+" (via MCP)")
-	if err != nil {
-		klog.Errorln("mcp: suppress_alerts:", err)
-		return mcp.NewToolResultError("failed to suppress alerts"), nil
-	}
-	h.Api.recordAlertActions(a, project.Id, ids, actionAlertSuppressed, comment)
-	return MCPJSON(map[string]any{"suppressed": len(ids), "notified": notified})
+	return h.mcpToolGated(user, project, "suppress_alerts", req)
 }
 
 func (h *MCPHandler) toolReopenAlerts(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -594,32 +588,14 @@ func (h *MCPHandler) toolUpdateAlertingRule(ctx context.Context, req mcp.CallToo
 	if errResult != nil {
 		return errResult, nil
 	}
-	existing, errResult := h.getRule(project, req)
+	c, errResult := h.mcpGatedCall(project, "update_alerting_rule", req)
 	if errResult != nil {
 		return errResult, nil
 	}
-	if existing.Readonly {
-		return mcp.NewToolResultError("this rule is managed via config and cannot be edited"), nil
+	if _, r, err := h.runGatedCall(project, newActor(user, viaMCP), c); r != nil || err != nil {
+		return r, err
 	}
-	if st := req.GetString("source_type", ""); existing.Builtin && st != "" && model.AlertSourceType(st) != existing.Source.Type {
-		return mcp.NewToolResultError("the source type of a builtin rule cannot be changed"), nil
-	}
-	updated := *existing
-	updated.Source = cloneAlertSource(existing.Source)
-	updated.Selector.Categories = slices.Clone(existing.Selector.Categories)
-	updated.Selector.ApplicationIdPatterns = slices.Clone(existing.Selector.ApplicationIdPatterns)
-	if err := applyRuleArgs(&updated, req); err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-	if len(alertingRuleChanges(existing, &updated)) == 0 && req.GetString("comment", "") == "" {
-		return mcp.NewToolResultError("nothing to update: pass at least one field to change"), nil
-	}
-	a := newActor(user, viaMCP)
-	if err := h.Api.updateAlertingRule(project.Id, existing, &updated, a); err != nil {
-		return mcpTargetError(err), nil
-	}
-	h.recordRuleNote(a, project.Id, &updated, req)
-	return h.ruleWithTimeline(user, project, &updated)
+	return h.ruleWithTimeline(user, project, c.rule)
 }
 
 func (h *MCPHandler) toolDeleteAlertingRule(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -627,16 +603,7 @@ func (h *MCPHandler) toolDeleteAlertingRule(ctx context.Context, req mcp.CallToo
 	if errResult != nil {
 		return errResult, nil
 	}
-	rule, errResult := h.getRule(project, req)
-	if errResult != nil {
-		return errResult, nil
-	}
-	a := newActor(user, viaMCP)
-	if err := h.Api.deleteAlertingRule(project.Id, rule, a); err != nil {
-		return mcpTargetError(err), nil
-	}
-	h.recordRuleNote(a, project.Id, rule, req)
-	return MCPJSON(map[string]any{"deleted": string(rule.Id), "name": rule.Name})
+	return h.mcpToolGated(user, project, "delete_alerting_rule", req)
 }
 
 // cloneAlertSource deep-copies a rule source so a partial update doesn't mutate the original.

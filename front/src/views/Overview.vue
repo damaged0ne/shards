@@ -1,5 +1,9 @@
 <template>
     <div>
+        <template v-if="view === 'home'">
+            <Home />
+        </template>
+
         <template v-if="view === 'applications'">
             <Application v-if="id" :id="id" :report="report" />
             <Applications v-else />
@@ -71,11 +75,13 @@ import Risks from '@/views/Risks.vue';
 import Dashboards from '@/views/dashboards/Dashboards.vue';
 import Dashboard from '@/views/dashboards/Dashboard.vue';
 import Kubernetes from '@/views/Kubernetes.vue';
+import Home from '@/views/Home.vue';
 import Agents from '@/views/agents/Agents.vue';
 import Agent from '@/views/agents/Agent.vue';
 
 export default {
     components: {
+        Home,
         Kubernetes,
         Applications,
         Application,

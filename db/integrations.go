@@ -21,6 +21,7 @@ const (
 	IntegrationTypeAWS        IntegrationType = "aws"
 	IntegrationTypeGCP        IntegrationType = "gcp"
 	IntegrationTypeOCI        IntegrationType = "oci"
+	IntegrationTypeAzure      IntegrationType = "azure" // shards fork
 	IntegrationTypeSlack      IntegrationType = "slack"
 	IntegrationTypePagerduty  IntegrationType = "pagerduty"
 	IntegrationTypeTeams      IntegrationType = "teams"

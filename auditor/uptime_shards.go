@@ -29,6 +29,10 @@ func (a *appAuditor) uptime() {
 	certCheck := report.CreateCheck(model.Checks.ProbeTLSCertExpiry)
 	certCriticalCheck := report.CreateCheck(model.Checks.ProbeTLSCertExpiryCritical)
 	certInvalidCheck := report.CreateCheck(model.Checks.ProbeTLSCertInvalid)
+	// these checks report (and raise alerts as) CRITICAL when they fire
+	downCheck.SetCritical()
+	certCriticalCheck.SetCritical()
+	certInvalidCheck.SetCritical()
 
 	upChart := report.GetOrCreateChart("Availability, %", nil)
 	latencyChart := report.GetOrCreateChart("Response time, seconds", nil)
@@ -130,33 +134,12 @@ func (a *appAuditor) uptime() {
 		}
 	}
 
-	checks := []*model.Check{downCheck, latencyCheck, certCheck, certCriticalCheck, certInvalidCheck}
-	for _, ch := range checks {
+	for _, ch := range []*model.Check{downCheck, latencyCheck, certCheck, certCriticalCheck, certInvalidCheck} {
 		ch.Calc()
-		if ch.Status > model.OK {
-			status := model.WARNING
-			if ch == downCheck || ch == certInvalidCheck || ch == certCriticalCheck {
-				status = model.CRITICAL
-			}
-			if a.app.Status < status {
-				a.app.Status = status
-			}
+		if ch.Status > a.app.Status {
+			a.app.Status = ch.Status
 		}
 	}
-}
-
-func lastValue(ts *timeseries.TimeSeries) float32 {
-	if ts.IsEmpty() {
-		return timeseries.NaN
-	}
-	res := timeseries.NaN
-	iter := ts.Iter()
-	for iter.Next() {
-		if _, v := iter.Value(); !timeseries.IsNaN(v) {
-			res = v
-		}
-	}
-	return res
 }
 
 // formatSeconds is like utils.FormatLatency but keeps two decimals for values above a second (2.5s, not 3s).

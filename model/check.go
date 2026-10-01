@@ -133,6 +133,22 @@ var Checks = struct {
 	ProbeTLSCertExpiry         CheckConfig
 	ProbeTLSCertExpiryCritical CheckConfig
 	ProbeTLSCertInvalid        CheckConfig
+	// shards fork: cluster agent targets (see check_cluster_targets_shards.go)
+	KafkaAvailability              CheckConfig
+	KafkaOfflinePartitions         CheckConfig
+	KafkaUnderReplicatedPartitions CheckConfig
+	KafkaConsumerLag               CheckConfig
+	ClickHouseAvailability         CheckConfig
+	ClickHouseReplication          CheckConfig
+	ClickHouseTooManyParts         CheckConfig
+	ClickHouseStuckMutations       CheckConfig
+	ClickHouseRejectedInserts      CheckConfig
+	ElasticsearchAvailability      CheckConfig
+	ElasticsearchClusterHealth     CheckConfig
+	ElasticsearchUnassignedShards  CheckConfig
+	ElasticsearchJvmHeap           CheckConfig
+	ElasticsearchDiskSpace         CheckConfig
+	ElasticsearchThreadPoolRejects CheckConfig
 }{
 	index: map[CheckId]*CheckConfig{},
 
@@ -716,6 +732,7 @@ var Checks = struct {
 }
 
 func init() {
+	initClusterTargetChecks() // shards fork
 	cs := reflect.ValueOf(&Checks).Elem()
 	for i := 0; i < cs.NumField(); i++ {
 		if !cs.Type().Field(i).IsExported() {
@@ -798,6 +815,7 @@ type Check struct {
 	value           float32
 	values          *timeseries.TimeSeries
 	fired           bool
+	critical        bool // shards fork: see SetCritical
 }
 
 func (ch *Check) AddWidget(w *Widget) {
@@ -904,6 +922,9 @@ func (ch *Check) Calc() {
 		return
 	}
 	ch.SetStatus(WARNING, "%s", buf.String())
+	if ch.critical { // shards fork
+		ch.Status = CRITICAL
+	}
 }
 
 type CheckConfigSource string

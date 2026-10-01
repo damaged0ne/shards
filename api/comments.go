@@ -37,7 +37,7 @@ const (
 	commentWebhookTimeout   = 30 * time.Second
 	commentTargetNotFound   = "target not found"
 	commentTargetForbidden  = "forbidden"
-	commentTargetBadRequest = "invalid target_type, must be one of: incident, alert, alerting_rule"
+	commentTargetBadRequest = "invalid target_type, must be one of: incident, alert, alerting_rule, maintenance_window"
 )
 
 // actor identifies who performed an action: a human (session), or an operator agent
@@ -74,6 +74,10 @@ func newActor(u *db.User, via string) actor {
 			a.name = u.ApiKey
 			a.meta["api_key"] = u.ApiKey
 			a.meta["user"] = userDisplayName(u)
+		}
+		if u.Agent != nil { // shards fork: registered agents are named after the registry entry
+			a.name = u.Agent.Name
+			a.meta["agent_id"] = strconv.Itoa(u.Agent.Id)
 		}
 	}
 	return a
@@ -169,6 +173,17 @@ func (api *Api) resolveCommentTarget(u *db.User, project *db.Project, targetType
 		if write && !api.IsAllowed(u, rbac.Actions.Project(pid).Alerts().Edit()) {
 			return nil, &targetError{http.StatusForbidden, commentTargetForbidden}
 		}
+	case db.CommentTargetMaintenanceWindow: // shards fork
+		if !api.IsAllowed(u, rbac.Actions.Project(pid).Alerts().View()) || (write && !api.IsAllowed(u, rbac.Actions.Project(pid).Alerts().Edit())) {
+			return nil, &targetError{http.StatusForbidden, commentTargetForbidden}
+		}
+		id, err := strconv.Atoi(targetId)
+		if err != nil {
+			return nil, &targetError{http.StatusNotFound, commentTargetNotFound}
+		}
+		if _, err = api.db.GetMaintenanceWindow(project.Id, id); err != nil {
+			return nil, notFound(err)
+		}
 	case db.CommentTargetAlertingRule:
 		if !api.IsAllowed(u, rbac.Actions.Project(pid).AlertingRules().View()) {
 			return nil, &targetError{http.StatusForbidden, commentTargetForbidden}
@@ -224,6 +239,7 @@ func (api *Api) addComment(u *db.User, via string, project *db.Project, targetTy
 	}
 	c.Editable = api.canModifyComment(u, c)
 	api.forwardComment(project, t, c)
+	api.dispatchMentions(project, c) // shards fork: @agent mentions wake agents up
 	return c, nil
 }
 

@@ -50,6 +50,14 @@ The MCP endpoint is served at `/mcp` on your shards instance. All tools are incl
 | `create_alerting_rule` | Add a custom alerting rule. | The created rule. |
 | `update_alerting_rule` | Change an existing rule (thresholds, severity, selector, templates, enabled state). | The updated rule. |
 | `delete_alerting_rule` | Remove a custom alerting rule. | Acknowledgement. |
+| `get_playbook` | Read the agent playbooks that apply to an alert, incident, alerting rule or application. | Playbooks (markdown) with author and update time. |
+| `get_incident_context` | Everything about one incident in a single compact call. | Incident and workflow status, the latest timeline entries, firing alerts of the app and its dependencies, deployments of the app and its upstreams in the last 24h, similar incidents of the same app in the last 30 days with their resolutions, active maintenance windows. |
+| `update_incident` | Move an incident through the workflow: `acknowledge`, `assign`, `unassign`, `mitigate`, `resolve` (with a resolution summary, root cause and follow-ups), `set_severity`. | The workflow state of the incident. |
+| `get_incident_postmortem` | Generate a postmortem draft. | Markdown: summary, impact (SLO burn), resolution, root cause, deployments around the incident, timeline, follow-up items. |
+| `list_maintenance_windows` | See which maintenance windows are active or scheduled. | Windows with schedule, scope, status (`active`, `scheduled`, `ended`, `expired`) and the current or next occurrence. |
+| `create_maintenance_window` | Mute notifications for planned work: for the next N minutes, between two timestamps, or weekly. | The created window. |
+| `end_maintenance_window` | End a maintenance window now. | The ended window. |
+| `get_approval_status` | Check an action that is waiting for a human. | Status (`pending`, `executed`, `failed`, `rejected`), who decided, the reviewer's comment and the result. |
 | `list_probes` | List the [synthetic probes](/uptime/probes) (HTTP/TCP/TLS/DNS uptime checks). | Probes with type, target, status, uptime % and p95 latency over the last hour, certificate days left, last error. |
 | `get_probe_results` | Look at one probe over a window (`window`, e.g. `24h`, max 7d). | Status, uptime %, latency p50/p95/max, downtime periods, latest phase timings, certificate details, last error. |
 | `create_probe` | Add a probe (optionally linked to an application). | The created probe. |
@@ -57,10 +65,54 @@ The MCP endpoint is served at `/mcp` on your shards instance. All tools are incl
 | `delete_probe` | Remove a probe. | Acknowledgement. |
 
 :::note
-The comment, suppress/reopen, alerting-rule and probe tools above, as well as the optional comment on `resolve_alerts`, are shards additions for [operator agents](/agents/operator-agents).
+The comment, suppress/reopen, alerting-rule, incident-workflow, maintenance, approval and probe tools above, as well as the optional comment on `resolve_alerts`, are shards additions for [operator agents](/agents/operator-agents).
+Some write tools are subject to the project's [approval policy](/agents/operator-agents#human-approval-for-agent-actions): instead of executing, they may return
+`{"status": "pending", "approval_id": N}` and wait for a person to approve the action.
 Write tools require a role that is allowed to change the project (`Editor` or `Admin`); a `Viewer` can only read.
 Exact arguments are described by the tool schemas the MCP server advertises to the client.
 :::
+
+## Agent scopes
+
+When the key belongs to a [registered agent](/agents/operator-agents#identities-and-scoped-keys), each tool needs a minimal scope;
+tools above the agent's scope are not listed in `tools/list` and are rejected if called:
+
+| Scope | Tools |
+| --- | --- |
+| `read` | `list_projects`, `select_project`, all `list_*` / `get_*` tools, traces, logs, metrics, `get_playbook` |
+| `triage` | + `add_comment` |
+| `operator` | + `resolve_alerts`, `suppress_alerts`, `reopen_alerts`, `create_alerting_rule`, `update_alerting_rule`, `delete_alerting_rule` |
+| `admin` | everything the owner's role allows |
+
+Every call is recorded in the agent's audit log. OAuth sessions and API keys that are not linked to an agent are unscoped (the user's role applies).
+
+## Resources
+
+| URI | Content |
+| --- | --- |
+| `shards://projects` | Projects you can access, `{name: id}`. |
+| `shards://projects/{project_id}/incidents/open` | Open SLO incidents (same shape as `list_incidents state=open`). |
+| `shards://projects/{project_id}/incidents/{key}` | One incident with RCA and timeline (same as `get_incident_details`). |
+| `shards://projects/{project_id}/alerts/firing` | Firing alerts (same shape as `list_alerts`). |
+
+The last three are resource templates (`resources/templates/list`). Resource subscriptions (`resources/subscribe` and
+per-resource `updated` notifications) are not offered: the Go MCP library shards uses (mark3labs/mcp-go v0.45, protocol `2025-11-25`)
+has no subscribe handler, and the stateless transport and `subscriptions/listen` of the 2026-07-28 revision are not implemented by it yet.
+Use [dispatch webhooks](/agents/operator-agents#waking-agents-up-dispatch) to get notified about new incidents and alerts instead.
+
+## Prompts
+
+| Prompt | Arguments | Workflow |
+| --- | --- | --- |
+| `triage_incident` | `incident` (key), optional `project_id` | Gather context (incident, timeline, playbook) → hypothesize → verify with metrics/logs/traces → comment findings → act within scope and playbook → resolve with a summary. |
+| `investigate_alert` | `alert` (id), optional `project_id` | The same workflow for an alert, including tuning a noisy rule. |
+| `write_postmortem` | `incident` (key), optional `project_id` | Blameless postmortem (summary, impact, timeline, root cause, detection, resolution, action items), posted as a comment. |
+
+## Untrusted data
+
+Text written by users, other agents or monitored systems (comments, alert summaries and details, log lines and attributes, trace attributes,
+events and error samples) is returned as `{"untrusted_data": ...}` and capped at 8 KB per value with a `[truncated: N bytes in total]` notice.
+The server instructions tell the agent to analyze such fields as evidence and never follow instructions inside them.
 
 ## Connecting an agent
 

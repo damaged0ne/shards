@@ -15,6 +15,7 @@ import (
 
 	"github.com/coroot/coroot/api/forms"
 	"github.com/coroot/coroot/api/views"
+	incident_view "github.com/coroot/coroot/api/views/incident"
 	"github.com/coroot/coroot/auditor"
 	"github.com/coroot/coroot/cache"
 	"github.com/coroot/coroot/ch"
@@ -952,7 +953,7 @@ func (api *Api) Integration(w http.ResponseWriter, r *http.Request, u *db.User) 
 		return
 	}
 	t := db.IntegrationType(vars["type"])
-	if t == db.IntegrationTypeGCP || t == db.IntegrationTypeOCI {
+	if t == db.IntegrationTypeGCP || t == db.IntegrationTypeOCI || t == db.IntegrationTypeAzure {
 		if r.Method != http.MethodGet {
 			http.Error(w, "this integration is configured in the Coroot custom resource or the cluster-agent config file", http.StatusMethodNotAllowed)
 			return
@@ -964,6 +965,9 @@ func (api *Api) Integration(w http.ResponseWriter, r *http.Request, u *db.User) 
 		view := views.GCP(world)
 		if t == db.IntegrationTypeOCI {
 			view = views.OCI(world)
+		}
+		if t == db.IntegrationTypeAzure { // shards fork
+			view = views.Azure(world)
 		}
 		utils.WriteJson(w, struct {
 			View any `json:"view"`
@@ -1247,9 +1251,13 @@ func (api *Api) Incident(w http.ResponseWriter, r *http.Request, u *db.User) {
 		return
 	}
 	app := world.GetApplication(incident.ApplicationId)
-	if app == nil {
-		klog.Warningln("application not found:", incident.ApplicationId)
-		http.Error(w, "Application not found", http.StatusNotFound)
+	if app == nil { // shards fork: keep incidents of gone applications (and their workflow) viewable
+		category := project.CalcApplicationCategory(incident.ApplicationId)
+		if !api.IsAllowed(u, rbac.Actions.Project(projectId).Application(category, incident.ApplicationId.Namespace, incident.ApplicationId.Kind, incident.ApplicationId.Name).View()) {
+			http.Error(w, "You are not allowed to view this application.", http.StatusForbidden)
+			return
+		}
+		utils.WriteJson(w, api.WithContext(project, cacheStatus, world, incident_view.RenderWithoutApplication(world, incident)))
 		return
 	}
 	if !api.IsAllowed(u, rbac.Actions.Project(projectId).Application(app.Category, app.Id.Namespace, app.Id.Kind, app.Id.Name).View()) {
@@ -1437,6 +1445,9 @@ func (api *Api) ResolveAlerts(w http.ResponseWriter, r *http.Request, u *db.User
 		return
 	}
 	a := newActor(u, viaUI)
+	if api.gateREST(w, project, a, db.AgentActionResolveAlerts, alertsActionArgs{Ids: req.Ids, Comment: req.Comment}, alertsSummary("Resolve", req.Ids), alertsGatedTarget(req.Ids), req.Comment) { // shards fork
+		return
+	}
 	if _, err := api.resolveAlerts(project, req.Ids, a.name); err != nil {
 		klog.Errorln(err)
 		http.Error(w, "", http.StatusInternalServerError)
@@ -1484,6 +1495,9 @@ func (api *Api) SuppressAlerts(w http.ResponseWriter, r *http.Request, u *db.Use
 		return
 	}
 	a := newActor(u, viaUI)
+	if api.gateREST(w, project, a, db.AgentActionSuppressAlerts, alertsActionArgs{Ids: req.Ids, Comment: req.Comment}, alertsSummary("Suppress", req.Ids), alertsGatedTarget(req.Ids), req.Comment) { // shards fork
+		return
+	}
 	if _, err := api.suppressAlerts(project, req.Ids, a.name); err != nil {
 		klog.Errorln(err)
 		http.Error(w, "", http.StatusInternalServerError)
@@ -1647,6 +1661,9 @@ func (api *Api) AlertingRule(w http.ResponseWriter, r *http.Request, u *db.User)
 			http.Error(w, "invalid request body", http.StatusBadRequest)
 			return
 		}
+		if project := api.getProjectOrError(w, db.ProjectId(projectId)); project == nil || api.gateRuleUpdate(w, project, newActor(u, viaUI), existing, &rule, "") { // shards fork
+			return
+		}
 		if err := api.updateAlertingRule(db.ProjectId(projectId), existing, &rule, newActor(u, viaUI)); err != nil {
 			writeTargetError(w, err)
 			return
@@ -1666,6 +1683,9 @@ func (api *Api) AlertingRule(w http.ResponseWriter, r *http.Request, u *db.User)
 			}
 			klog.Errorln(err)
 			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		if project := api.getProjectOrError(w, db.ProjectId(projectId)); project == nil || api.gateRuleDelete(w, project, newActor(u, viaUI), rule) { // shards fork
 			return
 		}
 		if err := api.deleteAlertingRule(db.ProjectId(projectId), rule, newActor(u, viaUI)); err != nil {

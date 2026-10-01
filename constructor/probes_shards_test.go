@@ -78,7 +78,7 @@ func TestProbes(t *testing.T) {
 		return res
 	}
 	ac := checks(app)
-	assert.Equal(t, model.WARNING, ac[model.Checks.ProbeDown.Id].Status)
+	assert.Equal(t, model.CRITICAL, ac[model.Checks.ProbeDown.Id].Status)
 	assert.Equal(t, "1 probe is failing", ac[model.Checks.ProbeDown.Id].Message)
 	assert.Equal(t, []string{"api-health: 2 failed runs in a row: unexpected status code: 503 (expected 200-399)"}, ac[model.Checks.ProbeDown.Id].Details.Items())
 	assert.Equal(t, model.WARNING, ac[model.Checks.ProbeLatency.Id].Status)
@@ -93,6 +93,6 @@ func TestProbes(t *testing.T) {
 	assert.Equal(t, model.OK, pc[model.Checks.ProbeDown.Id].Status, "a single failure doesn't fire")
 	assert.Equal(t, model.WARNING, pc[model.Checks.ProbeTLSCertExpiry.Id].Status)
 	assert.Equal(t, "the TLS certificate of 1 probe expires in less than 14 days", pc[model.Checks.ProbeTLSCertExpiry.Id].Message)
-	assert.Equal(t, model.WARNING, pc[model.Checks.ProbeTLSCertExpiryCritical.Id].Status)
-	assert.Equal(t, model.WARNING, pc[model.Checks.ProbeTLSCertInvalid.Id].Status)
+	assert.Equal(t, model.CRITICAL, pc[model.Checks.ProbeTLSCertExpiryCritical.Id].Status)
+	assert.Equal(t, model.CRITICAL, pc[model.Checks.ProbeTLSCertInvalid.Id].Status)
 }

@@ -228,6 +228,46 @@ Each capability can be toggled independently:
 - **`--track-database-sizes`** / `TRACK_DATABASE_SIZES` (default: `true`) - per-database and per-table size metrics.
 - **`--track-database-bloat`** / `TRACK_DATABASE_BLOAT` (default: `true`) - per-database, per-table, and per-index bloat estimation (Postgres only).
 
+### Database statistics, I/O, logical replication and indexes
+
+**Always collected** by shards-cluster (each view is gated by the server version; a missing or unreadable view is reported
+as a scrape warning and the rest is still collected):
+
+| Source | Metrics | Shown in the Postgres report as |
+|---|---|---|
+| `pg_stat_database` | `pg_db_xact_commit_total`, `pg_db_xact_rollback_total`, `pg_db_blks_hit_total`, `pg_db_blks_read_total`, `pg_db_deadlocks_total`, `pg_db_conflicts_total`, `pg_db_temp_bytes_total`, `pg_db_checksum_failures_total` (PG12+), `pg_db_sessions_{abandoned,fatal,killed}_total` and `pg_db_idle_in_transaction_time_seconds_total` (PG14+) | Transactions (commit/rollback), buffer cache hit ratio, errors (deadlocks, recovery conflicts, checksum failures, abandoned/fatal/killed sessions), temporary files, sessions idle in transaction |
+| `pg_stat_io` (PG16+) | `pg_io_{reads,writes,extends,fsyncs,hits,evictions}_total`, `pg_io_{read,write}_time_seconds_total` (aggregated over objects and contexts) | I/O operations, buffer hits and evictions, I/O time by backend type |
+| `pg_stat_wal` (PG14+) | `pg_wal_records_total`, `pg_wal_fpi_total`, `pg_wal_buffers_full_total` | WAL records, full page images, WAL buffers full |
+| `pg_stat_subscription(_stats)` | `pg_subscription_worker_up`, `pg_subscription_latest_end_age_seconds`, `pg_subscription_last_msg_receipt_age_seconds`, `pg_subscription_errors_total` | Logical replication: time since the last confirmed position by subscription |
+| `pg_stat_replication` | `pg_replication_standby_lag_seconds{stage="replay"}`, `pg_replication_standby_lag_bytes`, `pg_replication_standby_info` | Standby replay lag as seen by the primary |
+| `pg_stat_activity` | `pg_wait_event_sessions` | Sessions by wait event |
+| `pg_stat_statements` | `pg_top_query_{plan_time,rows,shared_blks_hit,shared_blks_read,temp_blks_read,temp_blks_written,wal_bytes}_per_second`, `pg_top_query_exec_time_{min,mean,max}_seconds` | The *Top query* table: calls, total time, mean/max execution time, rows, cache hit, temp blocks, WAL and planning time |
+| `pg_stat_user_indexes` (tracker interval) | `pg_index_unused_bytes`, `pg_db_unused_indexes`, `pg_db_unused_indexes_bytes`, `pg_db_duplicate_indexes` | *Unused indexes* and per-database unused/duplicate index tables |
+
+`idx_scan` is counted since the last statistics reset and only on the monitored server: an index used only by queries on a
+standby looks unused on the primary. The SLRU statistics (`pg_slru_*`), the `pg_db_tup_*` row counters and the session
+time counters (`pg_db_sessions_total`, `pg_db_session_time_seconds_total`, `pg_db_active_time_seconds_total`) are
+collected by the agent but not used by the reports.
+
+### Checks and built-in alerts
+
+In addition to the availability, latency, replication lag, connections, checkpoints, WAL archiving, wraparound, bloat,
+autovacuum and statistics checks, shards evaluates:
+
+| Check | Default condition | Built-in alert |
+|---|---|---|
+| Postgres deadlocks | more than 0 deadlocks in a database over the last 5 minutes | warning |
+| Postgres data checksum failures | more than 0 checksum failures in the selected period (requires data checksums) | **critical** |
+| Postgres logical replication | the apply worker of a subscription is not running, or no WAL position was confirmed to the publisher for more than 5 minutes | warning |
+| Postgres cache hit ratio | less than 90% of the block reads are served from shared buffers over 10 minutes (instances reading at least 50 blocks/s) | warning, after 15 minutes |
+| Postgres idle in transaction | more than 5 sessions idle in a transaction on average over 5 minutes (from `idle_in_transaction_time` on PG14+, `pg_stat_activity` otherwise) | warning, after 10 minutes |
+
+The cache hit ratio threshold is a heuristic for OLTP workloads, whose working set should fit in memory: they usually run
+at 99% or better, and a drop below 90% typically means the working set has outgrown `shared_buffers` (see
+[Understanding PostgreSQL's cache hit ratio](https://www.red-gate.com/hub/product-learning/redgate-monitor/understanding-postgresqls-cache-hit-ratio/)).
+Analytical workloads legitimately scan more data than fits in memory: raise or disable the check for such databases in
+the check settings.
+
 ## Performance impact
 
 shards collects most of the statistics over a single persistent connection to the `postgres` database. Once a minute it also connects to each database,

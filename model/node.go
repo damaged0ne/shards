@@ -182,6 +182,9 @@ func (n *Node) IsUp() bool {
 	if len(n.Instances) == 1 && n.Instances[0].Owner.Id.Kind == ApplicationKindOCICache {
 		return n.Instances[0].OCICache.IsUp()
 	}
+	if len(n.Instances) == 1 && n.Instances[0].Cloud != nil && n.CpuUsagePercent.IsEmpty() { // shards fork: serverless services report no CPU
+		return n.Instances[0].Cloud.IsUp()
+	}
 
 	return !n.CpuUsagePercent.TailIsEmpty()
 }

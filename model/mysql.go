@@ -38,6 +38,8 @@ type MysqlTableIOStats struct {
 }
 
 type Mysql struct {
+	Ext *MysqlExt // shards fork: cluster-agent extras, see dbext_shards.go
+
 	Up         *timeseries.TimeSeries
 	ServerUUID LabelLastValue
 	Error      LabelLastValue

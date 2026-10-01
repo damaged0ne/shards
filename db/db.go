@@ -125,6 +125,8 @@ func (db *DB) Migrate(extraTables ...Table) error {
 		&Alert{},
 		&Comment{},
 		&Probe{}, // shards fork
+		&IncidentWorkflow{}, &MaintenanceWindow{}, &Approval{}, // shards fork
+		AgentTables{}, // shards fork
 	}
 	return db.Migrator().Migrate(append(defaultTables, extraTables...)...)
 }

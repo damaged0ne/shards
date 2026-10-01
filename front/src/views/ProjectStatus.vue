@@ -54,6 +54,34 @@
                 <span class="ml-1 mr-2">{{ c.message }}</span>
                 <router-link :to="{ params: { tab: 'clouds' } }">{{ c.status === 'ok' ? 'details' : 'configure' }}</router-link>
             </div>
+
+            <div v-if="status.cluster_agent" class="mt-2">
+                <div class="d-flex align-center">
+                    <Led :status="status.cluster_agent.status" />
+                    <span class="font-weight-medium">cluster-agent</span>:
+                    <span class="ml-1">{{ status.cluster_agent.message }}</span>
+                </div>
+                <v-simple-table dense class="cluster-agent-targets mt-1">
+                    <thead>
+                        <tr>
+                            <th>Target</th>
+                            <th>Status</th>
+                            <th>Last collection</th>
+                            <th>Timeouts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="t in status.cluster_agent.targets" :key="t.type + '://' + t.address">
+                            <td class="text-no-wrap">{{ t.type }}://{{ t.address }}</td>
+                            <td>
+                                <div class="d-flex align-center"><Led :status="t.status" />{{ t.message }}</div>
+                            </td>
+                            <td class="text-no-wrap">{{ t.duration.toFixed(2) }}s</td>
+                            <td>{{ Math.round(t.timeouts) }}</td>
+                        </tr>
+                    </tbody>
+                </v-simple-table>
+            </div>
         </div>
     </div>
 </template>

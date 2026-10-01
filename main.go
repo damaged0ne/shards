@@ -142,6 +142,8 @@ func main() {
 		klog.Exitln(err)
 	}
 
+	a.StartAgentBackground() // shards fork: agent dispatch worker + audit retention
+
 	incidents := watchers.NewIncidents(database, nil)
 
 	watchers.Start(database, promCache, pricing, incidents, !cfg.DoNotCheckForDeployments, globalClickhouse, globalPrometheus, cfg.ClickHouseSpaceManager, nil, nil)
@@ -191,6 +193,8 @@ func main() {
 	r.HandleFunc("/api/project/{project}/comments", a.Auth(a.Comments)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/comments/{id}", a.Auth(a.Comment)).Methods(http.MethodPut, http.MethodDelete)
 	a.RegisterProbeRoutes(r) // shards fork
+	a.RegisterWorkflowRoutes(r) // shards fork: incident workflow, maintenance windows, approvals, home
+	a.RegisterAgentRoutes(r) // shards fork: Agents area + playbooks
 	r.HandleFunc("/api/project/{project}/alerting-rules", a.Auth(a.AlertingRules)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/alerting-rules/export", a.Auth(a.AlertingRulesExport)).Methods(http.MethodGet)
 	r.HandleFunc("/api/project/{project}/alerting-rules/{rule}", a.Auth(a.AlertingRule)).Methods(http.MethodGet, http.MethodPut, http.MethodDelete)

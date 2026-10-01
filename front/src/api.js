@@ -22,6 +22,7 @@ export default class Api {
         argocd: null,
         multicluster: false,
         member_projects: [],
+        attention: {},
     };
 
     constructor(router, vuetify, basePath) {
@@ -64,6 +65,7 @@ export default class Api {
                     this.context.argocd = response.data.context.argocd;
                     this.context.multicluster = response.data.context.multicluster;
                     this.context.member_projects = response.data.context.member_projects || [];
+                    this.context.attention = response.data.context.attention || {};
                 }
                 try {
                     const data = response.data.data !== undefined ? response.data.data : response.data;
@@ -311,6 +313,64 @@ export default class Api {
         this.del(this.projectPath(`comments/${id}`), cb);
     }
 
+    // shards fork: home, incident workflow, maintenance windows, agent approvals
+    getHome(cb) {
+        this.get(this.projectPath('home'), {}, cb);
+    }
+
+    incidentWorkflow(key, form, cb) {
+        const path = this.projectPath(`incident/${key}/workflow`);
+        if (form) {
+            this.post(path, form, cb);
+        } else {
+            this.get(path, {}, cb);
+        }
+    }
+
+    getIncidentsWorkflow(cb) {
+        this.get(this.projectPath('incidents/workflow'), {}, cb);
+    }
+
+    getIncidentPostmortem(key, cb) {
+        this.get(this.projectPath(`incident/${key}/postmortem`), {}, cb);
+    }
+
+    getMaintenanceWindows(includeEnded, cb) {
+        this.get(this.projectPath('maintenance'), { include_ended: includeEnded ? 'true' : undefined }, cb);
+    }
+
+    saveMaintenanceWindow(id, form, cb) {
+        if (id) {
+            this.put(this.projectPath(`maintenance/${id}`), form, cb);
+        } else {
+            this.post(this.projectPath('maintenance'), form, cb);
+        }
+    }
+
+    endMaintenanceWindow(id, comment, cb) {
+        this.post(this.projectPath(`maintenance/${id}/end`), { comment }, cb);
+    }
+
+    deleteMaintenanceWindow(id, cb) {
+        this.del(this.projectPath(`maintenance/${id}`), cb);
+    }
+
+    getApprovals(params, cb) {
+        this.get(this.projectPath('approvals'), params, cb);
+    }
+
+    decideApproval(id, decision, comment, cb) {
+        this.post(this.projectPath(`approvals/${id}`), { decision, comment }, cb);
+    }
+
+    approvalPolicy(form, cb) {
+        if (form) {
+            this.put(this.projectPath('approvals/policy'), form, cb);
+        } else {
+            this.get(this.projectPath('approvals/policy'), {}, cb);
+        }
+    }
+
     getInspectionConfig(appId, type, cb) {
         this.get(this.projectPath(`app/${encodeURIComponent(appId)}/inspection/${type}/config`), {}, cb);
     }
@@ -402,5 +462,42 @@ export default class Api {
 
     testProbe(form, cb) {
         this.post(this.projectPath('probes/test'), form, cb);
+    }
+
+    // shards fork: Agents area and playbooks
+    getAgents(cb) {
+        this.get(this.projectPath('agents'), {}, cb);
+    }
+
+    createAgent(form, cb) {
+        this.post(this.projectPath('agents'), form, cb);
+    }
+
+    getAgent(id, cb) {
+        this.get(this.projectPath(`agents/${id}`), {}, cb);
+    }
+
+    updateAgent(id, form, cb) {
+        this.put(this.projectPath(`agents/${id}`), form, cb);
+    }
+
+    deleteAgent(id, cb) {
+        this.del(this.projectPath(`agents/${id}`), cb);
+    }
+
+    agentAction(id, action, form, cb) {
+        if (form) {
+            this.post(this.projectPath(`agents/${id}/${action}`), form, cb);
+        } else {
+            this.get(this.projectPath(`agents/${id}/${action}`), {}, cb);
+        }
+    }
+
+    getPlaybook(targetType, targetId, cb) {
+        this.get(this.projectPath('playbooks'), { target_type: targetType, target_id: targetId }, cb);
+    }
+
+    savePlaybook(targetType, targetId, body, cb) {
+        this.put(this.projectPath('playbooks'), { target_type: targetType, target_id: targetId, body }, cb);
     }
 }

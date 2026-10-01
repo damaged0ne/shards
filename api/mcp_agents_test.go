@@ -111,7 +111,7 @@ func TestMCPAgentAlertWorkflow(t *testing.T) {
 	assert.Equal(t, "mcp", list.Items[0].Meta["via"])
 	assert.Equal(t, "action", list.Items[1].Kind)
 	assert.Equal(t, "resolved", list.Items[1].Action)
-	assert.Equal(t, "Raised the memory limit", list.Items[1].Body)
+	assert.Equal(t, MCPUntrusted("Raised the memory limit"), list.Items[1].Body)
 
 	a, err := e.db.GetAlert(e.project.Id, "alert-1")
 	require.NoError(t, err)
@@ -144,6 +144,9 @@ func TestMCPAgentAlertWorkflow(t *testing.T) {
 func TestMCPAgentAlertingRules(t *testing.T) {
 	e := newMCPTestEnv(t)
 	ctx := e.ctx(rbac.RoleEditor, "editor")
+	// this test covers the rule tools themselves: no human approvals (see approvals_shards_test.go)
+	e.project.Settings.AgentApprovals = &db.AgentApprovalPolicy{RequireApproval: false}
+	require.NoError(t, e.db.SaveProjectSettings(e.project))
 
 	// validation is shared with the REST form
 	res := e.call(ctx, e.h.toolCreateAlertingRule, map[string]any{"name": "bad", "source_type": "promql", "promql_expression": "rate(x[5m] >"})
@@ -171,7 +174,7 @@ func TestMCPAgentAlertingRules(t *testing.T) {
 	assert.Equal(t, model.ApplicationCategoryApplication, rule.NotificationCategory)
 	require.Len(t, rule.Timeline, 2)
 	assert.Equal(t, "created", rule.Timeline[0].Action)
-	assert.Equal(t, "Created during incident triage", rule.Timeline[1].Body)
+	assert.Equal(t, MCPUntrusted("Created during incident triage"), rule.Timeline[1].Body)
 
 	// partial update: only enabled
 	res = e.call(ctx, e.h.toolUpdateAlertingRule, map[string]any{"id": string(rule.Id), "enabled": false})

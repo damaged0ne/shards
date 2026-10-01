@@ -150,6 +150,9 @@ func (c *Constructor) loadProjectWorld(ctx context.Context, cache Cache, project
 	prof.stage("load_gcp", func() { c.loadGCP(w, metrics, pjs, cloudInstancesById) })
 	prof.stage("load_oci_metadata", func() { c.loadOCIMetadata(w, metrics, cloudInstancesById, project) })
 	prof.stage("load_oci", func() { c.loadOCI(w, metrics, pjs, cloudInstancesById) })
+	prof.stage("load_dbext_cloud_metadata", func() { c.loadDBExtCloudMetadata(w, metrics, cloudInstancesById, project) }) // shards fork
+	prof.stage("load_dbext_cloud", func() { c.loadDBExtCloud(w, metrics, cloudInstancesById) })                           // shards fork
+	prof.stage("load_cluster_agent_status", func() { loadClusterAgentStatus(w, metrics) })                                // shards fork
 	prof.stage("load_fargate_containers", func() { loadFargateContainers(w, metrics, pjs) })
 	prof.stage("load_containers", func() { c.loadContainers(w, metrics, pjs, nodes, containers, servicesByClusterIP, ip2fqdn, project) })
 	prof.stage("load_app_to_app_connections", func() { c.loadAppToAppConnections(w, metrics, fqdn2ip, project) })
@@ -455,9 +458,13 @@ func enrichInstances(w *model.World, metrics map[string][]*model.MetricValues, c
 		}
 	}
 
+	dbExt := newDBExtLoader(w, func(ls model.Labels, types ...model.ApplicationType) *model.Instance { // shards fork
+		return findInstance(instancesByPod, instancesByListenAddr, cloudInstancesById, ls, types...)
+	})
 	for queryName := range metrics {
 		for _, m := range metrics[queryName] {
 			switch {
+			case dbExt.load(queryName, m): // shards fork: pgbouncer_, rabbitmq_, etcd_
 			case strings.HasPrefix(queryName, "pg_"):
 				instance := findInstance(instancesByPod, instancesByListenAddr, cloudInstancesById, m.Labels, model.ApplicationTypePostgres)
 				postgres(instance, queryName, m, pjs)
@@ -476,6 +483,7 @@ func enrichInstances(w *model.World, metrics map[string][]*model.MetricValues, c
 			}
 		}
 	}
+	loadClusterTargets(w, metrics, instancesByPod, instancesByListenAddr, cloudInstancesById) // shards fork
 	return instancesByListen
 }
 

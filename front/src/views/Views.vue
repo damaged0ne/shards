@@ -31,6 +31,7 @@ import TopBar from '@/components/TopBar.vue';
 
 // group and tile define how the view is presented in the navigation rail.
 export const views = {
+    home: { name: 'Home', icon: 'mdi-inbox-outline', group: 'home', tile: 'accent' },
     applications: { name: 'Applications', icon: 'mdi-apps', group: 'health', tile: 'accent' },
     incidents: { name: 'Incidents', icon: 'mdi-alert-outline', group: 'health', tile: 'danger' },
     alerts: { name: 'Alerts', icon: 'mdi-bell-outline', group: 'health', tile: 'warning' },
@@ -43,6 +44,7 @@ export const views = {
     risks: { name: 'Risks', icon: 'mdi-weather-lightning', group: 'infrastructure', tile: 'pink' },
     uptime: { name: 'Uptime', icon: 'mdi-pulse', group: 'infrastructure', tile: 'success' },
     dashboards: { name: 'Dashboards', icon: 'mdi-view-dashboard-outline', group: 'explore', tile: 'purple' },
+    agents: { name: 'Agents', icon: 'mdi-robot-outline', group: 'automation', tile: 'accent' }, // shards fork
 };
 
 export default {

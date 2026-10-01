@@ -31,6 +31,9 @@ type User struct {
 	// ApiKey is the description (name) of the user API key the request was authenticated with.
 	// It is empty for session/OAuth-authenticated users. Not stored in the users table.
 	ApiKey string
+	// shards fork: ApiKeyId is the id of that key; Agent is the agent it is linked to (nil for unscoped keys).
+	ApiKeyId int
+	Agent    *Agent
 }
 
 type UserApiKey struct {
@@ -281,9 +284,9 @@ func (db *DB) GetUserByApiKey(key string) (*User, error) {
 	var u User
 	var roles string
 	err := db.db.QueryRow(
-		"SELECT u.id, u.email, u.name, u.roles, u.type, k.description FROM users u JOIN user_api_keys k ON k.user_id = u.id WHERE k.hash = $1",
+		"SELECT u.id, u.email, u.name, u.roles, u.type, k.description, k.id FROM users u JOIN user_api_keys k ON k.user_id = u.id WHERE k.hash = $1",
 		hashApiKey(key),
-	).Scan(&u.Id, &u.Email, &u.Name, &roles, &u.Type, &u.ApiKey)
+	).Scan(&u.Id, &u.Email, &u.Name, &roles, &u.Type, &u.ApiKey, &u.ApiKeyId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound

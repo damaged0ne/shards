@@ -218,31 +218,35 @@ button:focus-visible,
     background: var(--gray-3);
     color: var(--gray-11);
 }
-.status-chip.critical {
-    background: var(--danger-9);
-    border-color: var(--danger-9);
-    color: var(--danger-on);
+/* .v-application + !important: Vuetify's global .warning/.info/.error color classes would win otherwise */
+.v-application .status-chip.critical {
+    background: var(--danger-9) !important;
+    border-color: var(--danger-9) !important;
+    color: var(--danger-on) !important;
 }
-.status-chip.danger {
-    background: var(--danger-3);
-    border-color: var(--danger-6);
-    color: var(--danger-11);
+.v-application .status-chip.danger {
+    background: var(--danger-3) !important;
+    border-color: var(--danger-6) !important;
+    color: var(--danger-11) !important;
 }
-.status-chip.warning {
-    background: var(--warning-3);
-    border-color: var(--warning-6);
-    color: var(--warning-11);
+.v-application .status-chip.warning {
+    background: var(--warning-3) !important;
+    border-color: var(--warning-6) !important;
+    color: var(--warning-11) !important;
 }
-.status-chip.success,
-.status-chip.ok {
-    background: var(--success-3);
-    border-color: var(--success-6);
-    color: var(--success-11);
+.v-application .status-chip.success,
+.v-application .status-chip.ok {
+    background: var(--success-3) !important;
+    border-color: var(--success-6) !important;
+    color: var(--success-11) !important;
 }
-.status-chip.info {
-    background: var(--info-3);
-    border-color: var(--info-6);
-    color: var(--info-11);
+.v-application .status-chip.info {
+    background: var(--info-3) !important;
+    border-color: var(--info-6) !important;
+    color: var(--info-11) !important;
+}
+.v-application .status-chip .v-icon {
+    color: inherit !important;
 }
 /* .warning, .success and .info are also Vuetify color utilities (background-color !important) */
 .v-application .status-chip.warning {

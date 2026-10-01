@@ -543,10 +543,11 @@ func (h *MCPHandler) toolListApplications(ctx context.Context, req mcp.CallToolR
 }
 
 type mcpIssue struct {
-	Id      string `json:"id"`
-	Title   string `json:"title"`
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
+	Id      string   `json:"id"`
+	Title   string   `json:"title"`
+	Status  string   `json:"status"`
+	Message string   `json:"message,omitempty"`
+	Details []string `json:"details,omitempty"` // shards fork: per-item findings, e.g. which consumer group is stalled
 }
 
 type MCPSeriesValue struct {
@@ -661,6 +662,7 @@ func (h *MCPHandler) toolGetApplicationStatus(ctx context.Context, req mcp.CallT
 				Title:   c.Title,
 				Status:  c.Status.String(),
 				Message: c.Message,
+				Details: mcpCheckDetails(c),
 			})
 		}
 		if r.Status >= model.WARNING {

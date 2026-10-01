@@ -47,6 +47,8 @@ func GetDefaultInstrumentation(t ApplicationType) *ApplicationInstrumentation {
 		return &ApplicationInstrumentation{Type: ApplicationTypeMemcached, Port: "11211"}
 	case ApplicationTypeMysql:
 		return &ApplicationInstrumentation{Type: ApplicationTypeMysql, Port: "3306"}
+	case ApplicationTypeKafka, ApplicationTypeClickHouse, ApplicationTypeElasticsearch, ApplicationTypeOpensearch: // shards fork
+		return clusterTargetDefaultInstrumentation(t)
 	}
 	return nil
 }

@@ -475,6 +475,7 @@ func enrichInstances(w *model.World, metrics map[string][]*model.MetricValues, c
 			}
 		}
 	}
+	loadClusterTargets(w, metrics, instancesByPod, instancesByListenAddr, cloudInstancesById) // shards fork
 	return instancesByListen
 }
 

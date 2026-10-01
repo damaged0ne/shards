@@ -162,6 +162,7 @@ func (w *Alerts) evaluateCheckAlert(project *db.Project, rule *model.AlertingRul
 		if severity == model.UNKNOWN {
 			severity = model.WARNING
 		}
+		severity = checkAlertSeverity(severity, check) // shards fork
 		templateData := buildTemplateData(app, check)
 		summary := check.Message
 		description := renderTemplate(rule.Templates.Description, templateData)

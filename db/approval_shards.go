@@ -207,6 +207,7 @@ const (
 	AgentActionCreateMaintenanceWindow = "create_maintenance_window"
 	AgentActionEndMaintenanceWindow    = "end_maintenance_window"
 	AgentActionResolveIncident         = "resolve_incident"
+	AgentActionDeleteProbe             = "delete_probe" // probes
 )
 
 type AgentActionInfo struct {
@@ -225,6 +226,7 @@ var AgentActions = []AgentActionInfo{
 	{AgentActionCreateMaintenanceWindow, "Create a maintenance window", ApprovalPolicyAuto},
 	{AgentActionEndMaintenanceWindow, "End a maintenance window", ApprovalPolicyAuto},
 	{AgentActionResolveIncident, "Resolve an incident", ApprovalPolicyApproval},
+	{AgentActionDeleteProbe, "Delete an uptime probe", ApprovalPolicyAuto},
 }
 
 // AgentApprovalPolicy is the project setting "require human approval for agent actions".

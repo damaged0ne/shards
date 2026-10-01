@@ -166,6 +166,9 @@ func (h *MCPHandler) mcpGatedCall(project *db.Project, tool string, req mcp.Call
 		return &gatedCall{action: db.AgentActionEndMaintenanceWindow, args: maintenanceEndArgs{Id: id, Comment: comment},
 			summary: "End the maintenance window \"" + w.Name + "\"",
 			target:  gatedTarget{typ: db.CommentTargetMaintenanceWindow, id: strconv.Itoa(id), title: w.Name}, reason: comment}, nil
+
+	case "delete_probe": // probes
+		return h.probeDeleteGatedCall(project, req, comment)
 	}
 	return nil, nil
 }

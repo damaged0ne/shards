@@ -195,6 +195,10 @@ shards can send alert notifications through the following integrations:
 * [Pagerduty](/alerting/pagerduty)
 * [OpsGenie](/alerting/opsgenie)
 * [Webhook](/alerting/webhook)
+* [Telegram](/alerting/telegram)
+* [Discord](/alerting/discord)
+* [Mattermost](/alerting/mattermost)
+* [Email](/alerting/email)
 
 To configure notification integrations, go to **Project Settings** → **Integrations**.
 

@@ -50,6 +50,8 @@ type Config struct {
 
 	ClickHouseSpaceManager ClickHouseSpaceManager `yaml:"clickhouse_space_manager"`
 
+	Probes Probes `yaml:"probes"` // shards fork
+
 	BootstrapClickhouse *Clickhouse `yaml:"-"`
 	BootstrapPrometheus *Prometheus `yaml:"-"`
 }
@@ -282,6 +284,7 @@ func Load() (*Config, error) {
 	}
 
 	cfg.ApplyFlags()
+	cfg.applyProbesFlags() // shards fork
 
 	if err = cfg.Validate(); err != nil {
 		return nil, err

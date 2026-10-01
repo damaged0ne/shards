@@ -65,6 +65,9 @@ For instance, the `projects` parameter (a list of predefined projects) can only 
 | --disable-clickhouse-space-manager   | CLICKHOUSE_SPACE_MANAGER_DISABLED  | false         | Disable ClickHouse space manager that automatically cleans up old partitions.                                                                                                   |
 | --clickhouse-space-manager-usage-threshold | CLICKHOUSE_SPACE_MANAGER_USAGE_THRESHOLD | 70      | Disk usage percentage threshold for triggering partition cleanup in ClickHouse.                                                                                                 |
 | --clickhouse-space-manager-min-partitions | CLICKHOUSE_SPACE_MANAGER_MIN_PARTITIONS | 1        | Minimum number of partitions to keep when cleaning up ClickHouse disk space.                                                                                                    |
+| --disable-probes                     | DISABLE_PROBES                     | false         | Disable [synthetic probes](/uptime/probes) (HTTP/TCP/TLS/DNS uptime checks run by the server).                                                                                  |
+| --probes-concurrency                 | PROBES_CONCURRENCY                 | 16            | The maximum number of probes running at the same time.                                                                                                                          |
+| --probes-allowed-networks            | PROBES_ALLOWED_NETWORKS            |               | Comma-separated CIDRs probes may connect to although they are blocked by default (`169.254.0.0/16`, `fe80::/10`, `fd00:ec2::254`).                                              |
 
 ## Configuration file
 
@@ -118,6 +121,12 @@ global_prometheus: # The Prometheus server to be used for all projects.
 #    header_name: header_value
   remote_write_url:      # The URL for metric ingestion though the Prometheus Remote Write protocol.
   use_clickhouse: false  # Use ClickHouse for metrics storage instead of Prometheus.
+
+probes: # Synthetic probes (see /uptime/probes).
+  disabled: false     # Disable the probes scheduler.
+  concurrency: 16     # The maximum number of probes running at the same time.
+  allowed_networks:   # CIDRs excluded from the default block list (link-local and cloud metadata addresses).
+#   - 169.254.10.0/24
 
 global_clickhouse: # The ClickHouse server to be used for all projects.
   address:               # IP:Port or Domain:Port.
@@ -217,6 +226,38 @@ projects: # Create or update projects (configuration file only).
         incidentTemplate: ""    # Incident template (required if `incidents: true`).
         deploymentTemplate: ""  # Deployment template (required if `deployments: true`).
         alertTemplate: ""       # Alert template (required if `alerts: true`).
+      telegram:
+        botToken:               # Telegram bot token (required).
+        chatId:                 # Chat id (e.g. -1001234567890) or @channelusername (required).
+        messageThreadId: 0      # Forum topic id (optional).
+        incidents: false        # Notify of incidents (SLO violations).
+        alerts: false           # Notify of alerts.
+        comments: false         # Forward comments on incidents and alerts.
+      discord:
+        webhookURL:             # Discord channel webhook URL (required).
+        incidents: false
+        alerts: false
+        comments: false
+      mattermost:
+        webhookURL:             # Mattermost incoming webhook URL (required).
+        channel:                # Overrides the webhook's default channel (optional).
+        username:               # Overrides the webhook's default username (optional).
+        incidents: false
+        alerts: false
+        comments: false
+      email:
+        host:                   # SMTP server (required).
+        port: 587               # Default: 587 (465 for tlsMode: tls).
+        tlsMode: starttls       # starttls | tls | none.
+        tlsSkipVerify: false
+        username:               # SMTP AUTH PLAIN credentials (optional).
+        password:
+        from:                   # Sender, e.g. "shards <alerts@example.com>" (required).
+        to:                     # Recipients (required).
+          - ops@example.com
+        incidents: false
+        alerts: false
+        comments: false
     # Project application category settings.
     applicationCategories:
       - name:               # Application category name (required).
@@ -237,6 +278,8 @@ projects: # Create or update projects (configuration file only).
             opsgenie:
               enabled: false
             webhook:
+              enabled: false
+            telegram:         # also discord, mattermost and email
               enabled: false
           deployments:        # Notify of deployments.
             enabled: true

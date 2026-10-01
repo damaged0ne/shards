@@ -89,5 +89,5 @@ func shardsBuiltinAlertingRules() []AlertingRule {
 			Enabled: true,
 			Builtin: true,
 		},
-	}, append(clusterTargetAlertingRules(), dbExtBuiltinAlertingRules()...)...)
+	}, append(append(clusterTargetAlertingRules(), dbExtBuiltinAlertingRules()...), probeBuiltinAlertingRules()...)...)
 }

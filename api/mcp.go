@@ -47,6 +47,7 @@ Pick a tool by intent, cheapest first:
 - Incident workflow → update_incident (acknowledge / assign / mitigate / resolve with a summary / set_severity), get_incident_postmortem (markdown draft).
 - Maintenance windows (muting notifications for planned work) → list_maintenance_windows, create_maintenance_window, end_maintenance_window.
 - Alerting rules → list_alerting_rules, get_alerting_rule, create_alerting_rule, update_alerting_rule (partial: enabled, severity, promql_expression, for/keep_firing_for, selector, notification_category, description/runbook, ...), delete_alerting_rule. Builtin rules can be tuned or disabled but not deleted; readonly rules are managed by config and can't be changed.
+- Uptime / TLS checks → list_probes, get_probe_results (uptime %, latency, downtime periods, certificate expiry), create_probe, update_probe, delete_probe. Probes run from the shards server.
 
 Operator workflow for incidents and alerts (humans read the same timeline in the UI):
 1. Triage: list_alerts / list_incidents, then get_incident_context / get_alert. Read the timeline and the workflow status first — someone (human or agent) may already be on it; if not, update_incident action=acknowledge.
@@ -391,6 +392,7 @@ func (h *MCPHandler) registerTools() {
 		h.toolQueryLogs,
 	)
 	h.registerAgentTools()
+	h.registerProbeTools()  // shards fork
 	h.registerStatusTools() // shards fork
 }
 

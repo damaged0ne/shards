@@ -84,6 +84,8 @@ func (as ProjectActionSet) List() []Action {
 		as.AlertingRules().Edit(),
 		as.Alerts().View(),
 		as.Alerts().Edit(),
+		as.Probes().View(), // shards fork
+		as.Probes().Edit(), // shards fork
 	}
 }
 

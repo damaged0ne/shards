@@ -46,6 +46,8 @@ type NotificationIntegrations struct {
 	Pagerduty *IntegrationPagerduty `json:"pagerduty,omitempty" yaml:"pagerduty,omitempty"`
 	Opsgenie  *IntegrationOpsgenie  `json:"opsgenie,omitempty" yaml:"opsgenie,omitempty"`
 	Webhook   *IntegrationWebhook   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+
+	ShardsNotificationIntegrations `yaml:",inline"` // shards fork: telegram, discord, mattermost, email
 }
 
 func (i *NotificationIntegrations) Validate() error {
@@ -81,6 +83,9 @@ func (i *NotificationIntegrations) Validate() error {
 		if err := i.Webhook.Validate(); err != nil {
 			return fmt.Errorf("invalid webhook configuration: %w", err)
 		}
+	}
+	if err := i.ShardsNotificationIntegrations.validate(); err != nil { // shards fork
+		return err
 	}
 
 	return nil
@@ -149,6 +154,8 @@ func (integrations Integrations) GetInfo() []IntegrationInfo {
 		i.Alerts = boolValue(cfg.Alerts)
 	}
 	res = append(res, i)
+
+	res = append(res, integrations.ShardsNotificationIntegrations.info()...) // shards fork
 
 	return res
 }

@@ -58,9 +58,14 @@ The MCP endpoint is served at `/mcp` on your shards instance. All tools are incl
 | `create_maintenance_window` | Mute notifications for planned work: for the next N minutes, between two timestamps, or weekly. | The created window. |
 | `end_maintenance_window` | End a maintenance window now. | The ended window. |
 | `get_approval_status` | Check an action that is waiting for a human. | Status (`pending`, `executed`, `failed`, `rejected`), who decided, the reviewer's comment and the result. |
+| `list_probes` | List the [synthetic probes](/uptime/probes) (HTTP/TCP/TLS/DNS uptime checks). | Probes with type, target, status, uptime % and p95 latency over the last hour, certificate days left, last error. |
+| `get_probe_results` | Look at one probe over a window (`window`, e.g. `24h`, max 7d). | Status, uptime %, latency p50/p95/max, downtime periods, latest phase timings, certificate details, last error. |
+| `create_probe` | Add a probe (optionally linked to an application). | The created probe. |
+| `update_probe` | Change a probe (partial: only the passed fields). | The updated probe. |
+| `delete_probe` | Remove a probe. | Acknowledgement. |
 
 :::note
-The comment, suppress/reopen, alerting-rule, incident-workflow, maintenance and approval tools above, as well as the optional comment on `resolve_alerts`, are shards additions for [operator agents](/agents/operator-agents).
+The comment, suppress/reopen, alerting-rule, incident-workflow, maintenance, approval and probe tools above, as well as the optional comment on `resolve_alerts`, are shards additions for [operator agents](/agents/operator-agents).
 Some write tools are subject to the project's [approval policy](/agents/operator-agents#human-approval-for-agent-actions): instead of executing, they may return
 `{"status": "pending", "approval_id": N}` and wait for a person to approve the action.
 Write tools require a role that is allowed to change the project (`Editor` or `Admin`); a `Viewer` can only read.

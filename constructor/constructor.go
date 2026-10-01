@@ -171,6 +171,7 @@ func (c *Constructor) loadProjectWorld(ctx context.Context, cache Cache, project
 	prof.stage("group_custom_applications", func() { c.groupCustomApplications(w, project) })
 	prof.stage("join_db_cluster_components", func() { c.joinDBClusterComponents(w, project) })
 	prof.stage("merge_external_into_pods", func() { mergeExternalServicesIntoPods(w, instancesByListen) })
+	prof.stage("load_probes", func() { c.loadProbes(w, metrics, project) }) // shards fork
 	prof.stage("load_postgres_backups", func() { loadPostgresBackups(w, metrics, project) })
 	prof.stage("load_mongo_backups", func() { loadMongoBackups(w, metrics, project) })
 	prof.stage("load_mysql_backups", func() { loadMysqlBackups(w, metrics) })

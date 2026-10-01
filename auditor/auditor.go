@@ -73,7 +73,8 @@ func Audit(w *model.World, p *db.Project, generateDetailedReportFor *model.Appli
 		stages.stage("nodejs", a.nodejs)
 		stages.stage("logs", a.logs)
 		stages.stage("deployments", a.deployments)
-		stages.stage("cloud", a.cloud) // shards fork: after storage (escalates its disk space check)
+		stages.stage("uptime", a.uptime) // shards fork
+		stages.stage("cloud", a.cloud)   // shards fork: after storage (escalates its disk space check)
 
 		for _, r := range a.reports {
 			widgets := a.enrichWidgets(r.Widgets, app.Events)

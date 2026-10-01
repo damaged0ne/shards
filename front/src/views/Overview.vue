@@ -47,6 +47,10 @@
             <Risks />
         </template>
 
+        <template v-if="view === 'uptime'">
+            <Probes />
+        </template>
+
         <template v-if="view === 'dashboards'">
             <Dashboard v-if="id" :id="id" />
             <Dashboards v-else />
@@ -75,6 +79,7 @@ import Risks from '@/views/Risks.vue';
 import Dashboards from '@/views/dashboards/Dashboards.vue';
 import Dashboard from '@/views/dashboards/Dashboard.vue';
 import Kubernetes from '@/views/Kubernetes.vue';
+import Probes from '@/views/Probes.vue';
 import Home from '@/views/Home.vue';
 import Agents from '@/views/agents/Agents.vue';
 import Agent from '@/views/agents/Agent.vue';
@@ -97,6 +102,7 @@ export default {
         Risks,
         Dashboards,
         Dashboard,
+        Probes,
         Agents,
         Agent,
     },

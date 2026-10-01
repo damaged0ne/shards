@@ -53,6 +53,9 @@ func (n *IncidentNotifier) Enqueue(project *db.Project, app *model.Application, 
 	if webhook := notificationSettings.Webhook; webhook != nil && webhook.Enabled {
 		n.enqueue(now, project, app, incident, db.IncidentNotificationDestination{IntegrationType: db.IntegrationTypeWebhook})
 	}
+	for _, d := range notificationSettings.ShardsNotificationDestinations.Enabled() { // shards fork
+		n.enqueue(now, project, app, incident, d)
+	}
 	n.sendIncidents()
 }
 
@@ -130,7 +133,8 @@ func (n *IncidentNotifier) enqueue(now timeseries.Time, project *db.Project, app
 		Status:        incident.Severity,
 	}
 	switch destination.IntegrationType {
-	case db.IntegrationTypeSlack, db.IntegrationTypeTeams, db.IntegrationTypeWebhook:
+	case db.IntegrationTypeSlack, db.IntegrationTypeTeams, db.IntegrationTypeWebhook,
+		db.IntegrationTypeTelegram, db.IntegrationTypeDiscord, db.IntegrationTypeMattermost, db.IntegrationTypeEmail: // shards fork
 		if incident.Resolved() {
 			n.onResolve("", notification, incidentDetails(app, incident))
 		} else {

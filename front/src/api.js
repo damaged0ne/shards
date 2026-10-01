@@ -443,6 +443,27 @@ export default class Api {
         this.del(this.projectPath(`alerting-rules/${ruleId}`), cb);
     }
 
+    // shards fork: synthetic probes
+    getProbes(cb) {
+        this.get(this.projectPath('probes'), {}, cb);
+    }
+
+    createProbe(form, cb) {
+        this.post(this.projectPath('probes'), form, cb);
+    }
+
+    updateProbe(id, form, cb) {
+        this.put(this.projectPath(`probes/${id}`), form, cb);
+    }
+
+    deleteProbe(id, cb) {
+        this.del(this.projectPath(`probes/${id}`), cb);
+    }
+
+    testProbe(form, cb) {
+        this.post(this.projectPath('probes/test'), form, cb);
+    }
+
     // shards fork: Agents area and playbooks
     getAgents(cb) {
         this.get(this.projectPath('agents'), {}, cb);

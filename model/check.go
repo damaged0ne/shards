@@ -128,6 +128,11 @@ var Checks = struct {
 	NodeDiskSpace           CheckConfig
 	NodeFilesystemReadonly  CheckConfig
 
+	ProbeDown                  CheckConfig
+	ProbeLatency               CheckConfig
+	ProbeTLSCertExpiry         CheckConfig
+	ProbeTLSCertExpiryCritical CheckConfig
+	ProbeTLSCertInvalid        CheckConfig
 	// shards fork: cluster agent targets (see check_cluster_targets_shards.go)
 	KafkaAvailability              CheckConfig
 	KafkaOfflinePartitions         CheckConfig
@@ -680,6 +685,49 @@ var Checks = struct {
 		DefaultThreshold:        0,
 		MessageTemplate:         `{{.ItemsWithHave "node filesystem"}} been remounted read-only`,
 		ConditionFormatTemplate: "a filesystem of the app's nodes has been remounted read-only",
+	},
+
+	// shards fork: synthetic probes (see probe_shards.go)
+	ProbeDown: CheckConfig{
+		Category:                AuditReportUptime,
+		Type:                    CheckTypeItemBased,
+		Title:                   "Probe availability",
+		DefaultThreshold:        2,
+		MessageTemplate:         `{{.ItemsWithToBe "probe"}} failing`,
+		ConditionFormatTemplate: "a probe has failed <threshold> times in a row",
+	},
+	ProbeLatency: CheckConfig{
+		Category:                AuditReportUptime,
+		Type:                    CheckTypeItemBased,
+		Title:                   "Probe latency",
+		DefaultThreshold:        2,
+		Unit:                    CheckUnitSecond,
+		MessageTemplate:         `{{.ItemsWithToBe "probe"}} slower than {{.ThresholdDuration}}`,
+		ConditionFormatTemplate: "the response time of a probe > <threshold>",
+	},
+	ProbeTLSCertExpiry: CheckConfig{
+		Category:                AuditReportUptime,
+		Type:                    CheckTypeItemBased,
+		Title:                   "TLS certificate expiration",
+		DefaultThreshold:        14,
+		MessageTemplate:         `the TLS certificate of {{.Items "probe"}} expires in less than {{.ThresholdValue}} days`,
+		ConditionFormatTemplate: "the TLS certificate checked by a probe expires in less than <threshold> days",
+	},
+	ProbeTLSCertExpiryCritical: CheckConfig{
+		Category:                AuditReportUptime,
+		Type:                    CheckTypeItemBased,
+		Title:                   "TLS certificate expiration (critical)",
+		DefaultThreshold:        3,
+		MessageTemplate:         `the TLS certificate of {{.Items "probe"}} expires in less than {{.ThresholdValue}} days`,
+		ConditionFormatTemplate: "the TLS certificate checked by a probe expires in less than <threshold> days",
+	},
+	ProbeTLSCertInvalid: CheckConfig{
+		Category:                AuditReportUptime,
+		Type:                    CheckTypeItemBased,
+		Title:                   "TLS certificate validity",
+		DefaultThreshold:        0,
+		MessageTemplate:         `the TLS certificate of {{.Items "probe"}} is invalid`,
+		ConditionFormatTemplate: "the TLS certificate checked by a probe is expired, untrusted or doesn't match the hostname",
 	},
 }
 

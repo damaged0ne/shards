@@ -248,6 +248,13 @@ func (api *Api) doAgentAction(project *db.Project, a actor, action string, raw j
 			return nil, bad(err)
 		}
 		return api.incidentAction(project, a, args.Key, args.Form)
+
+	case db.AgentActionDeleteProbe: // probes
+		var args probeDeleteArgs
+		if err := json.Unmarshal(raw, &args); err != nil {
+			return nil, bad(err)
+		}
+		return api.doDeleteProbe(project, args)
 	}
 	return nil, &targetError{http.StatusBadRequest, "unknown action " + action}
 }

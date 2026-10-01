@@ -15,6 +15,7 @@ import (
 
 	"github.com/coroot/coroot/api/forms"
 	"github.com/coroot/coroot/api/views"
+	incident_view "github.com/coroot/coroot/api/views/incident"
 	"github.com/coroot/coroot/auditor"
 	"github.com/coroot/coroot/cache"
 	"github.com/coroot/coroot/ch"
@@ -1247,9 +1248,13 @@ func (api *Api) Incident(w http.ResponseWriter, r *http.Request, u *db.User) {
 		return
 	}
 	app := world.GetApplication(incident.ApplicationId)
-	if app == nil {
-		klog.Warningln("application not found:", incident.ApplicationId)
-		http.Error(w, "Application not found", http.StatusNotFound)
+	if app == nil { // shards fork: keep incidents of gone applications (and their workflow) viewable
+		category := project.CalcApplicationCategory(incident.ApplicationId)
+		if !api.IsAllowed(u, rbac.Actions.Project(projectId).Application(category, incident.ApplicationId.Namespace, incident.ApplicationId.Kind, incident.ApplicationId.Name).View()) {
+			http.Error(w, "You are not allowed to view this application.", http.StatusForbidden)
+			return
+		}
+		utils.WriteJson(w, api.WithContext(project, cacheStatus, world, incident_view.RenderWithoutApplication(world, incident)))
 		return
 	}
 	if !api.IsAllowed(u, rbac.Actions.Project(projectId).Application(app.Category, app.Id.Namespace, app.Id.Kind, app.Id.Name).View()) {

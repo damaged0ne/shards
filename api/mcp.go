@@ -69,17 +69,18 @@ type MCPHandler struct {
 }
 
 func (api *Api) SetupMCP(instructions string) *MCPHandler {
-	h := &MCPHandler{
-		Api: api,
-		Server: mcpserver.NewMCPServer(
-			"shards",
-			"1.0.0",
+	h := &MCPHandler{Api: api}
+	h.Server = mcpserver.NewMCPServer(
+		"shards",
+		"1.0.0",
+		append([]mcpserver.ServerOption{ // shards fork: agent scopes, resources and prompts
 			mcpserver.WithToolCapabilities(false),
 			mcpserver.WithRecovery(),
-			mcpserver.WithInstructions(instructions),
-		),
-	}
+			mcpserver.WithInstructions(instructions + MCPAgentInstructions),
+		}, h.shardsServerOptions()...)...,
+	)
 	h.registerTools()
+	h.registerShards() // shards fork
 	return h
 }
 
@@ -128,6 +129,9 @@ func (h *MCPHandler) sessionState(ctx context.Context) *mcpSessionState {
 }
 
 func (h *MCPHandler) currentProject(ctx context.Context) (*db.Project, error) {
+	if p, ok := ctx.Value(mcpProjectCtxKey{}).(*db.Project); ok { // shards fork: resources address a project explicitly
+		return p, nil
+	}
 	st := h.sessionState(ctx)
 	if st == nil {
 		return nil, nil
@@ -143,10 +147,10 @@ func (h *MCPHandler) currentProject(ctx context.Context) (*db.Project, error) {
 
 func (h *MCPHandler) AddTool(tool mcp.Tool, handler mcpserver.ToolHandlerFunc) {
 	name := tool.Name
-	h.Server.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	h.Server.AddTool(tool, h.agentToolMiddleware(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) { // shards fork: agent scopes + audit
 		h.Api.stats.RegisterMCPCall(name)
 		return handler(ctx, req)
-	})
+	}))
 }
 
 func (h *MCPHandler) registerTools() {
@@ -568,10 +572,10 @@ type mcpChart struct {
 }
 
 type mcpLogPattern struct {
-	Hash     string `json:"hash"`
-	Severity string `json:"severity"`
-	Sample   string `json:"sample"`
-	Messages int    `json:"messages"`
+	Hash     string       `json:"hash"`
+	Severity string       `json:"severity"`
+	Sample   MCPUntrusted `json:"sample"`
+	Messages int          `json:"messages"`
 }
 
 type mcpReportStatus struct {
@@ -939,7 +943,7 @@ func mcpExtractLogPatterns(app *model.Application, n int) []mcpLogPattern {
 		out = append(out, mcpLogPattern{
 			Hash:     r.hash,
 			Severity: r.severity.String(),
-			Sample:   utils.Truncate(r.pattern.Sample, mcpLogSampleMaxLength),
+			Sample:   MCPUntrusted(utils.Truncate(r.pattern.Sample, mcpLogSampleMaxLength)),
 			Messages: int(r.total),
 		})
 	}
@@ -1008,7 +1012,7 @@ func (h *MCPHandler) toolListAlerts(ctx context.Context, req mcp.CallToolRequest
 		}
 		out = append(out, a)
 	}
-	return mcpJSONList(out, "only the first alerts are returned, narrow with app_id or state, or lower the limit")
+	return mcpJSONList(mcpWrapAlerts(out), "only the first alerts are returned, narrow with app_id or state, or lower the limit")
 }
 
 func (h *MCPHandler) toolListIncidents(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1446,7 +1450,7 @@ func (h *MCPHandler) toolTracesErrors(ctx context.Context, req mcp.CallToolReque
 	}
 	errs := res.Errors
 	sort.Slice(errs, func(i, j int) bool { return errs[i].Count > errs[j].Count })
-	return mcpJSONList(errs, "only the most frequent errors are returned, narrow with service and span")
+	return mcpJSONList(mcpWrapTraceErrors(errs), "only the most frequent errors are returned, narrow with service and span")
 }
 
 func (h *MCPHandler) toolTracesOutliers(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1473,7 +1477,7 @@ func (h *MCPHandler) toolGetTrace(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	spans := res.Trace
 	sort.SliceStable(spans, func(i, j int) bool { return spans[i].Timestamp < spans[j].Timestamp })
-	return mcpJSONList(spans, "only the earliest spans of the trace are returned")
+	return mcpJSONList(mcpWrapSpans(spans), "only the earliest spans of the trace are returned")
 }
 
 func (h *MCPHandler) toolListMetricNames(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1656,7 +1660,7 @@ func (h *MCPHandler) toolQueryLogs(ctx context.Context, req mcp.CallToolRequest)
 	for _, e := range entries {
 		e.Body = mcpTruncate(e.Body, maxBodyLength)
 	}
-	fitted, err := mcpFitToBudget(entries, "only the newest entries are returned, narrow the time range, add severity/search filters, or lower max_body_length")
+	fitted, err := mcpFitToBudget(mcpWrapLogEntries(entries), "only the newest entries are returned, narrow the time range, add severity/search filters, or lower max_body_length")
 	if err != nil {
 		return nil, err
 	}

@@ -107,6 +107,7 @@ func (w *Incidents) Check(project *db.Project, world *model.World) {
 				}
 				needNotify = true
 			} else {
+				escalated := status > incident.Severity // shards fork
 				incident.Severity = status
 				incident.Details.AvailabilityBurnRates = details.AvailabilityBurnRates
 				incident.Details.LatencyBurnRates = details.LatencyBurnRates
@@ -115,6 +116,9 @@ func (w *Incidents) Check(project *db.Project, world *model.World) {
 				if err = w.db.UpdateIncident(project.Id, incident.Key, incident.Severity, incident.Details); err != nil {
 					klog.Errorln(err)
 					continue
+				}
+				if escalated { // shards fork
+					notifications.NotifyAgentsIncidentEscalated(project, app, incident)
 				}
 			}
 		}

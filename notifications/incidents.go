@@ -26,6 +26,7 @@ func NewIncidentNotifier(db *db.DB) *IncidentNotifier {
 }
 
 func (n *IncidentNotifier) Enqueue(project *db.Project, app *model.Application, incident *model.ApplicationIncident, now timeseries.Time) {
+	notifyAgentsIncident(project, app, incident) // shards fork
 	categorySettings := project.GetApplicationCategories()[app.Category]
 	if categorySettings == nil {
 		return

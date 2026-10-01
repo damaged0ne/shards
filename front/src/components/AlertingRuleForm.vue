@@ -216,6 +216,8 @@
                     <div class="subtitle-1">Description template</div>
                     <div class="caption grey--text">Optional detailed description of the alert and suggested actions.</div>
                     <v-textarea v-model="templateDescription" outlined dense hide-details="auto" rows="3" class="mb-4" />
+                    <!-- shards fork: agent playbook (saved separately) -->
+                    <PlaybookEditor v-if="ruleId" target-type="alerting_rule" :target-id="ruleId" class="mb-4" />
 
                     <v-checkbox v-model="enabled" color="primary" hide-details class="mt-0 pt-0 mb-1">
                         <template #label>
@@ -254,9 +256,10 @@
 <script>
 import MetricSelector from '@/components/MetricSelector.vue';
 import Panel from '@/views/dashboards/Panel.vue';
+import PlaybookEditor from '@/components/PlaybookEditor.vue';
 
 export default {
-    components: { MetricSelector, Panel },
+    components: { MetricSelector, Panel, PlaybookEditor },
 
     props: {
         ruleId: {

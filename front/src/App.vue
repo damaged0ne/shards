@@ -197,6 +197,7 @@ const groups = [
     { id: 'health', name: 'Health' },
     { id: 'explore', name: 'Explore' },
     { id: 'infrastructure', name: 'Infrastructure' },
+    { id: 'automation', name: 'Automation' }, // shards fork: Agents
 ];
 
 export default {

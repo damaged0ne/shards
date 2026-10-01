@@ -61,12 +61,16 @@ func Audit(w *model.World, p *db.Project, generateDetailedReportFor *model.Appli
 		stages.stage("redis", a.redis)
 		stages.stage("mongodb", a.mongodb)
 		stages.stage("memcached", a.memcached)
+		stages.stage("pgbouncer", a.pgbouncer) // shards fork
+		stages.stage("rabbitmq", a.rabbitmq)   // shards fork
+		stages.stage("etcd", a.etcd)           // shards fork
 		stages.stage("jvm", a.jvm)
 		stages.stage("dotnet", a.dotnet)
 		stages.stage("python", a.python)
 		stages.stage("nodejs", a.nodejs)
 		stages.stage("logs", a.logs)
 		stages.stage("deployments", a.deployments)
+		stages.stage("cloud", a.cloud) // shards fork: after storage (escalates its disk space check)
 
 		for _, r := range a.reports {
 			widgets := a.enrichWidgets(r.Widgets, app.Events)
@@ -83,7 +87,8 @@ func Audit(w *model.World, p *db.Project, generateDetailedReportFor *model.Appli
 				}
 			}
 			switch r.Name {
-			case model.AuditReportPostgres, model.AuditReportMongodb, model.AuditReportMysql, model.AuditReportRedis, model.AuditReportInstances, model.AuditReportSLO:
+			case model.AuditReportPostgres, model.AuditReportMongodb, model.AuditReportMysql, model.AuditReportRedis, model.AuditReportInstances, model.AuditReportSLO,
+				model.AuditReportPgbouncer, model.AuditReportRabbitmq, model.AuditReportEtcd, model.AuditReportCloud: // shards fork
 				if app.Status < r.Status {
 					app.Status = r.Status
 				}

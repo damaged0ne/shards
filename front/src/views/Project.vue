@@ -145,6 +145,14 @@
             </p>
             <ApplicationCategories />
 
+            <h2 class="text-h5 mt-10 mb-5" id="service-map">
+                Service map
+                <a :href="$utils.docsUrl('configuration/service-map')" target="_blank">
+                    <v-icon>mdi-information-outline</v-icon>
+                </a>
+            </h2>
+            <ServiceMapSettings />
+
             <h2 class="text-h5 mt-10 mb-5" id="custom-applications">
                 Custom applications
                 <a :href="$utils.docsUrl('configuration/custom-applications')" target="_blank">
@@ -216,6 +224,7 @@ import IntegrationGCP from './IntegrationGCP.vue';
 import IntegrationOCI from './IntegrationOCI.vue';
 import IntegrationAzure from './IntegrationAzure.vue';
 import CustomApplications from './CustomApplications.vue';
+import ServiceMapSettings from './ServiceMapSettings.vue';
 import Users from './Users.vue';
 import RBAC from './RBAC.vue';
 import ProjectStatus from '@/views/ProjectStatus.vue';
@@ -229,6 +238,7 @@ export default {
     components: {
         ProjectStatus,
         CustomApplications,
+        ServiceMapSettings,
         IntegrationPrometheus,
         IntegrationClickhouse,
         IntegrationAWS,

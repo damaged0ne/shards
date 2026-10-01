@@ -8,6 +8,8 @@
                 :applications="applications"
                 :autoSelectNamespaceThreshold="maxApplications"
                 :highlightSearch="mode === 'graph'"
+                storageKey="service-map-filter"
+                :defaultCategories="defaultCategories"
                 :searchInfo="mode === 'graph' && filtered.length ? searchInfo : ''"
                 @filter="setFilter"
                 @search="query = $event"
@@ -30,15 +32,34 @@
             Too many applications ({{ tooManyApplications }}) to render. Please choose a different category or namespace.
         </div>
 
+        <div v-if="collapsible.length" class="groups-bar mb-2">
+            <span class="groups-bar-label">Groups</span>
+            <button
+                v-for="g in collapsible"
+                :key="g.key"
+                type="button"
+                class="group-chip"
+                :class="{ collapsed: g.collapsed, muted: g.muted }"
+                :aria-pressed="String(!g.collapsed)"
+                :title="(g.collapsed ? 'expand ' : 'collapse ') + g.label"
+                @click="toggleGroup(g.key)"
+            >
+                <v-icon x-small>{{ g.collapsed ? 'mdi-chevron-right' : 'mdi-chevron-down' }}</v-icon>
+                {{ g.label }}
+                <span class="count">{{ g.count }}</span>
+            </button>
+        </div>
+
         <ServiceMapGraph
             v-if="mode === 'graph' && filtered.length"
             ref="graph"
-            :applications="filtered"
+            :applications="displayed"
             :categories="categories"
             :query="query"
             :selected="$route.query.app"
             @select="setSelected"
             @search-info="searchInfo = $event"
+            @toggle-group="toggleGroup"
         />
 
         <div v-if="mode === 'columns'" class="applications" v-on-resize="calc" @scroll="calc">
@@ -49,17 +70,29 @@
                 :style="{ rowGap: 200 / apps.length + 'px', maxWidth: 100 / levels.length + '%' }"
             >
                 <div v-for="a in apps" style="text-align: center">
-                    <div :ref="a.id" class="app" :class="{ selected: a.hi(hi) }" @mouseenter="hi = a.id" @mouseleave="hi = null">
+                    <div
+                        :ref="a.id"
+                        class="app"
+                        :class="{ selected: a.hi(hi), muted: a.muted, external: a.external }"
+                        @mouseenter="hi = a.id"
+                        @mouseleave="hi = null"
+                    >
                         <div class="d-flex align-center">
                             <div class="flex-grow-1 name">
-                                <router-link :to="{ name: 'overview', params: { view: 'applications', id: a.id }, query: $utils.contextQuery() }">
+                                <a v-if="a.collapsed" href="#" class="collapsed-app" @click.prevent="toggleGroup(a.groupKey)">
+                                    <v-icon small>mdi-arrow-expand-all</v-icon> {{ a.display_name }} <span class="count">{{ a.members }}</span>
+                                </a>
+                                <router-link
+                                    v-else
+                                    :to="{ name: 'overview', params: { view: 'applications', id: a.id }, query: $utils.contextQuery() }"
+                                >
                                     <AppHealth :app="a" />
                                 </router-link>
                             </div>
-                            <div>
+                            <div v-if="!a.collapsed">
                                 <AppPreferences :app="a" :categories="categories" />
                             </div>
-                            <AppIcon :icon="a.icon" />
+                            <AppIcon v-if="!a.collapsed" :icon="a.icon" />
                         </div>
                         <Labels
                             :labels="a.labels"
@@ -113,6 +146,7 @@ import ApplicationFilter from '@/components/ApplicationFilter.vue';
 import AppPreferences from '@/components/AppPreferences.vue';
 import NoData from '@/components/NoData.vue';
 import ServiceMapGraph from '@/components/ServiceMapGraph.vue';
+import { collapseGroups } from '@/utils/serviceMapGroups';
 
 const modeButtons = [
     { value: 'columns', label: 'tiers view', icon: 'mdi-view-column-outline' },
@@ -161,6 +195,8 @@ export default {
         return {
             applications: [],
             categories: [],
+            categoryModes: {},
+            groupState: this.$storage.local('service-map-groups') || {},
             loading: false,
             error: '',
             levels: [],
@@ -219,6 +255,18 @@ export default {
         hideLabels() {
             return this.levels.some((l) => l.length >= 15);
         },
+        defaultCategories() {
+            return Object.keys(this.categoryModes).filter((c) => this.categoryModes[c] !== 'hidden');
+        },
+        grouping() {
+            return collapseGroups(this.filtered, this.categoryModes, this.groupState);
+        },
+        displayed() {
+            return this.grouping.apps;
+        },
+        collapsible() {
+            return this.grouping.groups;
+        },
     },
     methods: {
         get() {
@@ -230,9 +278,19 @@ export default {
                     this.error = error;
                     return;
                 }
+                this.categoryModes = (data.service_map && data.service_map.category_modes) || {};
                 this.applications = data.map || [];
                 this.categories = data.categories || [];
             });
+        },
+        toggleGroup(key) {
+            const g = this.collapsible.find((g) => g.key === key);
+            if (!g) {
+                return;
+            }
+            this.groupState = { ...this.groupState, [key]: g.collapsed ? 'expanded' : 'collapsed' };
+            this.$storage.local('service-map-groups', this.groupState);
+            this.$nextTick(this.calc);
         },
         setSelected(id) {
             if (id && this.query) {
@@ -292,13 +350,16 @@ export default {
             if (this.mode !== 'columns') {
                 return;
             }
-            const applications = filtered.map((a) => ({ ...a }));
+            const shown = collapseGroups(filtered, this.categoryModes, this.groupState).apps;
+            const shownIds = new Set(shown.map((a) => a.id));
+            const shownFilter = (a) => shownIds.has(a.id);
+            const applications = shown.map((a) => ({ ...a }));
             applications.forEach((a) => {
-                a.name = this.$utils.appId(a.id).name;
+                a.name = a.display_name || this.$utils.appId(a.id).name;
                 a.level = 0;
-                a.upstreams = a.upstreams.filter(filter);
+                a.upstreams = a.upstreams.filter(shownFilter);
                 a.upstreams.sort((u1, u2) => u1.id.localeCompare(u2.id));
-                a.downstreams = a.downstreams.filter(filter);
+                a.downstreams = a.downstreams.filter(shownFilter);
                 a.hi = (hi) => Array.of(a, ...a.upstreams, ...a.downstreams).some((aa) => aa.id === hi);
             });
             applications.sort((a, b) => a.name.localeCompare(b.name));
@@ -441,6 +502,60 @@ export default {
     line-height: 1.1;
     text-align: left;
 }
+.app.muted {
+    opacity: 0.6;
+    border-style: dashed;
+}
+.app.external {
+    border-style: dashed;
+}
+.collapsed-app {
+    font-weight: 500;
+}
+.collapsed-app .count,
+.group-chip .count {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-left: 2px;
+}
+.groups-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.groups-bar-label {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-right: 2px;
+}
+.group-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 24px;
+    padding: 0 8px 0 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    color: var(--text-1);
+    font-size: 12px;
+    cursor: pointer;
+}
+.group-chip:hover {
+    background: var(--hover);
+}
+.group-chip:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+.group-chip.collapsed {
+    background: var(--surface-sunk);
+    color: var(--text-2);
+}
+.group-chip.muted {
+    border-style: dashed;
+}
 .app.selected {
     border: 1px solid var(--text-color);
     background-color: var(--background-color-hi);
@@ -472,8 +587,8 @@ svg {
     stroke-dasharray: 4;
 }
 .arrow.ok {
-    fill: var(--status-ok);
-    stroke: var(--status-ok);
+    fill: var(--text-3);
+    stroke: var(--text-3);
 }
 .arrow.warning {
     fill: var(--status-warning);
@@ -482,8 +597,8 @@ svg {
     stroke-width: 1.5;
 }
 .arrow.critical {
-    fill: var(--status-critical);
-    stroke: var(--status-critical);
+    fill: var(--danger-9);
+    stroke: var(--danger-9);
     stroke-dasharray: 6;
     stroke-width: 1.5;
 }
@@ -491,13 +606,13 @@ svg {
     fill: var(--status-unknown);
 }
 .marker.ok {
-    fill: var(--status-ok);
+    fill: var(--text-3);
 }
 .marker.warning {
     fill: var(--status-warning);
 }
 .marker.critical {
-    fill: var(--status-critical);
+    fill: var(--danger-9);
 }
 
 .stats {

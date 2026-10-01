@@ -40,6 +40,7 @@ type Status struct {
 	NodeAgent        NodeAgent         `json:"node_agent"`
 	KubeStateMetrics *KubeStateMetrics `json:"kube_state_metrics"`
 	Clouds           []CloudStatus     `json:"clouds"`
+	ClusterAgent     *ClusterAgent     `json:"cluster_agent,omitempty"` // shards fork
 }
 
 type CloudStatus struct {
@@ -197,6 +198,7 @@ func renderStatus(p *db.Project, cacheStatus *cache.Status, w *model.World, glob
 		{"aws", "AWS", views.AWS(w, p.Settings.Integrations.AWS != nil)},
 		{"gcp", "GCP", views.GCP(w)},
 		{"oci", "OCI", views.OCI(w)},
+		{"azure", "Azure", views.Azure(w)}, // shards fork
 	} {
 		cs := CloudStatus{Id: c.id, Name: c.name}
 		switch {
@@ -214,6 +216,11 @@ func renderStatus(p *db.Project, cacheStatus *cache.Status, w *model.World, glob
 			cs.Message = english.Plural(len(c.view.Instances), "instance", "") + " discovered"
 		}
 		res.Clouds = append(res.Clouds, cs)
+	}
+
+	res.ClusterAgent = renderClusterAgentStatus(w) // shards fork
+	if res.ClusterAgent != nil && res.ClusterAgent.Status >= model.WARNING {
+		res.Status = model.WARNING
 	}
 
 	return res

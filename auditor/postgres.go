@@ -343,6 +343,8 @@ func (a *appAuditor) postgres() {
 	}
 	bloatCheck.AddWidget(report.GetOrCreateChartGroup(pgBloatByDbChartTitle, nil).Widget())
 
+	a.postgresExt(report) // shards fork
+
 	pgConfigurationHints(report, a.app.Instances)
 }
 

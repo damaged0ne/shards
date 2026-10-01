@@ -72,7 +72,12 @@ oci:
   dbTagFilters: {team: payments}
   cacheTagFilters: {}
 
-# Databases to collect metrics from, in addition to those configured in shards. Exactly one of host, rds, elasticache, cloudsql, memorystore, ocidb or ocicache per entry.
+# Azure integration settings (PostgreSQL/MySQL flexible servers and Azure Cache for Redis), see /configuration/azure.
+azure:
+  subscriptionIds: [00000000-0000-0000-0000-000000000000]
+  postgresTagFilters: {team: payments}
+
+# Databases to collect metrics from, in addition to those configured in shards. Exactly one of host, rds, elasticache, cloudsql, memorystore, ocidb, ocicache, memorydb, azuredb or azureredis per entry.
 databases:
   - type: postgres                # postgres, mysql, redis, memcached or mongodb.
     rds: my-db                    # An RDS instance discovered by the AWS integration: its endpoint is used.
@@ -103,3 +108,16 @@ Targets defined in the file take precedence over the same `ip:port` targets conf
 attributed to applications by address, so a database configured here shows up under the RDS, ElastiCache, or external
 service application that shards already sees clients connecting to.
 
+## Collection health
+
+The agent collects every target in the background with its own deadline (the scrape timeout minus 1s), so a slow or
+unreachable database never stalls the others. It reports the outcome of each collection:
+
+* `coroot_cluster_agent_target_collect_success{address, target_type}`: whether the last collection completed within the deadline
+* `coroot_cluster_agent_target_collect_duration_seconds{address, target_type}`: the duration of the last collection
+* `coroot_cluster_agent_target_collect_timeouts_total{address, target_type}`: the number of abandoned collections
+
+shards shows these targets in the **cluster-agent** section of the project status (**Project Settings** → **General**).
+A target whose last 3 collections didn't complete is marked as failing and turns the project status to *warning*: its
+metrics are missing from every report, which would otherwise go unnoticed. The same status is available to agents
+through the `get_monitoring_status` MCP tool.

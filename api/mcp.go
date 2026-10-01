@@ -384,6 +384,7 @@ func (h *MCPHandler) registerTools() {
 		h.toolQueryLogs,
 	)
 	h.registerAgentTools()
+	h.registerStatusTools() // shards fork
 }
 
 func (h *MCPHandler) toolListProjects(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {

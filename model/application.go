@@ -208,6 +208,10 @@ func (app *Application) Labels() Labels {
 		res["db"] = fmt.Sprintf(`%s (OCI)`, app.Instances[0].OCIDB.Engine.Value())
 	case ApplicationKindOCICache:
 		res["db"] = fmt.Sprintf(`%s (OCI Cache)`, app.Instances[0].OCICache.Engine.Value())
+	case ApplicationKindAzureDB, ApplicationKindAzureRedis, ApplicationKindElasticacheServerless, ApplicationKindMemoryDB: // shards fork
+		if c := app.Instances[0].Cloud; c != nil {
+			res["db"] = fmt.Sprintf(`%s (%s)`, c.Engine.Value(), c.Service)
+		}
 	case ApplicationKindUnknown, ApplicationKindDockerSwarmService, ApplicationKindNomadJobGroup:
 		if app.Id.Namespace != "_" {
 			res["ns"] = app.Id.Namespace
@@ -344,6 +348,9 @@ func (app *Application) IsStandalone() bool {
 }
 
 func (app *Application) IsDatabase() bool {
+	if IsShardsCloudKind(app.Id.Kind) {
+		return true
+	}
 	switch app.Id.Kind {
 	case ApplicationKindRds, ApplicationKindElasticacheCluster, ApplicationKindCloudSQL, ApplicationKindMemorystore, ApplicationKindOCIDB, ApplicationKindOCICache:
 		return true

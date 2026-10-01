@@ -353,6 +353,8 @@ func (a *appAuditor) mysql() {
 		availabilityCheck.AddWidget(galeraClusterSizeChart.Widget())
 	}
 
+	a.mysqlExt(report) // shards fork
+
 	if b := a.app.Cluster.Backups; b != nil && a.app.Cluster.Manager == model.ClusterManagerPerconaXtraDB &&
 		(len(b.Methods) > 0 || b.Schedule != "" || len(b.Runs) > 0) {
 		backupCheck := report.CreateCheck(model.Checks.MysqlBackups)

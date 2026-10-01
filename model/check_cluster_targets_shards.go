@@ -223,3 +223,9 @@ func clusterTargetAlertingRules() []AlertingRule {
 			"Thread pools reject tasks: the node is overloaded and clients receive 429 errors."),
 	}
 }
+
+// Escalate is an alias of SetCritical: the check reports CRITICAL instead of WARNING if it fires,
+// and its alerts are raised as CRITICAL even if their rule says WARNING.
+func (ch *Check) Escalate() {
+	ch.SetCritical()
+}

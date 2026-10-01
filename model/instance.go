@@ -39,6 +39,7 @@ type Instance struct {
 	OCIDB       *OCIDB
 	OCICache    *OCICache
 	Elasticache *Elasticache
+	Cloud       *CloudService // shards fork: Azure, ElastiCache Serverless, MemoryDB
 
 	Jvms   map[string]*Jvm
 	DotNet map[string]*DotNet
@@ -74,6 +75,9 @@ type Instance struct {
 	Kafka         *Kafka
 	ClickHouse    *ClickHouse
 	Elasticsearch *Elasticsearch
+	Pgbouncer     *Pgbouncer
+	Rabbitmq      *Rabbitmq
+	Etcd          *Etcd
 }
 
 func NewInstance(name string, owner *Application) *Instance {
@@ -113,12 +117,15 @@ func (instance *Instance) ApplicationTypes() map[ApplicationType]bool {
 	if t := instance.OCICache.ApplicationType(); t != ApplicationTypeUnknown {
 		res[t] = true
 	}
-	instance.addClusterTargetTypes(res) // shards fork
+	instance.addClusterTargetTypes(res)                                     // shards fork
+	if t := instance.Cloud.ApplicationType(); t != ApplicationTypeUnknown { // shards fork
+		res[t] = true
+	}
 	return res
 }
 
 func (instance *Instance) IsManagedDatabase() bool {
-	return instance.Rds != nil || instance.Elasticache != nil || instance.CloudSQL != nil || instance.Memorystore != nil || instance.OCIDB != nil || instance.OCICache != nil
+	return instance.Rds != nil || instance.Elasticache != nil || instance.CloudSQL != nil || instance.Memorystore != nil || instance.OCIDB != nil || instance.OCICache != nil || instance.Cloud != nil
 }
 
 func (instance *Instance) InstrumentedType() ApplicationType {

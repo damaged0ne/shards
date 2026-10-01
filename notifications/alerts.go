@@ -56,6 +56,9 @@ func (n *AlertNotifier) Enqueue(project *db.Project, app *model.Application, ale
 	if webhook := notificationSettings.Webhook; webhook != nil && webhook.Enabled {
 		n.enqueue(now, project, alert, rule, db.IncidentNotificationDestination{IntegrationType: db.IntegrationTypeWebhook})
 	}
+	for _, d := range notificationSettings.ShardsNotificationDestinations.Enabled() { // shards fork
+		n.enqueue(now, project, alert, rule, d)
+	}
 	n.sendAlerts()
 }
 
@@ -144,7 +147,8 @@ func (n *AlertNotifier) enqueue(now timeseries.Time, project *db.Project, alert 
 		details.Duration = utils.FormatDurationShort(alert.ResolvedAt.Sub(alert.OpenedAt), 2)
 	}
 	switch destination.IntegrationType {
-	case db.IntegrationTypeSlack, db.IntegrationTypeTeams, db.IntegrationTypeWebhook:
+	case db.IntegrationTypeSlack, db.IntegrationTypeTeams, db.IntegrationTypeWebhook,
+		db.IntegrationTypeTelegram, db.IntegrationTypeDiscord, db.IntegrationTypeMattermost, db.IntegrationTypeEmail: // shards fork
 		if alert.ResolvedAt > 0 {
 			n.onResolve("", notification, details)
 		} else {
@@ -319,4 +323,5 @@ func enqueueResolvedAlert(database *db.DB, now timeseries.Time, project *db.Proj
 		}
 		database.PutAlertNotification(notification)
 	}
+	enqueueResolvedAlertShards(database, now, project, alert, settings, details) // shards fork
 }

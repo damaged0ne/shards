@@ -250,10 +250,6 @@ func (api *Api) recordAlertActions(a actor, projectId db.ProjectId, ids []string
 }
 
 func (api *Api) forwardComment(project *db.Project, t *commentTarget, c *db.Comment) {
-	cfg := project.Settings.Integrations.Webhook
-	if cfg == nil || cfg.CommentTemplate == "" {
-		return
-	}
 	values := notifications.CommentTemplateValues{
 		ProjectName: project.Name,
 		TargetType:  string(t.typ),
@@ -272,6 +268,11 @@ func (api *Api) forwardComment(project *db.Project, t *commentTarget, c *db.Comm
 		values.Title = t.alert.Summary
 	case t.rule != nil:
 		values.Title = t.rule.Name
+	}
+	notifications.ForwardCommentShards(project.Settings.Integrations, values)
+	cfg := project.Settings.Integrations.Webhook
+	if cfg == nil || cfg.CommentTemplate == "" {
+		return
 	}
 	wh := notifications.NewWebhook(cfg)
 	go func() {

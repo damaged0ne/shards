@@ -54,7 +54,7 @@ func getClient(destination db.IncidentNotificationDestination, integrations db.I
 			return NewWebhook(cfg)
 		}
 	}
-	return nil
+	return getClientShards(destination, integrations, notificationType) // shards fork
 }
 
 func isEnabled(incidents bool, alerts *bool, notificationType NotificationType) bool {

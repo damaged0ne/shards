@@ -1832,6 +1832,9 @@ func (api *Api) Inspection(w http.ResponseWriter, r *http.Request, u *db.User) {
 					if webhook := notificationSettings.Webhook; webhook != nil && webhook.Enabled {
 						res.Integrations = append(res.Integrations, Integration{Name: "Webhook"})
 					}
+					for _, d := range notificationSettings.ShardsNotificationDestinations.Enabled() { // shards fork
+						res.Integrations = append(res.Integrations, Integration{Name: shardsIntegrationTitle(d.IntegrationType)})
+					}
 				}
 			}
 		}

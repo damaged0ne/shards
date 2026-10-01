@@ -52,6 +52,8 @@ type ApplicationCategoryNotificationDestinations struct {
 	Pagerduty *ApplicationCategoryNotificationSettingsPagerduty `json:"pagerduty,omitempty" yaml:"pagerduty,omitempty"`
 	Opsgenie  *ApplicationCategoryNotificationSettingsOpsgenie  `json:"opsgenie,omitempty" yaml:"opsgenie,omitempty"`
 	Webhook   *ApplicationCategoryNotificationSettingsWebhook   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+
+	ShardsNotificationDestinations `yaml:",inline"` // shards fork: telegram, discord, mattermost, email
 }
 
 func (s ApplicationCategoryNotificationDestinations) hasEnabled() bool {
@@ -59,7 +61,8 @@ func (s ApplicationCategoryNotificationDestinations) hasEnabled() bool {
 		(s.Teams != nil && s.Teams.Enabled) ||
 		(s.Pagerduty != nil && s.Pagerduty.Enabled) ||
 		(s.Opsgenie != nil && s.Opsgenie.Enabled) ||
-		(s.Webhook != nil && s.Webhook.Enabled)
+		(s.Webhook != nil && s.Webhook.Enabled) ||
+		s.ShardsNotificationDestinations.hasEnabled() // shards fork
 }
 
 type ApplicationCategoryNotificationSettingsSlack struct {
@@ -305,6 +308,8 @@ func (p *Project) GetApplicationCategories() map[model.ApplicationCategory]*Appl
 			}
 		}
 
+		category.applyShardsDefaults(&p.Settings.Integrations.ShardsNotificationIntegrations) // shards fork
+
 		if !category.NotificationSettings.Incidents.hasEnabled() {
 			category.NotificationSettings.Incidents.Enabled = false
 		}
@@ -370,6 +375,7 @@ func (p *Project) NewApplicationCategory() *ApplicationCategory {
 			category.NotificationSettings.Alerts.Opsgenie = &ApplicationCategoryNotificationSettingsOpsgenie{}
 		}
 	}
+	category.newShardsDefaults(&p.Settings.Integrations.ShardsNotificationIntegrations) // shards fork
 	return category
 }
 

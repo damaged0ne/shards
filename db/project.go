@@ -39,6 +39,7 @@ type ProjectSettings struct {
 	CustomCloudPricing          *CustomCloudPricing                                        `json:"custom_cloud_pricing"`
 	MemberProjects              []string                                                   `json:"member_projects"`
 	AgentApprovals              *AgentApprovalPolicy                                       `json:"agent_approvals,omitempty"` // shards fork
+	ServiceMap                  *ServiceMapSettings                                        `json:"service_map,omitempty"`     // shards fork
 }
 
 type ApiKey struct {

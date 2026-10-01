@@ -18,7 +18,7 @@ func (c ApplicationCategory) Builtin() bool {
 }
 
 func (c ApplicationCategory) Auxiliary() bool {
-	return c.Monitoring() || c.ControlPlane()
+	return c.Monitoring() || c.ControlPlane() || c.System() // shards fork: + system
 }
 
 func (c ApplicationCategory) Monitoring() bool {

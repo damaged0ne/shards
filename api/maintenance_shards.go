@@ -304,4 +304,5 @@ func (api *Api) RegisterWorkflowRoutes(r *mux.Router) {
 	r.HandleFunc("/api/project/{project}/approvals", api.Auth(api.Approvals)).Methods(get)
 	r.HandleFunc("/api/project/{project}/approvals/policy", api.Auth(api.ApprovalPolicy)).Methods(get, put)
 	r.HandleFunc("/api/project/{project}/approvals/{id}", api.Auth(api.Approval)).Methods(get, post)
+	r.HandleFunc("/api/project/{project}/service_map_settings", api.Auth(api.ServiceMapSettings)).Methods(get, put)
 }

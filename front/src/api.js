@@ -371,6 +371,15 @@ export default class Api {
         }
     }
 
+    // shards fork: service map settings (category map modes, group rules, node display names)
+    serviceMapSettings(form, cb) {
+        if (form) {
+            this.put(this.projectPath('service_map_settings'), form, cb);
+        } else {
+            this.get(this.projectPath('service_map_settings'), {}, cb);
+        }
+    }
+
     getInspectionConfig(appId, type, cb) {
         this.get(this.projectPath(`app/${encodeURIComponent(appId)}/inspection/${type}/config`), {}, cb);
     }

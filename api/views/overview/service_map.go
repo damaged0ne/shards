@@ -16,6 +16,10 @@ type Application struct {
 	Icon       string                    `json:"icon"`
 	Indicators []model.Indicator         `json:"indicators"`
 
+	Group       string `json:"group,omitempty"`        // shards fork: compose project / namespace, see service_map_shards.go
+	GroupSource string `json:"group_source,omitempty"` // shards fork
+	Node        string `json:"node,omitempty"`         // shards fork: the node of a single-node application
+
 	Upstreams   []Link `json:"upstreams"`
 	Downstreams []Link `json:"downstreams"`
 }

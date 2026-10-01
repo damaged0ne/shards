@@ -69,7 +69,7 @@ func (w *World) GetOrCreateApplication(id ApplicationId, custom bool) *Applicati
 
 func (w *World) GetNode(name string) *Node {
 	for _, n := range w.Nodes {
-		if n.Name.Value() == name || n.K8sName.Value() == name {
+		if n.Name.Value() == name || n.K8sName.Value() == name || (n.Shards != nil && n.Shards.Hostname == name && name != "") { // shards fork: + original hostname
 			return n
 		}
 	}

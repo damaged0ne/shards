@@ -181,6 +181,8 @@ const (
 	AgentDeliveryPending   = "pending"
 	AgentDeliveryDelivered = "delivered"
 	AgentDeliveryFailed    = "failed"
+	// AgentDeliveryNew is a row being created (its payload isn't written yet); the worker ignores it.
+	AgentDeliveryNew = "new"
 )
 
 type AgentDelivery struct {
@@ -655,8 +657,10 @@ func (db *DB) AddAgentDelivery(d *AgentDelivery) error {
 	).Scan(&d.Id)
 }
 
-func (db *DB) UpdateAgentDeliveryPayload(id int64, payload string) error {
-	_, err := db.db.Exec("UPDATE agent_dispatch SET payload = $1 WHERE id = $2", payload, id)
+// UpdateAgentDeliveryPayload sets the payload of a delivery inserted as AgentDeliveryNew and makes it
+// visible to the delivery worker (status/next attempt).
+func (db *DB) UpdateAgentDeliveryPayload(d *AgentDelivery) error {
+	_, err := db.db.Exec("UPDATE agent_dispatch SET payload = $1, status = $2, next_attempt_at = $3 WHERE id = $4", d.Payload, d.Status, d.NextAttemptAt, d.Id)
 	return err
 }
 

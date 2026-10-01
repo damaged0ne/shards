@@ -400,3 +400,27 @@ func TestMCPResourcesPromptsAndPlaybooks(t *testing.T) {
 	assert.Contains(t, init, `"prompts"`)
 	assert.Contains(t, init, `"resources"`)
 }
+
+// Regression: building a task without a project base URL must not deadlock on the dispatcher lock.
+func TestAgentDispatchWithoutBaseUrl(t *testing.T) {
+	e := newMCPTestEnv(t)
+	ownerId, err := e.db.AddServiceAccount("owner", "Owner", rbac.RoleEditor)
+	require.NoError(t, err)
+	a := &db.Agent{ProjectId: e.project.Id, Name: "bot", Scope: db.AgentScopeRead, OwnerId: ownerId,
+		Dispatch: &db.AgentDispatchConfig{Enabled: true, URL: "http://127.0.0.1:1/", Events: []string{db.AgentEventMention}}}
+	require.NoError(t, e.db.CreateAgent(a))
+	done := make(chan struct{})
+	go func() {
+		e.h.Api.dispatchMentions(e.project, &db.Comment{Id: 1, TargetType: db.CommentTargetAlert, TargetId: "x", Author: "human", Body: "@bot hi"})
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("dispatch deadlocked")
+	}
+	dls, err := e.db.GetAgentDeliveries(a.Id, 10)
+	require.NoError(t, err)
+	require.Len(t, dls, 1)
+	assert.Equal(t, db.AgentEventMention, dls[0].Event)
+}

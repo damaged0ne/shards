@@ -153,6 +153,7 @@ type agentDispatcher struct {
 	backoff     func(attempt int) time.Duration
 	maxAttempts int
 	mu          sync.Mutex // serializes rate-limit/dedup checks with inserts
+	baseUrlMu   sync.Mutex
 	baseUrl     string
 }
 
@@ -215,17 +216,17 @@ func (d *agentDispatcher) wake() {
 func (api *Api) rememberBaseUrl(r *http.Request) {
 	u := strings.TrimSuffix(api.GetAbsoluteUrl(r, "/").String(), "/")
 	d := api.agentDispatcher()
-	d.mu.Lock()
+	d.baseUrlMu.Lock()
 	d.baseUrl = u
-	d.mu.Unlock()
+	d.baseUrlMu.Unlock()
 }
 
 func (d *agentDispatcher) baseUrlFor(project *db.Project) string {
 	if u := strings.TrimSuffix(project.Settings.Integrations.BaseUrl, "/"); u != "" {
 		return u
 	}
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.baseUrlMu.Lock()
+	defer d.baseUrlMu.Unlock()
 	return d.baseUrl
 }
 
@@ -388,20 +389,26 @@ func (d *agentDispatcher) enqueue(project *db.Project, a *db.Agent, ev AgentEven
 			dl.NextAttemptAt = 0
 		}
 	}
-	dl.Payload = "{}"
+	if ev.Type == db.AgentEventTest {
+		// test deliveries are sent synchronously by the caller; the worker only retries them later
+		dl.NextAttemptAt = now.Add(time.Hour).UnixMilli()
+	}
+	// insert first (the payload carries the delivery id), publish to the worker with the payload
+	status := dl.Status
+	dl.Status, dl.Payload = db.AgentDeliveryNew, "{}"
 	if err := d.api.db.AddAgentDelivery(dl); err != nil {
 		return nil, err
 	}
-	task := d.buildTask(project, a, ev, dl)
-	data, err := json.Marshal(task)
+	dl.Status = status
+	data, err := json.Marshal(d.buildTask(project, a, ev, dl))
 	if err != nil {
 		return nil, err
 	}
 	dl.Payload = string(data)
-	if err = d.api.db.UpdateAgentDeliveryPayload(dl.Id, dl.Payload); err != nil {
+	if err = d.api.db.UpdateAgentDeliveryPayload(dl); err != nil {
 		return nil, err
 	}
-	if dl.Status == db.AgentDeliveryPending {
+	if dl.Status == db.AgentDeliveryPending && ev.Type != db.AgentEventTest {
 		d.wake()
 	}
 	return dl, nil

@@ -248,19 +248,6 @@ button:focus-visible,
 .v-application .status-chip .v-icon {
     color: inherit !important;
 }
-/* .warning, .success and .info are also Vuetify color utilities (background-color !important) */
-.v-application .status-chip.warning {
-    background-color: var(--warning-3) !important;
-    border-color: var(--warning-6) !important;
-}
-.v-application .status-chip.success {
-    background-color: var(--success-3) !important;
-    border-color: var(--success-6) !important;
-}
-.v-application .status-chip.info {
-    background-color: var(--info-3) !important;
-    border-color: var(--info-6) !important;
-}
 
 /* ---------- surfaces ---------- */
 .v-application .theme--light.v-sheet,

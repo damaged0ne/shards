@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/coroot/coroot/db"
@@ -39,6 +40,10 @@ func probeSpecOptions() []mcp.ToolOption {
 }
 
 func (h *MCPHandler) registerProbeTools() {
+	// agent scopes (see agents_scope_shards.go): the read tools are classified by their read-only hint
+	for _, tool := range []string{"create_probe", "update_probe", "delete_probe"} {
+		SetMCPToolScope(tool, db.AgentScopeOperator)
+	}
 	h.AddTool(
 		mcp.NewTool("list_probes",
 			mcp.WithDescription("List the synthetic probes (HTTP/TCP/TLS/DNS uptime checks run by the shards server) with their status, uptime % and p95 latency over the last hour, TLS certificate days left and the last error."),
@@ -88,8 +93,9 @@ func (h *MCPHandler) registerProbeTools() {
 
 	h.AddTool(
 		mcp.NewTool("delete_probe",
-			mcp.WithDescription("Delete a probe. Its metrics stay in the metrics storage until they expire. Requires the Admin or Editor role."),
+			mcp.WithDescription("Delete a probe. Its metrics stay in the metrics storage until they expire. Requires the Admin or Editor role."+mcpApprovalNote),
 			mcp.WithString("id", mcp.Required(), mcp.Description("Probe id or name from list_probes.")),
+			mcp.WithString("comment", mcp.Description("Optional reason, shown to the approver if the action needs approval.")),
 			mcp.WithReadOnlyHintAnnotation(false),
 			mcp.WithDestructiveHintAnnotation(true),
 			mcp.WithIdempotentHintAnnotation(true),
@@ -111,30 +117,30 @@ func (h *MCPHandler) requireProbes(ctx context.Context, edit bool) (*db.User, *d
 }
 
 type mcpProbe struct {
-	Id              string   `json:"id"`
-	Name            string   `json:"name"`
-	Type            string   `json:"type"`
-	Target          string   `json:"target"`
-	Interval        string   `json:"interval"`
-	Paused          bool     `json:"paused,omitempty"`
-	ApplicationId   string   `json:"application_id,omitempty"`
-	Status          string   `json:"status"`
-	UptimePercent   *float32 `json:"uptime_percent,omitempty"`
-	LatencyP95      string   `json:"latency_p95,omitempty"`
-	LatencyLast     string   `json:"latency_last,omitempty"`
-	StatusCode      int      `json:"status_code,omitempty"`
-	CertDaysLeft    *float32 `json:"cert_days_left,omitempty"`
-	CertSubject     string   `json:"cert_subject,omitempty"`
-	CertIssuer      string   `json:"cert_issuer,omitempty"`
-	CertNotAfter    string   `json:"cert_not_after,omitempty"`
-	CertValid       *bool    `json:"cert_valid,omitempty"`
-	LastError       string   `json:"last_error,omitempty"`
-	LastRunAt       string   `json:"last_run_at,omitempty"`
-	ConsecFailures  int      `json:"consecutive_failures,omitempty"`
-	ExpectedStatus  string   `json:"expected_status,omitempty"`
-	BodyContains    string   `json:"body_contains,omitempty"`
-	FollowRedirects bool     `json:"follow_redirects,omitempty"`
-	TlsSkipVerify   bool     `json:"tls_skip_verify,omitempty"`
+	Id              string        `json:"id"`
+	Name            string        `json:"name"`
+	Type            string        `json:"type"`
+	Target          string        `json:"target"`
+	Interval        string        `json:"interval"`
+	Paused          bool          `json:"paused,omitempty"`
+	ApplicationId   string        `json:"application_id,omitempty"`
+	Status          string        `json:"status"`
+	UptimePercent   *float32      `json:"uptime_percent,omitempty"`
+	LatencyP95      string        `json:"latency_p95,omitempty"`
+	LatencyLast     string        `json:"latency_last,omitempty"`
+	StatusCode      int           `json:"status_code,omitempty"`
+	CertDaysLeft    *float32      `json:"cert_days_left,omitempty"`
+	CertSubject     *MCPUntrusted `json:"cert_subject,omitempty"`
+	CertIssuer      *MCPUntrusted `json:"cert_issuer,omitempty"`
+	CertNotAfter    string        `json:"cert_not_after,omitempty"`
+	CertValid       *bool         `json:"cert_valid,omitempty"`
+	LastError       *MCPUntrusted `json:"last_error,omitempty"`
+	LastRunAt       string        `json:"last_run_at,omitempty"`
+	ConsecFailures  int           `json:"consecutive_failures,omitempty"`
+	ExpectedStatus  string        `json:"expected_status,omitempty"`
+	BodyContains    *MCPUntrusted `json:"body_contains,omitempty"`
+	FollowRedirects bool          `json:"follow_redirects,omitempty"`
+	TlsSkipVerify   bool          `json:"tls_skip_verify,omitempty"`
 }
 
 func mcpProbeLatency(v *float32) string {
@@ -149,9 +155,9 @@ func toMCPProbe(v ProbeView) mcpProbe {
 		Id: v.Id, Name: v.Name, Type: string(v.Spec.Type), Target: v.Spec.Target, Interval: v.Spec.Interval.String(),
 		Paused: v.Spec.Paused, Status: v.Status, UptimePercent: v.Uptime,
 		LatencyP95: mcpProbeLatency(v.LatencyP95), LatencyLast: mcpProbeLatency(v.LatencyLast), StatusCode: v.StatusCode,
-		CertDaysLeft: v.CertDaysLeft, CertSubject: v.CertSubject, CertIssuer: v.CertIssuer, CertNotAfter: v.CertNotAfter,
-		CertValid: v.CertValid, LastError: v.LastError, LastRunAt: MCPFormatTime(v.LastRunAt), ConsecFailures: v.ConsecFails,
-		ExpectedStatus: v.Spec.ExpectedStatus, BodyContains: v.Spec.BodyContains, FollowRedirects: v.Spec.FollowRedirects,
+		CertDaysLeft: v.CertDaysLeft, CertSubject: mcpUntrustedPtr(v.CertSubject, 500), CertIssuer: mcpUntrustedPtr(v.CertIssuer, 500), CertNotAfter: v.CertNotAfter,
+		CertValid: v.CertValid, LastError: mcpUntrustedPtr(v.LastError, 2000), LastRunAt: MCPFormatTime(v.LastRunAt), ConsecFailures: v.ConsecFails,
+		ExpectedStatus: v.Spec.ExpectedStatus, BodyContains: mcpUntrustedPtr(v.Spec.BodyContains, 1100), FollowRedirects: v.Spec.FollowRedirects,
 		TlsSkipVerify: v.Spec.TlsSkipVerify,
 	}
 	if v.Linked {
@@ -401,16 +407,40 @@ func (h *MCPHandler) toolUpdateProbe(ctx context.Context, req mcp.CallToolReques
 }
 
 func (h *MCPHandler) toolDeleteProbe(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	_, project, errResult := h.requireProbes(ctx, true)
+	user, project, errResult := h.requireProbes(ctx, true)
 	if errResult != nil {
 		return errResult, nil
 	}
+	// delete_probe is a gated agent action (db.AgentActionDeleteProbe, 'auto' by default)
+	return h.mcpToolGated(user, project, "delete_probe", req)
+}
+
+type probeDeleteArgs struct {
+	Id      string `json:"id"`
+	Comment string `json:"comment,omitempty"`
+}
+
+// probeDeleteGatedCall builds the gated call of delete_probe (see mcpGatedCall).
+func (h *MCPHandler) probeDeleteGatedCall(project *db.Project, req mcp.CallToolRequest, comment string) (*gatedCall, *mcp.CallToolResult) {
 	p, errResult := h.getProbeArg(project, req)
 	if errResult != nil {
-		return errResult, nil
+		return nil, errResult
 	}
-	if err := h.Api.deleteProbe(project, p.Id); err != nil {
-		return mcpTargetError(err), nil
+	return &gatedCall{action: db.AgentActionDeleteProbe, args: probeDeleteArgs{Id: p.Id, Comment: comment},
+		summary: "Delete the probe \"" + p.Name + "\" (" + string(p.Spec.Type) + " " + p.Spec.Target + ")", reason: comment}, nil
+}
+
+// doDeleteProbe executes an (approved) delete_probe action.
+func (api *Api) doDeleteProbe(project *db.Project, args probeDeleteArgs) (any, error) {
+	p, err := api.db.GetProbe(project.Id, args.Id)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			return nil, &targetError{status: http.StatusNotFound, msg: "probe not found"}
+		}
+		return nil, err
 	}
-	return MCPJSON(map[string]string{"deleted": p.Id, "name": p.Name})
+	if err = api.deleteProbe(project, p.Id); err != nil {
+		return nil, err
+	}
+	return map[string]string{"deleted": p.Id, "name": p.Name}, nil
 }

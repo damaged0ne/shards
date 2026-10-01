@@ -392,7 +392,7 @@ func (h *MCPHandler) registerTools() {
 		h.toolQueryLogs,
 	)
 	h.registerAgentTools()
-	h.registerProbeTools() // shards fork
+	h.registerProbeTools()  // shards fork
 	h.registerStatusTools() // shards fork
 }
 

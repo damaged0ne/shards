@@ -63,6 +63,8 @@ func agentScopeForAction(a rbac.Action) db.AgentScope {
 		return db.AgentScopeTriage
 	case rbac.ScopeProjectAlertingRules:
 		return db.AgentScopeOperator
+	case rbac.ScopeProjectProbes: // uptime probes
+		return db.AgentScopeOperator
 	}
 	return db.AgentScopeAdmin
 }

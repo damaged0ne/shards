@@ -124,7 +124,7 @@ func (db *DB) Migrate(extraTables ...Table) error {
 		&AlertingRule{},
 		&Alert{},
 		&Comment{},
-		&Probe{}, // shards fork
+		&Probe{},                                               // shards fork
 		&IncidentWorkflow{}, &MaintenanceWindow{}, &Approval{}, // shards fork
 		AgentTables{}, // shards fork
 	}

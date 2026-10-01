@@ -352,6 +352,11 @@ func (api *Api) Probe(w http.ResponseWriter, r *http.Request, u *db.User) {
 		}
 		utils.WriteJson(w, probeViews(project, []*db.Probe{p}, nil, false)[0])
 	case http.MethodDelete:
+		// delete_probe is a gated agent action: API keys of agents may get 202 + a pending approval
+		args := probeDeleteArgs{Id: p.Id}
+		if api.gateREST(w, project, newActor(u, viaUI), db.AgentActionDeleteProbe, args, "Delete the probe \""+p.Name+"\"", gatedTarget{}, "") {
+			return
+		}
 		if err = api.deleteProbe(project, p.Id); err != nil {
 			writeTargetError(w, err)
 			return
@@ -360,6 +365,11 @@ func (api *Api) Probe(w http.ResponseWriter, r *http.Request, u *db.User) {
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
+}
+
+func init() {
+	// agent scopes of the REST write endpoints (see agents_scope_shards.go)
+	RegisterAgentRESTScope("POST,PUT,DELETE", `/api/project/[^/]+/probes(/[^/]+)?$`, db.AgentScopeOperator)
 }
 
 // RegisterProbeRoutes adds the probe endpoints to the router.

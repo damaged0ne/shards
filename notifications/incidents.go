@@ -26,6 +26,9 @@ func NewIncidentNotifier(db *db.DB) *IncidentNotifier {
 }
 
 func (n *IncidentNotifier) Enqueue(project *db.Project, app *model.Application, incident *model.ApplicationIncident, now timeseries.Time) {
+	if muteIncidentNotification(n.db, project, app, incident, now) { // shards fork: maintenance windows
+		return
+	}
 	categorySettings := project.GetApplicationCategories()[app.Category]
 	if categorySettings == nil {
 		return

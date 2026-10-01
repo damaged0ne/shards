@@ -19,6 +19,16 @@
                     <AlertingRules @loading="setLoading" @error="setError" />
                 </div>
             </template>
+            <template v-else-if="tab === 'maintenance'">
+                <div class="pt-4">
+                    <Maintenance @loading="setLoading" @error="setError" />
+                </div>
+            </template>
+            <template v-else-if="tab === 'approvals'">
+                <div class="pt-4">
+                    <Approvals @loading="setLoading" @error="setError" />
+                </div>
+            </template>
             <template v-else-if="tab === 'inspections'">
                 <div class="pt-4">
                     <Inspections @loading="setLoading" @error="setError" />
@@ -33,9 +43,11 @@ import Views from '@/views/Views.vue';
 import AlertsList from '@/components/AlertsList.vue';
 import AlertingRules from '@/components/AlertingRules.vue';
 import Inspections from '@/components/Inspections.vue';
+import Maintenance from '@/components/Maintenance.vue';
+import Approvals from '@/components/Approvals.vue';
 
 export default {
-    components: { Views, AlertsList, AlertingRules, Inspections },
+    components: { Views, AlertsList, AlertingRules, Inspections, Maintenance, Approvals },
     data() {
         return {
             tab: this.$route.params.id,
@@ -57,10 +69,15 @@ export default {
         },
     },
     computed: {
+        pendingApprovals() {
+            return (this.$api.context.attention || {}).pending_approvals || 0;
+        },
         tabs() {
             return [
                 { id: undefined, name: 'Alerts' },
                 { id: 'rules', name: 'Alerting Rules' },
+                { id: 'maintenance', name: 'Maintenance' },
+                { id: 'approvals', name: this.pendingApprovals ? `Approvals (${this.pendingApprovals})` : 'Approvals' },
                 { id: 'inspections', name: 'Inspections' },
             ];
         },

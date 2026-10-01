@@ -21,7 +21,7 @@
 
                 <nav v-if="project" class="rail-nav" aria-label="Sections">
                     <div v-for="g in navGroups" :key="g.id" class="rail-group">
-                        <div class="rail-title">{{ g.name }}</div>
+                        <div v-if="g.name" class="rail-title">{{ g.name }}</div>
                         <router-link
                             v-for="item in g.items"
                             :key="item.id"
@@ -194,6 +194,7 @@ import { views } from '@/views/Views.vue';
 import { repoUrl } from '@/utils/utils';
 
 const groups = [
+    { id: 'home', name: '' },
     { id: 'health', name: 'Health' },
     { id: 'explore', name: 'Explore' },
     { id: 'infrastructure', name: 'Infrastructure' },
@@ -358,7 +359,7 @@ export default {
             handler(curr, prev) {
                 this.getUser();
                 if (curr.name === 'overview' && !this.views[curr.params.view]) {
-                    this.$router.replace({ params: { view: 'applications' } }).catch((err) => err);
+                    this.$router.replace({ params: { view: 'home' } }).catch((err) => err);
                     return;
                 }
                 if (!prev) {
@@ -392,6 +393,15 @@ export default {
             const badges = [];
             let dot = '';
             switch (id) {
+                case 'home': {
+                    const a = this.context.attention || {};
+                    const n = (a.unacknowledged_incidents || 0) + (a.pending_approvals || 0);
+                    if (n) {
+                        badges.push({ class: 'danger', value: n });
+                        dot = 'danger';
+                    }
+                    break;
+                }
                 case 'incidents':
                     if (this.incidentsCount) {
                         badges.push({ class: 'danger', value: this.incidentsCount });

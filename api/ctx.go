@@ -27,6 +27,7 @@ type Context struct {
 	Argocd         *GitOpsStatus                     `json:"argocd"`
 	Multicluster   bool                              `json:"multicluster"`
 	MemberProjects []string                          `json:"member_projects,omitempty"`
+	Attention      *AttentionCounts                  `json:"attention,omitempty"` // shards fork
 }
 
 type GitOpsStatus struct {
@@ -98,6 +99,7 @@ func (api *Api) WithContext(p *db.Project, cacheStatus *cache.Status, w *model.W
 			Argocd:         gitOpsStatus(w, w != nil && w.ArgoCD != nil, overview.CountArgoCDIssues),
 			Multicluster:   p.Multicluster(),
 			MemberProjects: p.Settings.MemberProjects,
+			Attention:      api.attentionCounts(p.Id), // shards fork
 		},
 		Data: data,
 	}

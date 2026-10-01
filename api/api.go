@@ -1437,6 +1437,9 @@ func (api *Api) ResolveAlerts(w http.ResponseWriter, r *http.Request, u *db.User
 		return
 	}
 	a := newActor(u, viaUI)
+	if api.gateREST(w, project, a, db.AgentActionResolveAlerts, alertsActionArgs{Ids: req.Ids, Comment: req.Comment}, alertsSummary("Resolve", req.Ids), alertsGatedTarget(req.Ids), req.Comment) { // shards fork
+		return
+	}
 	if _, err := api.resolveAlerts(project, req.Ids, a.name); err != nil {
 		klog.Errorln(err)
 		http.Error(w, "", http.StatusInternalServerError)
@@ -1484,6 +1487,9 @@ func (api *Api) SuppressAlerts(w http.ResponseWriter, r *http.Request, u *db.Use
 		return
 	}
 	a := newActor(u, viaUI)
+	if api.gateREST(w, project, a, db.AgentActionSuppressAlerts, alertsActionArgs{Ids: req.Ids, Comment: req.Comment}, alertsSummary("Suppress", req.Ids), alertsGatedTarget(req.Ids), req.Comment) { // shards fork
+		return
+	}
 	if _, err := api.suppressAlerts(project, req.Ids, a.name); err != nil {
 		klog.Errorln(err)
 		http.Error(w, "", http.StatusInternalServerError)
@@ -1647,6 +1653,9 @@ func (api *Api) AlertingRule(w http.ResponseWriter, r *http.Request, u *db.User)
 			http.Error(w, "invalid request body", http.StatusBadRequest)
 			return
 		}
+		if project := api.getProjectOrError(w, db.ProjectId(projectId)); project == nil || api.gateRuleUpdate(w, project, newActor(u, viaUI), existing, &rule, "") { // shards fork
+			return
+		}
 		if err := api.updateAlertingRule(db.ProjectId(projectId), existing, &rule, newActor(u, viaUI)); err != nil {
 			writeTargetError(w, err)
 			return
@@ -1666,6 +1675,9 @@ func (api *Api) AlertingRule(w http.ResponseWriter, r *http.Request, u *db.User)
 			}
 			klog.Errorln(err)
 			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		if project := api.getProjectOrError(w, db.ProjectId(projectId)); project == nil || api.gateRuleDelete(w, project, newActor(u, viaUI), rule) { // shards fork
 			return
 		}
 		if err := api.deleteAlertingRule(db.ProjectId(projectId), rule, newActor(u, viaUI)); err != nil {

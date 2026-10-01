@@ -43,15 +43,18 @@ Pick a tool by intent, cheapest first:
   • full trace → get_trace trace_id=… (full span tree with attributes/events; use trace_ids from traces_errors / traces_summary samples).
 - "Show me logs" → query_logs: app-scoped or project-wide, with severity / search / time range. Sorted newest-first.
 - "What does this metric look like?" / "Why is shards saying X?" → query_metrics for raw PromQL with labels and sparklines; list_metric_names to discover metric names.
-- Incident / alert detail → get_incident_details, get_alert (both include the timeline).
+- Incident / alert detail → get_incident_context (one compact call: incident + workflow status + timeline + firing alerts of the app and its dependencies + deployments in the last 24h + similar past incidents with their resolutions + active maintenance), get_incident_details (full RCA), get_alert (both include the timeline).
+- Incident workflow → update_incident (acknowledge / assign / mitigate / resolve with a summary / set_severity), get_incident_postmortem (markdown draft).
+- Maintenance windows (muting notifications for planned work) → list_maintenance_windows, create_maintenance_window, end_maintenance_window.
 - Alerting rules → list_alerting_rules, get_alerting_rule, create_alerting_rule, update_alerting_rule (partial: enabled, severity, promql_expression, for/keep_firing_for, selector, notification_category, description/runbook, ...), delete_alerting_rule. Builtin rules can be tuned or disabled but not deleted; readonly rules are managed by config and can't be changed.
 
 Operator workflow for incidents and alerts (humans read the same timeline in the UI):
-1. Triage: list_alerts / list_incidents, then get_alert / get_incident_details. Read the timeline first — someone (human or agent) may already be on it.
+1. Triage: list_alerts / list_incidents, then get_incident_context / get_alert. Read the timeline and the workflow status first — someone (human or agent) may already be on it; if not, update_incident action=acknowledge.
 2. Comment: add_comment with what you found (evidence, suspected root cause, links to traces/logs) and what you are going to do. Keep comments concise markdown.
 3. Fix: investigate with the read tools; apply the fix with whatever tools you have outside shards. If an alert is noise, tune its rule (update_alerting_rule) and say why in the comment argument.
 4. Resolve: resolve_alerts with a comment summarising the fix, only after confirming the underlying issue is gone — alerts whose conditions still hold will re-fire on the next evaluation. Use suppress_alerts for known/accepted issues that should not re-fire, reopen_alerts if a fix didn't hold.
 Every action (resolve / suppress / reopen, rule create / update / enable / disable / delete) is recorded in the timeline with your agent identity, so always explain non-obvious actions.
+Human approval: depending on the project's policy, some actions (by default: delete or disable an alerting rule, resolve an incident) are not executed right away. The tool then returns {status: 'pending', approval_id}; nothing changed yet. Tell the user, carry on with other work, and check get_approval_status(approval_id) later ('executed' | 'failed' | 'rejected' with the reviewer's comment). Never retry a pending action. 'denied' means the policy forbids it for agents.
 
 Time arguments accept epoch ms or relative strings like 'now-1h', 'now-15m'. Default windows are short (the server's configured default time range, 1h unless overridden) — widen explicitly when looking at historical patterns.`
 
@@ -1106,14 +1109,9 @@ func (h *MCPHandler) toolResolveAlerts(ctx context.Context, req mcp.CallToolRequ
 	if errResult != nil {
 		return errResult, nil
 	}
-	a := newActor(user, viaMCP)
-	notified, err := h.Api.resolveAlerts(project, ids, a.name+" (via MCP)")
-	if err != nil {
-		klog.Errorln("mcp: resolve_alerts:", err)
-		return mcp.NewToolResultError("failed to resolve alerts"), nil
-	}
-	h.Api.recordAlertActions(a, project.Id, ids, actionAlertResolved, comment)
-	return MCPJSON(map[string]any{"resolved": len(ids), "notified": notified})
+	// shards fork: subject to the project's agent approval policy
+	return h.runGated(project, newActor(user, viaMCP), db.AgentActionResolveAlerts, alertsActionArgs{Ids: ids, Comment: comment},
+		alertsSummary("Resolve", ids), alertsGatedTarget(ids), comment)
 }
 
 func (h *MCPHandler) toolGetIncidentDetails(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

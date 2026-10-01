@@ -144,6 +144,9 @@ func TestMCPAgentAlertWorkflow(t *testing.T) {
 func TestMCPAgentAlertingRules(t *testing.T) {
 	e := newMCPTestEnv(t)
 	ctx := e.ctx(rbac.RoleEditor, "editor")
+	// this test covers the rule tools themselves: no human approvals (see approvals_shards_test.go)
+	e.project.Settings.AgentApprovals = &db.AgentApprovalPolicy{RequireApproval: false}
+	require.NoError(t, e.db.SaveProjectSettings(e.project))
 
 	// validation is shared with the REST form
 	res := e.call(ctx, e.h.toolCreateAlertingRule, map[string]any{"name": "bad", "source_type": "promql", "promql_expression": "rate(x[5m] >"})

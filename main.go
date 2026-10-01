@@ -145,6 +145,7 @@ func main() {
 	incidents := watchers.NewIncidents(database, nil)
 
 	watchers.Start(database, promCache, pricing, incidents, !cfg.DoNotCheckForDeployments, globalClickhouse, globalPrometheus, cfg.ClickHouseSpaceManager, nil, nil)
+	startProbes(cfg, database, coll) // shards fork
 
 	router := mux.NewRouter()
 	router.Use(statsCollector.MiddleWare)
@@ -189,6 +190,7 @@ func main() {
 	r.HandleFunc("/api/project/{project}/alerts/reopen", a.Auth(a.ReopenAlerts)).Methods(http.MethodPost)
 	r.HandleFunc("/api/project/{project}/comments", a.Auth(a.Comments)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/comments/{id}", a.Auth(a.Comment)).Methods(http.MethodPut, http.MethodDelete)
+	a.RegisterProbeRoutes(r) // shards fork
 	r.HandleFunc("/api/project/{project}/alerting-rules", a.Auth(a.AlertingRules)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/api/project/{project}/alerting-rules/export", a.Auth(a.AlertingRulesExport)).Methods(http.MethodGet)
 	r.HandleFunc("/api/project/{project}/alerting-rules/{rule}", a.Auth(a.AlertingRule)).Methods(http.MethodGet, http.MethodPut, http.MethodDelete)

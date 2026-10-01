@@ -280,6 +280,9 @@ func (db *DB) DeleteProject(id ProjectId) error {
 	if _, err = tx.Exec("DELETE FROM comment WHERE project_id = $1", id); err != nil {
 		return err
 	}
+	if _, err = tx.Exec("DELETE FROM probe WHERE project_id = $1", id); err != nil { // shards fork
+		return err
+	}
 	if _, err = tx.Exec("DELETE FROM alert WHERE project_id = $1", id); err != nil {
 		return err
 	}

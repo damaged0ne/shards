@@ -33,6 +33,8 @@ type World struct {
 	IntegrationStatus IntegrationStatus
 
 	ProjectNamesById map[string]string
+
+	Probes []*Probe // shards fork: synthetic probes, see probe_shards.go
 }
 
 func NewWorld(from, to timeseries.Time, step, rawStep timeseries.Duration) *World {

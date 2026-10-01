@@ -187,6 +187,25 @@ Both schema tracking and size tracking respect these additional flags:
 - **`--max-tables-per-database`** / `MAX_TABLES_PER_DATABASE` (default: `1000`) - skip databases with more tables than this limit, protecting against expensive queries on very large schemas.
 - **`--exclude-databases`** / `EXCLUDE_DATABASES` (default: `mysql`, `information_schema`, `performance_schema`, `sys`) - databases to exclude from schema and size tracking.
 
+### Wait events, replication applier and unused indexes
+
+**Always collected** by shards-cluster from `performance_schema`:
+
+| Metrics | Shown in the MySQL report as |
+|---|---|
+| `mysql_wait_event_seconds_total{event}` (top 30 events by total wait time, `idle` excluded), `mysql_wait_event_count_total{event}` | Wait time by event |
+| `mysql_replication_applier_last_transaction_lag_seconds{channel}`, `mysql_replication_applier_current_lag_seconds{channel}` (MySQL 8.0+ replicas, `replication_applier_status_by_worker`) | Replication applier lag, the *Mysql replication applier lag* check |
+| `mysql_index_unused{schema,table,index}`, `mysql_index_unused_bytes` (needs `SELECT` on `mysql.innodb_index_stats`) | *Unused indexes* table |
+| `mysql_table_locks_waited_total`, `mysql_table_locks_immediate_total` | Table lock waits |
+
+The applier lag compares the timestamps of the source and the replica, so clock skew affects it. The index usage counters
+are reset on server restart: right after a restart every index looks unused. `mysql_schema_unused_indexes` and
+`mysql_wait_event_count_total` are collected but not shown.
+
+| Check | Default condition | Built-in alert |
+|---|---|---|
+| Mysql replication applier lag | the applier lag of a replication channel is more than 5 minutes | warning, after 5 minutes |
+
 ## Performance impact
 
 All statistics are collected with regular SQL queries over a single persistent connection, so the agent can never occupy more than one MySQL thread.

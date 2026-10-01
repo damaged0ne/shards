@@ -304,7 +304,7 @@ func TestDBExtEtcd(t *testing.T) {
 	e.add("etcd_wal_fsync_p99", a, flat(0.02))
 	e.add("etcd_backend_commit_p99", a, flat(0.01))
 	e.add("etcd_mvcc_db_total_size_in_bytes", a, flat(1.8*1024*1024*1024)) // 84% of the default 2GiB quota
-	e.add("etcd_leader_changes_rate", a, tail(0, 1.0/30, 5))              // 5 leader changes
+	e.add("etcd_leader_changes_rate", a, tail(0, 1.0/30, 5))               // 5 leader changes
 	h := map[string]string{"instance": "10.0.4.2:2381"}
 	e.add("etcd_up", h, flat(1))
 	e.add("etcd_server_has_leader", h, flat(1))

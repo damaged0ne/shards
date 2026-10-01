@@ -33,6 +33,7 @@ func NewDeployments(db *db.DB, pricing *cloud_pricing.Manager) *Deployments {
 func (w *Deployments) Check(project *db.Project, world *model.World) {
 	start := time.Now()
 	apps := w.discoverAndSaveDeployments(project, world)
+	apps += w.discoverAndSaveDockerReleases(project, world) // shards fork
 	w.snapshotDeploymentMetrics(project, world)
 	w.sendNotifications(project, world)
 	klog.Infof("%s: checked %d apps in %s", project.Id, apps, time.Since(start).Truncate(time.Millisecond))

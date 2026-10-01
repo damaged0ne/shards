@@ -4,26 +4,26 @@ sidebar_position: 1
 
 # Alerts
 
-Coroot continuously monitors your applications and fires alerts when something goes wrong.
+shards continuously monitors your applications and fires alerts when something goes wrong.
 The Alerts page displays a list of both firing and resolved alerts within the selected time window.
 
 <img alt="Alerts" src="/img/docs/alerts.png" class="card w-1200"/>
 
 ## How alerting works
 
-Coroot evaluates alerting rules on every data collection cycle. Each rule defines a source, a set of matching applications, and a severity level.
+shards evaluates alerting rules on every data collection cycle. Each rule defines a source, a set of matching applications, and a severity level.
 
 There are four types of alert sources:
 
-* **Check-based alerts**: Coroot runs a set of built-in inspections (checks) for every application, such as CPU utilization, instance availability, or database latency. When a check exceeds its threshold, the corresponding alert fires.
-* **Log-based alerts**: Coroot automatically detects new error and fatal log patterns using its log pattern detection engine. When a new pattern appears with enough occurrences, an alert fires. Optionally, patterns can be evaluated by AI to reduce noise.
-* **Kubernetes events-based alerts**: Coroot monitors Kubernetes events (e.g., FailedScheduling, BackOff, Unhealthy) collected by coroot-cluster-agent and fires alerts when Warning events are detected. Events are automatically grouped by application and reason, so multiple pods of the same Deployment produce a single alert rather than an alert storm. Node-level events from the node-controller (e.g., NodeNotReady) are grouped by cluster and reason instead of per-application, because a single node failure typically affects many applications at once and would otherwise cause an alert storm.
+* **Check-based alerts**: shards runs a set of built-in inspections (checks) for every application, such as CPU utilization, instance availability, or database latency. When a check exceeds its threshold, the corresponding alert fires.
+* **Log-based alerts**: shards automatically detects new error and fatal log patterns using its log pattern detection engine. When a new pattern appears with enough occurrences, an alert fires.
+* **Kubernetes events-based alerts**: shards monitors Kubernetes events (e.g., FailedScheduling, BackOff, Unhealthy) collected by shards-cluster and fires alerts when Warning events are detected. Events are automatically grouped by application and reason, so multiple pods of the same Deployment produce a single alert rather than an alert storm. Node-level events from the node-controller (e.g., NodeNotReady) are grouped by cluster and reason instead of per-application, because a single node failure typically affects many applications at once and would otherwise cause an alert storm.
 * **PromQL-based alerts**: Custom alerting rules based on PromQL expressions. This allows you to alert on any metric available in your Prometheus-compatible data source.
 
 ### Evaluation flow
 
-1. On each cycle, Coroot evaluates every enabled alerting rule against matching applications.
-2. If the alert condition is met, Coroot waits for the configured **For** duration before firing the alert. This prevents transient spikes from causing alerts.
+1. On each cycle, shards evaluates every enabled alerting rule against matching applications.
+2. If the alert condition is met, shards waits for the configured **For** duration before firing the alert. This prevents transient spikes from causing alerts.
 3. Once fired, the alert remains active until the condition clears. The **Keep firing for** duration prevents flapping by keeping the alert active for a grace period after the condition resolves.
 4. Notifications are sent through the configured integrations when an alert fires or resolves.
 
@@ -46,7 +46,7 @@ Each rule has the following settings:
 
 ### Built-in rules
 
-Coroot comes with a set of built-in alerting rules that cover the most common failure modes:
+shards comes with a set of built-in alerting rules that cover the most common failure modes:
 
 | Rule | Category |
 |------|----------|
@@ -98,7 +98,7 @@ Alerting rules can also be managed through the [configuration file](/configurati
 This is useful for version-controlling your alerting configuration or applying it across environments.
 
 Rules defined in config are shown with a lock icon in the UI and cannot be edited or deleted through the UI.
-Removing a rule from the config file and restarting Coroot makes it editable again.
+Removing a rule from the config file and restarting shards makes it editable again.
 
 Config rules use a **patch** model for built-in rules: only the fields you specify are overridden, and unset fields
 keep their current values (whether from built-in defaults or previous UI edits).
@@ -163,7 +163,7 @@ The alert detail dialog shows:
 
 For check-based alerts, the detail view also includes relevant charts and tables from the corresponding inspection report. For example, a CPU utilization alert shows CPU usage charts, and a Postgres availability alert shows the instance status table.
 
-For log-based alerts, the detail view includes a bar chart showing the log pattern's message rate over time and a **Show messages** button that takes you directly to the raw log messages matching the pattern. If AI evaluation is enabled, the detail view also includes an **AI analysis** field with the AI's explanation.
+For log-based alerts, the detail view includes a bar chart showing the log pattern's message rate over time and a **Show messages** button that takes you directly to the raw log messages matching the pattern.
 
 For Kubernetes events-based alerts, the detail view shows the event message, labels (cluster, reason, source component), and a chart showing the event frequency over time. A **Show events** button takes you to the Kubernetes events page filtered to the relevant events.
 
@@ -176,7 +176,7 @@ For PromQL-based alerts, the detail view includes the PromQL query and a chart s
 ### Resolve
 
 Clicking **Resolve** acknowledges the alert and marks it as resolved for this occurrence.
-If the condition clears and later reoccurs, Coroot will open a new alert.
+If the condition clears and later reoccurs, shards will open a new alert.
 
 ### Suppress
 
@@ -186,54 +186,25 @@ This is useful for known issues that you have decided to accept, such as a noisy
 
 To re-enable a suppressed alert, click **Reopen** in the alert detail dialog.
 
-## LLM evaluation
-
-:::info Enterprise Edition
-LLM evaluation for alerts is available in Coroot Enterprise Edition only.
-:::
-
-Log-based and Kubernetes events-based alerts can be noisy — not every new error pattern or event needs immediate attention.
-When an [AI integration](/alerting/incidents#ai-integration) is configured, Coroot can use an LLM to evaluate new log patterns and Kubernetes events
-and figure out which ones are real problems and which are just noise.
-
-### How it works
-
-1. A new log pattern or Kubernetes event group appears and the alerting rule has **AI evaluation** turned on.
-2. Coroot sends the pattern/event details to the configured LLM.
-3. The LLM decides if it looks like a real problem (failed connections, crashes, scheduling failures, etc.) or noise (expected retries, debug messages logged at the wrong level, benign warnings).
-4. If the LLM thinks it's noise, the alert is still created but **automatically suppressed**. The explanation is saved in the alert details so you can see why.
-5. If the LLM thinks it's a real issue, the alert fires normally and notifications go out.
-
-### Reviewing AI-suppressed alerts
-
-AI-suppressed alerts show up in the alert list with a **Suppressed** badge and "AI" as the suppressor.
-You can read the LLM's reasoning in the alert detail dialog under **AI analysis**.
-
-If you disagree, click **Reopen**. The alert becomes a normal firing alert and won't be re-suppressed by AI,
-even if the same pattern comes back later.
-
-### Enabling LLM evaluation
-
-LLM evaluation is controlled per alerting rule. The built-in **Log errors** and **Kubernetes events** rules have it enabled by default.
-For custom rules, toggle it in the rule settings.
-
-This requires an AI integration to be configured under **Settings** → **AI**.
-
 ## Notification integrations
 
-Coroot can send alert notifications through the following integrations:
+shards can send alert notifications through the following integrations:
 
 * [Slack](/alerting/slack)
 * [Microsoft Teams](/alerting/teams)
 * [Pagerduty](/alerting/pagerduty)
 * [OpsGenie](/alerting/opsgenie)
 * [Webhook](/alerting/webhook)
+* [Telegram](/alerting/telegram)
+* [Discord](/alerting/discord)
+* [Mattermost](/alerting/mattermost)
+* [Email](/alerting/email)
 
 To configure notification integrations, go to **Project Settings** → **Integrations**.
 
 ### Notification routing
 
-Coroot routes alert notifications based on [application categories](/configuration/application-categories).
+shards routes alert notifications based on [application categories](/configuration/application-categories).
 Each category has independent notification settings for three event types:
 
 * **Incidents** (SLO violations)
@@ -253,7 +224,7 @@ To configure notification routing:
 * Select a category
 * Toggle integrations on or off for Incidents, Deployments, and Alerts independently
 
-When an alert fires, Coroot determines the application's category and checks the category's notification settings.
+When an alert fires, shards determines the application's category and checks the category's notification settings.
 If notifications are disabled for that category and event type, no notification is sent.
 
 See [Application Categories](/configuration/application-categories#notification-routing) for more details on how to assign applications to categories.

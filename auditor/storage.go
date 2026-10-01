@@ -129,6 +129,9 @@ func (a *appAuditor) storage() {
 			}
 		}
 	}
+	if a.nodeFilesystems(report) { // shards fork
+		seenVolumes = true
+	}
 	if !seenVolumes {
 		a.delReport(model.AuditReportStorage)
 	}

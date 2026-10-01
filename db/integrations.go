@@ -21,6 +21,7 @@ const (
 	IntegrationTypeAWS        IntegrationType = "aws"
 	IntegrationTypeGCP        IntegrationType = "gcp"
 	IntegrationTypeOCI        IntegrationType = "oci"
+	IntegrationTypeAzure      IntegrationType = "azure" // shards fork
 	IntegrationTypeSlack      IntegrationType = "slack"
 	IntegrationTypePagerduty  IntegrationType = "pagerduty"
 	IntegrationTypeTeams      IntegrationType = "teams"
@@ -45,6 +46,8 @@ type NotificationIntegrations struct {
 	Pagerduty *IntegrationPagerduty `json:"pagerduty,omitempty" yaml:"pagerduty,omitempty"`
 	Opsgenie  *IntegrationOpsgenie  `json:"opsgenie,omitempty" yaml:"opsgenie,omitempty"`
 	Webhook   *IntegrationWebhook   `json:"webhook,omitempty" yaml:"webhook,omitempty"`
+
+	ShardsNotificationIntegrations `yaml:",inline"` // shards fork: telegram, discord, mattermost, email
 }
 
 func (i *NotificationIntegrations) Validate() error {
@@ -80,6 +83,9 @@ func (i *NotificationIntegrations) Validate() error {
 		if err := i.Webhook.Validate(); err != nil {
 			return fmt.Errorf("invalid webhook configuration: %w", err)
 		}
+	}
+	if err := i.ShardsNotificationIntegrations.validate(); err != nil { // shards fork
+		return err
 	}
 
 	return nil
@@ -148,6 +154,8 @@ func (integrations Integrations) GetInfo() []IntegrationInfo {
 		i.Alerts = boolValue(cfg.Alerts)
 	}
 	res = append(res, i)
+
+	res = append(res, integrations.ShardsNotificationIntegrations.info()...) // shards fork
 
 	return res
 }
@@ -313,6 +321,8 @@ type IntegrationWebhook struct {
 	IncidentTemplate   string            `json:"incident_template" yaml:"incidentTemplate"`
 	DeploymentTemplate string            `json:"deployment_template" yaml:"deploymentTemplate"`
 	AlertTemplate      string            `json:"alert_template" yaml:"alertTemplate"`
+	// CommentTemplate, when set, forwards human/agent comments on incidents and alerts to the webhook.
+	CommentTemplate string `json:"comment_template,omitempty" yaml:"commentTemplate,omitempty"`
 }
 
 func (i *IntegrationWebhook) Validate() error {

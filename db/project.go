@@ -38,6 +38,8 @@ type ProjectSettings struct {
 	ApiKeys                     []ApiKey                                                   `json:"api_keys"`
 	CustomCloudPricing          *CustomCloudPricing                                        `json:"custom_cloud_pricing"`
 	MemberProjects              []string                                                   `json:"member_projects"`
+	AgentApprovals              *AgentApprovalPolicy                                       `json:"agent_approvals,omitempty"` // shards fork
+	ServiceMap                  *ServiceMapSettings                                        `json:"service_map,omitempty"`     // shards fork
 }
 
 type ApiKey struct {
@@ -277,6 +279,12 @@ func (db *DB) DeleteProject(id ProjectId) error {
 	if _, err = tx.Exec("DELETE FROM dashboards WHERE project_id = $1", id); err != nil {
 		return err
 	}
+	if _, err = tx.Exec("DELETE FROM comment WHERE project_id = $1", id); err != nil {
+		return err
+	}
+	if _, err = tx.Exec("DELETE FROM probe WHERE project_id = $1", id); err != nil { // shards fork
+		return err
+	}
 	if _, err = tx.Exec("DELETE FROM alert WHERE project_id = $1", id); err != nil {
 		return err
 	}
@@ -284,6 +292,9 @@ func (db *DB) DeleteProject(id ProjectId) error {
 		return err
 	}
 	if _, err = tx.Exec("DELETE FROM alert_notification WHERE project_id = $1", id); err != nil {
+		return err
+	}
+	if err = deleteProjectWorkflowData(tx, id); err != nil { // shards fork
 		return err
 	}
 	if _, err = tx.Exec("DELETE FROM project WHERE id = $1", id); err != nil {

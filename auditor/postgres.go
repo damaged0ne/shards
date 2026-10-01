@@ -343,6 +343,8 @@ func (a *appAuditor) postgres() {
 	}
 	bloatCheck.AddWidget(report.GetOrCreateChartGroup(pgBloatByDbChartTitle, nil).Widget())
 
+	a.postgresExt(report) // shards fork
+
 	pgConfigurationHints(report, a.app.Instances)
 }
 
@@ -593,7 +595,7 @@ func pgConfigurationHints(report *model.AuditReport, instances []*model.Instance
 	if seen && !enabled {
 		report.ConfigurationHint = &model.ConfigurationHint{
 			Message:      "Enable track_io_timing to attribute disk I/O to specific queries - without it, the per-query I/O time is always zero.",
-			ReadMoreLink: "https://docs.coroot.com/databases/postgres",
+			ReadMoreLink: "https://damaged0ne.github.io/shards/databases/postgres",
 		}
 	}
 }

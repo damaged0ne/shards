@@ -102,7 +102,7 @@ and [Exporter](https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exp
 ```bash
 export \
   OTEL_SERVICE_NAME="hello-app" \
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://coroot.coroot:8080/v1/traces" \
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://shards.shards:8080/v1/traces" \
 && go run main.go
 ```
 
@@ -205,7 +205,7 @@ and [Exporter](https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exp
 ```bash
 export \
   OTEL_SERVICE_NAME="hello-app" \
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://coroot.coroot:8080/v1/traces" \
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://shards.shards:8080/v1/traces" \
 && go run main.go
 ```
 
@@ -303,7 +303,7 @@ and [Exporter](https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exp
 ```bash
 export \
   OTEL_SERVICE_NAME="hello-app" \
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://coroot.coroot:8080/v1/traces" \
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://shards.shards:8080/v1/traces" \
 && go run main.go
 ```
 
@@ -401,7 +401,7 @@ and [Exporter](https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exp
 ```bash
 export \
   OTEL_SERVICE_NAME="hello-app" \
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://coroot.coroot:8080/v1/traces" \
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="http://shards.shards:8080/v1/traces" \
 && go run main.go
 ```
 

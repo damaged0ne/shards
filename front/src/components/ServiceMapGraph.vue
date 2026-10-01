@@ -51,11 +51,21 @@
         </div>
 
         <v-card v-if="tooltip" ref="tooltip" class="tooltip pa-2">
-            <template v-if="tooltip.kind === 'node'">
+            <template v-if="tooltip.kind === 'group'">
+                <div class="font-weight-medium">
+                    {{ tooltip.name }} <span class="grey--text">· {{ tooltip.members.length }} applications</span>
+                </div>
+                <div class="grey--text text-caption">{{ tooltip.members.join(', ') }}</div>
+                <div class="text-caption">click to expand</div>
+            </template>
+            <template v-else-if="tooltip.kind === 'node'">
                 <div class="font-weight-medium">{{ tooltip.name }}</div>
                 <div class="grey--text text-caption">
                     <span v-if="tooltip.ns">ns: {{ tooltip.ns }}</span>
                     <span v-if="tooltip.cluster"> · cluster: {{ tooltip.cluster }}</span>
+                    <span v-if="tooltip.group"> · {{ tooltip.group }}</span>
+                    <span v-if="tooltip.node"> · node: {{ tooltip.node }}</span>
+                    <span v-if="tooltip.external"> · external endpoint</span>
                 </div>
                 <div v-for="i in tooltip.indicators">
                     <Led :status="i.status" />
@@ -113,6 +123,93 @@ const overlapArea = (a, b) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, 
 const max = (values) => values.reduce((m, v) => (v > m ? v : m), 0);
 const particleColor = '#0b8a3e';
 const fallbackIcons = { external: '\u{F059F}', other: '\u{F0493}' };
+const groupForce = { cohesion: 0.35, separation: 0.6, margin: 40, memberSpacing: 34 };
+
+// shards fork: keeps groups compact (members are pulled towards the group's centroid) and apart (groups whose
+// discs overlap, and non-members inside a group's disc, are pushed away from it).
+function forceGroups() {
+    let nodes = [];
+    function force(alpha) {
+        const c = new Map();
+        nodes.forEach((n) => {
+            if (!n.groupKey || n.x === undefined) {
+                return;
+            }
+            const g = c.get(n.groupKey) || { x: 0, y: 0, k: 0 };
+            g.x += n.x;
+            g.y += n.y;
+            g.k++;
+            c.set(n.groupKey, g);
+        });
+        const groups = [];
+        c.forEach((g, key) => {
+            if (g.k < 2) {
+                return;
+            }
+            g.key = key;
+            g.x /= g.k;
+            g.y /= g.k;
+            g.r = groupForce.memberSpacing * Math.sqrt(g.k);
+            groups.push(g);
+        });
+        nodes.forEach((n) => {
+            const g = n.groupKey && c.get(n.groupKey);
+            if (g && g.k >= 2) {
+                g.r = Math.max(g.r, Math.hypot(n.x - g.x, n.y - g.y) + (n.r || 12) + 36);
+            }
+        });
+        nodes.forEach((n) => {
+            const g = n.groupKey && c.get(n.groupKey);
+            if (g && g.k >= 2) {
+                n.vx += (g.x - n.x) * groupForce.cohesion * alpha;
+                n.vy += (g.y - n.y) * groupForce.cohesion * alpha;
+            }
+        });
+        for (let i = 0; i < groups.length; i++) {
+            const a = groups[i];
+            for (let j = i + 1; j < groups.length; j++) {
+                const b = groups[j];
+                let dx = b.x - a.x;
+                let dy = b.y - a.y;
+                const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                const overlap = a.r + b.r + groupForce.margin - d;
+                if (overlap <= 0) {
+                    continue;
+                }
+                dx /= d;
+                dy /= d;
+                const push = overlap * groupForce.separation * alpha;
+                a.dx = (a.dx || 0) - dx * push;
+                a.dy = (a.dy || 0) - dy * push;
+                b.dx = (b.dx || 0) + dx * push;
+                b.dy = (b.dy || 0) + dy * push;
+            }
+        }
+        nodes.forEach((n) => {
+            if (n.x === undefined) {
+                return;
+            }
+            const own = n.groupKey && c.get(n.groupKey);
+            if (own && own.k >= 2) {
+                n.vx += own.dx || 0;
+                n.vy += own.dy || 0;
+                return;
+            }
+            groups.forEach((g) => {
+                const dx = n.x - g.x;
+                const dy = n.y - g.y;
+                const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                const overlap = g.r + (n.r || 12) + groupForce.margin / 2 - d;
+                if (overlap > 0) {
+                    n.vx += (dx / d) * overlap * groupForce.separation * alpha;
+                    n.vy += (dy / d) * overlap * groupForce.separation * alpha;
+                }
+            });
+        });
+    }
+    force.initialize = (ns) => (nodes = ns);
+    return force;
+}
 
 export default {
     props: {
@@ -133,6 +230,7 @@ export default {
             counts: { nodes: 0, links: 0 },
             layingOut: false,
             flow: this.$storage.local('service-map-graph-flow') !== false,
+            showGroups: this.$storage.local('service-map-graph-groups') !== false,
         };
     },
 
@@ -144,6 +242,7 @@ export default {
         this.maxLevel = 0;
         this.hover = null;
         this.hoverLabel = null;
+        this.groupBoxes = [];
         this.focus = null;
         this.viewBeforeSelection = null;
         this.matches = null;
@@ -219,6 +318,10 @@ export default {
         multicluster() {
             this.measureLabels();
         },
+        showGroups(v) {
+            this.$storage.local('service-map-graph-groups', v);
+            this.redraw();
+        },
         flow(flow) {
             this.$storage.local('service-map-graph-flow', flow);
             this.applyXForce();
@@ -242,6 +345,7 @@ export default {
                 { label: 'fit to screen', icon: 'mdi-fit-to-screen-outline', action: this.fit },
                 { label: 're-layout', icon: 'mdi-refresh', action: this.relayout },
                 { label: 'flow left to right', icon: 'mdi-arrow-right-bold-box-outline', action: () => (this.flow = !this.flow), pressed: this.flow },
+                { label: 'group frames', icon: 'mdi-group', action: () => (this.showGroups = !this.showGroups), pressed: this.showGroups },
             ];
         },
         multicluster() {
@@ -276,7 +380,11 @@ export default {
                 .nodePointerAreaPaint((n, color, ctx) => {
                     ctx.fillStyle = color;
                     ctx.beginPath();
-                    ctx.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
+                    if (n.collapsed) {
+                        ctx.rect(n.x - n.r, n.y - n.r, 2 * n.r, 2 * n.r);
+                    } else {
+                        ctx.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
+                    }
                     ctx.fill();
                     if (n.labelShown) {
                         const b = n.labelBox;
@@ -287,7 +395,7 @@ export default {
                 .linkWidth((l) => (this.focus && this.isHiLink(l) ? 1 + 3 * (l.hr || 0) : 1 + l.w * 2.5))
                 .linkDirectionalArrowLength((l) => (this.isHiLink(l) ? 5 : 0))
                 .linkDirectionalArrowRelPos(1)
-                .linkLineDash((l) => (l.status === 'unknown' ? [4, 4] : l.status === 'warning' || l.status === 'critical' ? [6, 4] : null))
+                .linkLineDash((l) => (l.status === 'unknown' ? [4, 4] : l.status === 'warning' ? [6, 4] : null))
                 .linkDirectionalParticles((l) =>
                     !this.reducedMotion && this.focus && this.isHiLink(l) && l.weight > 0 ? Math.max(1, Math.round((l.hr || 0) * 8)) : 0,
                 )
@@ -314,15 +422,21 @@ export default {
                         this.nodeClick(n, e);
                         return;
                     }
+                    const g = this.groupAt(e);
+                    if (g) {
+                        this.$emit('toggle-group', g.key);
+                        return;
+                    }
                     if (this.selection) {
                         this.select(null);
                     }
                 })
                 .onZoom(() => (this.tooltip = null))
-                .onRenderFramePre(() => {
+                .onRenderFramePre((ctx, scale) => {
                     const a = this.fg.screen2GraphCoords(0, 0);
                     const b = this.fg.screen2GraphCoords(this.fg.width(), this.fg.height());
                     this.viewport = { x0: a.x, y0: a.y, x1: b.x, y1: b.y };
+                    this.drawGroups(ctx, scale);
                 })
                 .onRenderFramePost((ctx, scale) => {
                     if (this.focus) {
@@ -343,6 +457,7 @@ export default {
                 .strength(forces.linkStrength);
             fg.d3Force('collide', forceCollide((n) => n.r + forces.collidePadding).iterations(2));
             fg.d3Force('y', forceY(0).strength(forces.centerY));
+            fg.d3Force('groups', forceGroups());
             this.fg = fg;
             this.resize();
             window.addEventListener('resize', this.scheduleResize);
@@ -367,8 +482,14 @@ export default {
                 const id = this.$utils.appId(a.id);
                 const n = prev.get(a.id) || { id: a.id, labelBox: { x0: 0, x1: 0, y0: 0, y1: 0 } };
                 n.app = a;
-                n.name = id.name;
+                n.name = a.display_name || id.name;
                 n.kind = id.kind;
+                n.groupKey = a.collapsed ? '' : a.groupKey || '';
+                n.groupLabel = a.groupLabel || '';
+                n.groupMuted = !!a.groupMuted;
+                n.collapsed = !!a.collapsed;
+                n.muted = !!a.muted;
+                n.external = id.kind === 'ExternalService';
                 n.status = a.status || 'unknown';
                 n.icon = a.icon;
                 n.deg = 0;
@@ -392,7 +513,7 @@ export default {
             });
             const maxW = Math.max(1, max(links.map((l) => l.weight)));
             links.forEach((l) => (l.w = Math.log1p(l.weight) / Math.log1p(maxW)));
-            nodes.forEach((n) => (n.r = 12 + Math.sqrt(n.deg) * 2));
+            nodes.forEach((n) => (n.r = (n.collapsed ? 16 : 12) + Math.sqrt(n.deg) * 2));
 
             const adj = new Map();
             nodes.forEach((n, id) => adj.set(id, new Set([id])));
@@ -499,8 +620,15 @@ export default {
                 bg: v('--background-color', '#fff'),
                 border: v('--border-color', '#d0d0d0'),
                 selected: this.$vuetify.theme.currentTheme.primary || '#1976d2',
+                groupFill: v('--surface-sunk', '#f0f0f2'),
+                groupBorder: v('--border', '#dcdce0'),
+                groupText: v('--text-2', '#626269'),
+                neutral: v('--text-3', '#73747b'),
+                danger: v('--danger-9', '#db2c2b'),
             };
             statuses.forEach((st) => (c[st] = v('--status-' + st, 'grey')));
+            c.ok = c.neutral; // shards fork: healthy edges are neutral, failed connects are red
+            c.critical = c.danger;
             this.colors = c;
             this.sprites = new Map();
         },
@@ -567,12 +695,12 @@ export default {
                 const sub = [this.multicluster && n.app.cluster, ns && 'ns:' + ns].filter(Boolean).join(' / ');
                 n.label = truncate(n.name, sizes.maxLabel);
                 n.sub = truncate(sub, sizes.maxSubLabel);
-                ctx.font = `${sizes.labelFont}px Roboto, sans-serif`;
+                ctx.font = `${sizes.labelFont}px Inter, Roboto, sans-serif`;
                 n.labelW = ctx.measureText(n.label).width;
-                ctx.font = `${sizes.labelFont * 0.85}px Roboto, sans-serif`;
+                ctx.font = `${sizes.labelFont * 0.85}px Inter, Roboto, sans-serif`;
                 n.subW = n.sub ? ctx.measureText(n.sub).width : 0;
             });
-            ctx.font = `${sizes.statsFont}px Roboto, sans-serif`;
+            ctx.font = `${sizes.statsFont}px Inter, Roboto, sans-serif`;
             this.links.forEach((l) => (l.statsW = max(l.stats.map((st) => ctx.measureText(st).width))));
             this.redraw();
         },
@@ -588,7 +716,7 @@ export default {
                 return this.withAlpha(c.textDimmed, 0.06);
             }
             const color = c[l.status] || c.unknown;
-            return this.focus ? color : this.withAlpha(color, l.status === 'ok' ? 0.45 : 0.7);
+            return this.focus ? color : this.withAlpha(color, l.status === 'ok' ? 0.4 : l.status === 'unknown' ? 0.35 : 0.85);
         },
 
         sprite(key, draw, screenSize) {
@@ -617,16 +745,29 @@ export default {
             const hi = neighbours ? neighbours.has(n.id) : !this.matches || matched;
             ctx.globalAlpha = hi ? 1 : 0.12;
 
-            ctx.beginPath();
-            ctx.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
-            ctx.fillStyle = c.bg;
-            ctx.fill();
-            ctx.lineWidth = n.id === this.focus ? 2.5 : matched ? 1.8 : 1.2;
-            ctx.strokeStyle = n.id === this.focus || matched ? c.selected : c.border;
-            ctx.stroke();
+            if (n.muted) {
+                ctx.globalAlpha *= 0.6;
+            }
+            if (n.collapsed) {
+                this.drawCollapsed(n, ctx, matched);
+            } else {
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, n.r, 0, 2 * Math.PI);
+                ctx.fillStyle = n.external ? c.groupFill : c.bg;
+                ctx.fill();
+                ctx.lineWidth = n.id === this.focus ? 2.5 : matched ? 1.8 : 1.2;
+                ctx.strokeStyle = n.id === this.focus || matched ? c.selected : n.external ? c.neutral : c.border;
+                if (n.external) {
+                    ctx.setLineDash([3, 2]);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
 
-            const img = n.icon && this.images[n.icon];
-            if (img) {
+            const img = !n.collapsed && n.icon && this.images[n.icon];
+            if (n.collapsed) {
+                // the member count is drawn by drawCollapsed
+            } else if (img) {
                 const s = n.r * 1.1;
                 ctx.drawImage(img, n.x - s / 2, n.y - s / 2, s, s);
             } else if (!n.icon || this.images[n.icon] === false) {
@@ -642,7 +783,7 @@ export default {
             ctx.drawImage(badge, n.x + n.r * 0.72 - br, n.y - n.r * 0.72 - br, 2 * br, 2 * br);
 
             const m = this.menuBtnPos(n);
-            if (m.r * scale > 5 && n.id !== this.menuNode) {
+            if (!n.collapsed && m.r * scale > 5 && n.id !== this.menuNode) {
                 const mr = m.r / 0.9;
                 const btn = this.sprite(
                     'menu',
@@ -676,7 +817,7 @@ export default {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
 
-                ctx.font = `${fs}px Roboto, sans-serif`;
+                ctx.font = `${n.collapsed ? '600 ' : n.external ? 'italic ' : ''}${fs}px Inter, Roboto, sans-serif`;
                 ctx.fillStyle = onLabel ? c.selected : c.text;
                 ctx.fillText(n.label, n.x, y);
                 const w = n.labelW * k;
@@ -690,7 +831,7 @@ export default {
                     const sfs = fs * 0.85;
                     const sy = y + fs * 1.25;
                     const sw = n.subW * k;
-                    ctx.font = `${sfs}px Roboto, sans-serif`;
+                    ctx.font = `${sfs}px Inter, Roboto, sans-serif`;
                     ctx.fillStyle = onLabel ? c.selected : c.textDimmed;
                     ctx.fillText(n.sub, n.x, sy);
                     if (onLabel) {
@@ -707,6 +848,124 @@ export default {
                 b.y1 = bottom + pad;
             }
             ctx.globalAlpha = 1;
+        },
+
+        drawCollapsed(n, ctx, matched) {
+            const c = this.colors;
+            const r = n.r;
+            const rr = r * 0.35;
+            const box = (dx, dy) => {
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(n.x - r + dx, n.y - r + dy, 2 * r, 2 * r, rr);
+                } else {
+                    ctx.rect(n.x - r + dx, n.y - r + dy, 2 * r, 2 * r);
+                }
+            };
+            // a stack of cards: the group hides several applications
+            box(r * 0.18, -r * 0.18);
+            ctx.fillStyle = c.groupFill;
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = c.groupBorder;
+            ctx.stroke();
+            box(0, 0);
+            ctx.fillStyle = c.bg;
+            ctx.fill();
+            ctx.lineWidth = n.id === this.focus ? 2.5 : matched ? 1.8 : 1.2;
+            ctx.strokeStyle = n.id === this.focus || matched ? c.selected : c.border;
+            if (n.muted) {
+                ctx.setLineDash([3, 2]);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = c.groupText;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = `600 ${r * 0.8}px Inter, Roboto, sans-serif`;
+            ctx.fillText(String(n.app.members || ''), n.x, n.y + r * 0.04);
+        },
+
+        groupFrames() {
+            const groups = new Map();
+            this.nodes.forEach((n) => {
+                if (!n.groupKey || n.x === undefined) {
+                    return;
+                }
+                let g = groups.get(n.groupKey);
+                if (!g) {
+                    g = { key: n.groupKey, label: n.groupLabel, muted: n.groupMuted, members: [] };
+                    groups.set(n.groupKey, g);
+                }
+                g.members.push(n);
+            });
+            return [...groups.values()];
+        },
+
+        drawGroups(ctx, scale) {
+            this.groupBoxes = [];
+            if (!this.showGroups || !this.nodes.size) {
+                return;
+            }
+            const c = this.colors;
+            const fs = Math.max(11 / scale, 4);
+            const pad = 10 + 6 / scale;
+            this.groupFrames().forEach((g) => {
+                let x0 = Infinity;
+                let y0 = Infinity;
+                let x1 = -Infinity;
+                let y1 = -Infinity;
+                g.members.forEach((n) => {
+                    x0 = Math.min(x0, n.x - n.r, n.labelShown ? n.labelBox.x0 : Infinity);
+                    x1 = Math.max(x1, n.x + n.r, n.labelShown ? n.labelBox.x1 : -Infinity);
+                    y0 = Math.min(y0, n.y - n.r);
+                    y1 = Math.max(y1, n.y + n.r, n.labelShown ? n.labelBox.y1 : -Infinity);
+                });
+                x0 -= pad;
+                x1 += pad;
+                y1 += pad;
+                y0 -= pad + fs * 1.6;
+                const neighbours = this.focus && this.adj.get(this.focus);
+                const hi = !neighbours || g.members.some((n) => neighbours.has(n.id));
+                ctx.globalAlpha = (hi ? 1 : 0.35) * (g.muted ? 0.6 : 1);
+                ctx.beginPath();
+                const radius = 10 / Math.max(scale, 0.5);
+                if (ctx.roundRect) {
+                    ctx.roundRect(x0, y0, x1 - x0, y1 - y0, radius);
+                } else {
+                    ctx.rect(x0, y0, x1 - x0, y1 - y0);
+                }
+                ctx.fillStyle = this.withAlpha(c.groupFill, 0.55);
+                ctx.fill();
+                ctx.lineWidth = 1 / scale;
+                ctx.strokeStyle = c.groupBorder;
+                if (g.muted) {
+                    ctx.setLineDash([4 / scale, 3 / scale]);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const label = `${g.label} · ${g.members.length}`;
+                ctx.font = `600 ${fs}px Inter, Roboto, sans-serif`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = c.groupText;
+                const hx = x0 + fs * 0.8;
+                const hy = y0 + fs * 0.95;
+                ctx.fillText('\u25BE ' + label, hx, hy);
+                const w = ctx.measureText('\u25BE ' + label).width;
+                this.groupBoxes.push({ key: g.key, x0: hx - fs * 0.4, y0: hy - fs * 0.8, x1: hx + w + fs * 0.4, y1: hy + fs * 0.8 });
+                ctx.globalAlpha = 1;
+            });
+        },
+
+        groupAt(e) {
+            if (!this.groupBoxes.length) {
+                return null;
+            }
+            const r = this.$refs.graph.getBoundingClientRect();
+            const p = this.fg.screen2GraphCoords(e.clientX - r.left, e.clientY - r.top);
+            return this.groupBoxes.find((b) => p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1) || null;
         },
 
         drawFocusStats(ctx, scale) {
@@ -774,7 +1033,7 @@ export default {
             const fs = sizes.statsFont / scale;
             const lh = fs * 1.25;
             const pad = fs * 0.35;
-            ctx.font = `${fs}px Roboto, sans-serif`;
+            ctx.font = `${fs}px Inter, Roboto, sans-serif`;
             ctx.fillStyle = this.withAlpha(c.bg, 0.92);
             ctx.strokeStyle = l.status === 'critical' || l.status === 'warning' ? c[l.status] : c.border;
             ctx.lineWidth = 1 / scale;
@@ -984,11 +1243,18 @@ export default {
 
         showNodeTooltip(n) {
             const a = n.app;
+            if (n.collapsed) {
+                this.showTooltip({ kind: 'group', name: n.name, members: a.memberNames || [] });
+                return;
+            }
             this.showTooltip({
                 kind: 'node',
                 name: n.name,
                 ns: (a.labels && a.labels.ns) || '',
                 cluster: this.multicluster ? a.cluster : '',
+                group: a.groupLabel || '',
+                node: a.node || '',
+                external: n.external,
                 indicators: (a.indicators || []).map((i) => Object.freeze({ status: i.status, message: i.message })),
             });
         },
@@ -1048,7 +1314,9 @@ export default {
         updateLabelHover() {
             const n = this.hover && this.nodes.get(this.hover);
             const id = this.onLabel(n) ? n.id : null;
-            this.$refs.graph.style.cursor = id ? 'pointer' : null;
+            const p = this.graphPointer;
+            const onGroup = !n && p && this.groupBoxes.some((b) => p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1);
+            this.$refs.graph.style.cursor = id || onGroup || (n && n.collapsed) ? 'pointer' : null;
             if (id !== this.hoverLabel) {
                 this.hoverLabel = id;
                 this.redraw();
@@ -1071,6 +1339,10 @@ export default {
         },
 
         nodeClick(n, e) {
+            if (n.collapsed) {
+                this.$emit('toggle-group', n.app.groupKey);
+                return;
+            }
             const selected = !!this.selection && this.selection.id === n.id;
             if (this.onLabel(n) && (e.pointerType !== 'touch' || selected)) {
                 this.openApp(n, e.ctrlKey || e.metaKey);
@@ -1098,7 +1370,7 @@ export default {
         },
         auxClick(e) {
             const n = this.hover && this.nodes.get(this.hover);
-            if (e.button === 1 && this.onLabel(n)) {
+            if (e.button === 1 && this.onLabel(n) && !n.collapsed) {
                 e.preventDefault();
                 this.openApp(n, true);
             }
@@ -1106,7 +1378,7 @@ export default {
 
         contextMenu(e) {
             const n = this.hover && this.nodes.get(this.hover);
-            if (!n) {
+            if (!n || n.collapsed) {
                 return;
             }
             e.preventDefault();
@@ -1115,6 +1387,9 @@ export default {
 
         showMenuBtn(n) {
             clearTimeout(this.menuBtnTimer);
+            if (n.collapsed) {
+                return;
+            }
             if (this.menuNode === n.id || this.menuOpen()) {
                 return;
             }

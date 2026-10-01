@@ -133,6 +133,7 @@ func (c *Constructor) loadContainers(w *model.World, metrics map[string][]*model
 	apps := map[nsName]*model.Application{}
 	rttByInstance := map[instanceId]map[string]*timeseries.TimeSeries{}
 	instancesByListen := map[model.Listen]*model.Instance{}
+	dockerProxy := newDockerProxyResolver() // shards fork
 
 	for _, a := range w.Applications {
 		if a.Id.Namespace != "" {
@@ -221,6 +222,7 @@ func (c *Constructor) loadContainers(w *model.World, metrics map[string][]*model
 	loadContainer("container_restarts", func(instance *model.Instance, container *model.Container, metric *model.MetricValues) {
 		container.Restarts = merge(container.Restarts, timeseries.Increase(metric.Values, pjs.get(metric.Labels)), timeseries.Any)
 	})
+	loadDockerContainers(loadContainer) // shards fork
 	loadContainer("container_net_latency", func(instance *model.Instance, container *model.Container, metric *model.MetricValues) {
 		id := instanceId{ns: instance.Owner.Id.Namespace, name: instance.Name, node: instance.NodeId()}
 		rtts := rttByInstance[id]
@@ -238,6 +240,7 @@ func (c *Constructor) loadContainers(w *model.World, metrics map[string][]*model
 		}
 		isActive := metric.Values.Last() == 1
 		l := model.Listen{IP: ipStr, Port: port, Proxied: metric.Labels["proxy"] != ""}
+		dockerProxy.addListen(instance, ipStr, port, metric.Labels["proxy"]) // shards fork
 		if !instance.TcpListens[l] {
 			instance.TcpListens[l] = isActive
 		}
@@ -274,6 +277,9 @@ func (c *Constructor) loadContainers(w *model.World, metrics map[string][]*model
 	loadConnection := func(queryName string, f func(instance *model.Instance, connection *model.Connection, metric *model.MetricValues)) {
 		loadContainer(queryName, func(instance *model.Instance, container *model.Container, metric *model.MetricValues) {
 			conn := getOrCreateConnection(instance, metric)
+			if conn == nil {
+				conn = dockerProxy.backendLeg(instance, metric) // shards fork: docker-proxy's backend leg, kept aside
+			}
 			if conn != nil {
 				f(instance, conn, metric)
 			}
@@ -566,6 +572,8 @@ func (c *Constructor) loadContainers(w *model.World, metrics map[string][]*model
 			}
 		}
 	}
+
+	dockerProxy.resolve(w, instancesByListen) // shards fork: prefer the container that published the port
 
 	isEmpty := func(ts *timeseries.TimeSeries) bool {
 		return ts.IsEmpty() || ts.Reduce(timeseries.NanSum) == 0.

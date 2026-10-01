@@ -34,20 +34,22 @@
             :footer-props="{ itemsPerPageOptions: [10, 20, 50, 100] }"
             @update:items-per-page="changeLimit"
         >
-            <template #header.rca>
-                <div class="d-flex align-center gap-1">
-                    Root Cause
-                    <a href="https://docs.coroot.com/ai/overview" target="_blank">
-                        <v-icon small>mdi-information-outline</v-icon>
-                    </a>
-                </div>
-            </template>
             <template #item.incident="{ item }">
                 <div class="incident" :class="{ 'grey--text': item.resolved_at }">
                     <div class="status" :class="item.color" />
                     <router-link :to="{ name: 'overview', params: { view: 'incidents' }, query: { ...$utils.contextQuery(), incident: item.key } }">
-                        <span class="key" style="font-family: monospace">i-{{ item.key }}</span>
+                        <span class="key mono">i-{{ item.key }}</span>
                     </router-link>
+                </div>
+            </template>
+
+            <template #item.workflow="{ item }">
+                <div v-if="item.workflow" class="d-flex align-center text-no-wrap" style="gap: 6px">
+                    <Chip :tone="statusChip(item.workflow.status)">{{ statusName(item.workflow.status) }}</Chip>
+                    <Chip v-if="item.workflow.in_maintenance" tone="info" title="Notifications muted by a maintenance window">
+                        <v-icon size="12">mdi-wrench-clock</v-icon>
+                    </Chip>
+                    <span v-if="item.workflow.assignee" class="caption">{{ item.workflow.assignee }}</span>
                 </div>
             </template>
 
@@ -88,17 +90,6 @@
                 </div>
             </template>
 
-            <template #item.rca="{ item }">
-                <div>
-                    <template v-if="item.rca">
-                        <v-icon v-if="item.rca.status === 'OK'" small color="success">mdi-check-circle</v-icon>
-                        <v-icon v-else-if="item.rca.status === 'Failed'" small color="error">mdi-alert-circle</v-icon>
-                        <span v-else class="grey--text">{{ item.rca.status }}</span>
-                    </template>
-                    <span v-else class="grey--text">&mdash;</span>
-                </div>
-            </template>
-
             <template #item.impact="{ item }">
                 <v-progress-linear :value="item.impact" color="red lighten-1" height="16px"> {{ $format.percent(item.impact) }} % </v-progress-linear>
             </template>
@@ -126,9 +117,11 @@
 </template>
 
 <script>
+import Chip from '@/views/agents/Chip.vue';
 import Views from '@/views/Views.vue';
 import ApplicationFilter from '../components/ApplicationFilter.vue';
 import CheckForm from '@/components/CheckForm.vue';
+import { incidentStatusChip, incidentStatusName } from '@/utils/workflow';
 
 const statuses = {
     critical: { name: 'Critical', color: 'red lighten-1' },
@@ -137,12 +130,13 @@ const statuses = {
 };
 
 export default {
-    components: { Views, CheckForm, ApplicationFilter },
+    components: { Chip, Views, CheckForm, ApplicationFilter },
 
     data() {
         return {
             limit: Number(this.$route.query.limit) || 50,
             incidents: [],
+            workflow: {},
             filter: new Set(),
             search: '',
             showResolved: false,
@@ -172,10 +166,10 @@ export default {
         headers() {
             const headers = [
                 { value: 'incident', text: 'Incident', sortable: false },
+                { value: 'workflow', text: 'Status', sortable: false },
                 { value: 'application', text: 'Application', sortable: false },
                 { value: 'cluster', text: 'Cluster', sortable: true },
                 { value: 'description', text: 'Description', sortable: false },
-                { value: 'rca', text: 'Root Cause', sortable: false },
                 { value: 'impact', text: 'Impacted requests', sortable: true },
                 { value: 'opened_at', text: 'Opened at', sortable: true },
                 { value: 'duration', text: 'Duration', sortable: true },
@@ -222,6 +216,7 @@ export default {
             return filtered.map((i) => {
                 return {
                     ...i,
+                    workflow: this.workflow[i.key],
                     color: statuses[i.resolved_at ? 'ok' : i.severity].color,
                 };
             });
@@ -247,7 +242,14 @@ export default {
                 }
                 this.incidents = data || [];
             });
+            this.$api.getIncidentsWorkflow((data, error) => {
+                if (!error) {
+                    this.workflow = data || {};
+                }
+            });
         },
+        statusChip: incidentStatusChip,
+        statusName: incidentStatusName,
         changeLimit(limit) {
             this.limit = limit;
             this.get();

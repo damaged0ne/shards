@@ -28,6 +28,10 @@ func (c *Constructor) initNodesList(w *model.World, metrics map[string][]*model.
 			nodes[node.Id] = node
 			nodesBySystemUUID[node.Id.SystemUUID] = node
 		}
+		if display := project.NodeDisplayName(id.MachineID, name); display != name { // shards fork: node display names
+			node.Shards.Hostname = name
+			name = display
+		}
 		node.Name.Update(m.Values, name)
 		node.KernelVersion.Update(m.Values, m.Labels["kernel_version"])
 	}
@@ -119,6 +123,7 @@ func (c *Constructor) loadNodes(w *model.World, metrics map[string][]*model.Metr
 			}
 		}
 	}
+	loadNodesShards(metrics, nodes) // shards fork
 	if c.pricing != nil {
 		for _, n := range w.Nodes {
 			n.Price = c.pricing.GetNodePrice(project.Settings.CustomCloudPricing, n)

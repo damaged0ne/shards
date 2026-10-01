@@ -78,8 +78,6 @@
 </template>
 
 <script>
-const storageKey = 'application-filter';
-
 function autoSelectNamespace(namespaces, maxApps) {
     let ns = namespaces.find((ns) => ns.value === 'default');
     if (ns && ns.apps <= maxApps) {
@@ -102,6 +100,8 @@ function autoSelectNamespace(namespaces, maxApps) {
 export default {
     props: {
         applications: Array,
+        storageKey: { type: String, default: 'application-filter' },
+        defaultCategories: { type: Array, default: () => [] },
         autoSelectNamespaceThreshold: Number,
         highlightSearch: Boolean,
         searchInfo: String,
@@ -187,7 +187,8 @@ export default {
         filter: {
             handler() {
                 if (!this.selectedCategories.length && this.categories.length) {
-                    this.selectedCategories.push(this.categories[0]);
+                    const defaults = this.defaultCategories.filter((c) => this.categories.includes(c));
+                    this.selectedCategories.push(...(defaults.length ? defaults : [this.categories[0]]));
                     this.save();
                     return;
                 }
@@ -235,21 +236,21 @@ export default {
         },
         load() {
             const projectId = this.$route.params.projectId;
-            let saved = this.$storage.local(storageKey) || {};
+            let saved = this.$storage.local(this.storageKey) || {};
             saved = saved[projectId] || {};
             this.selectedCategories = saved.categories || [];
             this.selectedNamespaces = saved.namespaces || [];
             this.autoSelectNamespace = !!this.autoSelectNamespaceThreshold && !this.selectedNamespaces.length;
         },
         save() {
-            const saved = this.$storage.local(storageKey) || {};
+            const saved = this.$storage.local(this.storageKey) || {};
             const projectId = this.$route.params.projectId;
             if (!saved[projectId]) {
                 saved[projectId] = {};
             }
             saved[projectId].categories = this.selectedCategories;
             saved[projectId].namespaces = this.selectedNamespaces;
-            this.$storage.local(storageKey, saved);
+            this.$storage.local(this.storageKey, saved);
         },
     },
 };

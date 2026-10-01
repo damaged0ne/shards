@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/coroot/coroot/cloud"
 	"github.com/coroot/coroot/db"
 	"github.com/coroot/coroot/rbac"
 	"github.com/coroot/coroot/timeseries"
@@ -51,7 +50,7 @@ type Config struct {
 
 	ClickHouseSpaceManager ClickHouseSpaceManager `yaml:"clickhouse_space_manager"`
 
-	CorootCloud *cloud.Settings `yaml:"corootCloud"`
+	Probes Probes `yaml:"probes"` // shards fork
 
 	BootstrapClickhouse *Clickhouse `yaml:"-"`
 	BootstrapPrometheus *Prometheus `yaml:"-"`
@@ -285,6 +284,7 @@ func Load() (*Config, error) {
 	}
 
 	cfg.ApplyFlags()
+	cfg.applyProbesFlags() // shards fork
 
 	if err = cfg.Validate(); err != nil {
 		return nil, err
@@ -331,12 +331,6 @@ func (cfg *Config) Validate() error {
 	if cfg.TLS != nil {
 		if err = cfg.TLS.Validate(); err != nil {
 			return fmt.Errorf("invalid tls settings: %w", err)
-		}
-	}
-
-	if cfg.CorootCloud != nil {
-		if err = cfg.CorootCloud.Validate(); err != nil {
-			return fmt.Errorf("invalid corootCloud settings: %w", err)
 		}
 	}
 

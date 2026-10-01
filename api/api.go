@@ -15,6 +15,7 @@ import (
 
 	"github.com/coroot/coroot/api/forms"
 	"github.com/coroot/coroot/api/views"
+	incident_view "github.com/coroot/coroot/api/views/incident"
 	"github.com/coroot/coroot/auditor"
 	"github.com/coroot/coroot/cache"
 	"github.com/coroot/coroot/ch"
@@ -39,7 +40,6 @@ import (
 
 const (
 	MaxIncidentWindow = timeseries.Day
-	MaxRCAWindow      = 4 * timeseries.Hour
 )
 
 type LoadWorldF func(ctx context.Context, project *db.Project, from, to timeseries.Time) (*model.World, error)
@@ -54,7 +54,6 @@ type Api struct {
 	roles            rbac.RoleManager
 	globalClickHouse *db.IntegrationClickhouse
 	globalPrometheus *db.IntegrationPrometheus
-	licenseMgr       LicenseManager
 
 	authSecret        string
 	authAnonymousRole rbac.RoleName
@@ -65,7 +64,7 @@ type Api struct {
 	loadWorld LoadWorldF
 }
 
-func NewApi(cfg *config.Config, cache *cache.Cache, db *db.DB, collector *collector.Collector, stats *stats.Collector, pricing *pricing.Manager, roles rbac.RoleManager, licenseMgr LicenseManager,
+func NewApi(cfg *config.Config, cache *cache.Cache, db *db.DB, collector *collector.Collector, stats *stats.Collector, pricing *pricing.Manager, roles rbac.RoleManager,
 	globalClickHouse *db.IntegrationClickhouse, globalPrometheus *db.IntegrationPrometheus,
 	deploymentUuid, instanceUuid string, loadWorld LoadWorldF) *Api {
 
@@ -79,7 +78,6 @@ func NewApi(cfg *config.Config, cache *cache.Cache, db *db.DB, collector *collec
 		roles:            roles,
 		globalClickHouse: globalClickHouse,
 		globalPrometheus: globalPrometheus,
-		licenseMgr:       licenseMgr,
 		deploymentUuid:   deploymentUuid,
 		instanceUuid:     instanceUuid,
 		loadWorld:        loadWorld,
@@ -955,7 +953,7 @@ func (api *Api) Integration(w http.ResponseWriter, r *http.Request, u *db.User) 
 		return
 	}
 	t := db.IntegrationType(vars["type"])
-	if t == db.IntegrationTypeGCP || t == db.IntegrationTypeOCI {
+	if t == db.IntegrationTypeGCP || t == db.IntegrationTypeOCI || t == db.IntegrationTypeAzure {
 		if r.Method != http.MethodGet {
 			http.Error(w, "this integration is configured in the Coroot custom resource or the cluster-agent config file", http.StatusMethodNotAllowed)
 			return
@@ -967,6 +965,9 @@ func (api *Api) Integration(w http.ResponseWriter, r *http.Request, u *db.User) 
 		view := views.GCP(world)
 		if t == db.IntegrationTypeOCI {
 			view = views.OCI(world)
+		}
+		if t == db.IntegrationTypeAzure { // shards fork
+			view = views.Azure(world)
 		}
 		utils.WriteJson(w, struct {
 			View any `json:"view"`
@@ -1250,9 +1251,13 @@ func (api *Api) Incident(w http.ResponseWriter, r *http.Request, u *db.User) {
 		return
 	}
 	app := world.GetApplication(incident.ApplicationId)
-	if app == nil {
-		klog.Warningln("application not found:", incident.ApplicationId)
-		http.Error(w, "Application not found", http.StatusNotFound)
+	if app == nil { // shards fork: keep incidents of gone applications (and their workflow) viewable
+		category := project.CalcApplicationCategory(incident.ApplicationId)
+		if !api.IsAllowed(u, rbac.Actions.Project(projectId).Application(category, incident.ApplicationId.Namespace, incident.ApplicationId.Kind, incident.ApplicationId.Name).View()) {
+			http.Error(w, "You are not allowed to view this application.", http.StatusForbidden)
+			return
+		}
+		utils.WriteJson(w, api.WithContext(project, cacheStatus, world, incident_view.RenderWithoutApplication(world, incident)))
 		return
 	}
 	if !api.IsAllowed(u, rbac.Actions.Project(projectId).Application(app.Category, app.Id.Namespace, app.Id.Kind, app.Id.Name).View()) {
@@ -1401,39 +1406,54 @@ func (api *Api) Alert(w http.ResponseWriter, r *http.Request, u *db.User) {
 	utils.WriteJson(w, api.WithContext(project, cacheStatus, world, views.Alert(world, a, app, rules, notifications[alertId], chs)))
 }
 
-func (api *Api) ResolveAlerts(w http.ResponseWriter, r *http.Request, u *db.User) {
-	vars := mux.Vars(r)
-	projectId := vars["project"]
+// alertsActionRequest is the body of the resolve/suppress/reopen endpoints.
+// The optional comment is attached to the action entry in each alert's timeline.
+type alertsActionRequest struct {
+	Ids     []string `json:"ids"`
+	Comment string   `json:"comment"`
+}
 
+func (api *Api) readAlertsAction(w http.ResponseWriter, r *http.Request, u *db.User) (*db.Project, *alertsActionRequest) {
+	projectId := mux.Vars(r)["project"]
 	if !api.IsAllowed(u, rbac.Actions.Project(projectId).Alerts().Edit()) {
 		http.Error(w, "", http.StatusForbidden)
-		return
+		return nil, nil
 	}
-
-	var req struct {
-		Ids []string `json:"ids"`
-	}
+	var req alertsActionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return nil, nil
+	}
+	if len(req.Ids) == 0 {
+		http.Error(w, "no alert ids provided", http.StatusBadRequest)
+		return nil, nil
+	}
+	if len(req.Comment) > db.CommentMaxBodyLength {
+		http.Error(w, "comment is too long", http.StatusBadRequest)
+		return nil, nil
+	}
+	project := api.getProjectOrError(w, db.ProjectId(projectId))
+	if project == nil {
+		return nil, nil
+	}
+	return project, &req
+}
+
+func (api *Api) ResolveAlerts(w http.ResponseWriter, r *http.Request, u *db.User) {
+	project, req := api.readAlertsAction(w, r, u)
+	if project == nil {
 		return
 	}
-
-	resolvedBy := u.Name
-	if resolvedBy == "" {
-		resolvedBy = u.Email
+	a := newActor(u, viaUI)
+	if api.gateREST(w, project, a, db.AgentActionResolveAlerts, alertsActionArgs{Ids: req.Ids, Comment: req.Comment}, alertsSummary("Resolve", req.Ids), alertsGatedTarget(req.Ids), req.Comment) { // shards fork
+		return
 	}
-
-	project, err := api.db.GetProject(db.ProjectId(projectId))
-	if err != nil {
+	if _, err := api.resolveAlerts(project, req.Ids, a.name); err != nil {
 		klog.Errorln(err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
-	if _, err := api.resolveAlerts(project, req.Ids, resolvedBy); err != nil {
-		klog.Errorln(err)
-		http.Error(w, "", http.StatusInternalServerError)
-		return
-	}
+	api.recordAlertActions(a, project.Id, req.Ids, actionAlertResolved, req.Comment)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1470,29 +1490,29 @@ func (api *Api) resolveAlerts(project *db.Project, ids []string, resolvedBy stri
 }
 
 func (api *Api) SuppressAlerts(w http.ResponseWriter, r *http.Request, u *db.User) {
-	vars := mux.Vars(r)
-	projectId := vars["project"]
-
-	if !api.IsAllowed(u, rbac.Actions.Project(projectId).Alerts().Edit()) {
-		http.Error(w, "", http.StatusForbidden)
+	project, req := api.readAlertsAction(w, r, u)
+	if project == nil {
 		return
 	}
-
-	var req struct {
-		Ids []string `json:"ids"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	a := newActor(u, viaUI)
+	if api.gateREST(w, project, a, db.AgentActionSuppressAlerts, alertsActionArgs{Ids: req.Ids, Comment: req.Comment}, alertsSummary("Suppress", req.Ids), alertsGatedTarget(req.Ids), req.Comment) { // shards fork
 		return
 	}
-	if len(req.Ids) == 0 {
-		http.Error(w, "no alert ids provided", http.StatusBadRequest)
+	if _, err := api.suppressAlerts(project, req.Ids, a.name); err != nil {
+		klog.Errorln(err)
+		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
+	api.recordAlertActions(a, project.Id, req.Ids, actionAlertSuppressed, req.Comment)
+	w.WriteHeader(http.StatusNoContent)
+}
 
+// suppressAlerts suppresses alerts (they won't re-fire while the condition holds) and notifies
+// downstream integrations that the firing ones are resolved. Returns the number of notified alerts.
+func (api *Api) suppressAlerts(project *db.Project, ids []string, suppressedBy string) (int, error) {
 	var alertsToNotify []*model.Alert
-	for _, id := range req.Ids {
-		alert, err := api.db.GetAlert(db.ProjectId(projectId), id)
+	for _, id := range ids {
+		alert, err := api.db.GetAlert(project.Id, id)
 		if err != nil {
 			continue
 		}
@@ -1500,69 +1520,35 @@ func (api *Api) SuppressAlerts(w http.ResponseWriter, r *http.Request, u *db.Use
 			alertsToNotify = append(alertsToNotify, alert)
 		}
 	}
-
-	suppressedBy := u.Name
-	if suppressedBy == "" {
-		suppressedBy = u.Email
+	if err := api.db.SuppressAlerts(project.Id, ids, suppressedBy); err != nil {
+		return 0, err
 	}
-
-	if err := api.db.SuppressAlerts(db.ProjectId(projectId), req.Ids, suppressedBy); err != nil {
-		klog.Errorln(err)
-		http.Error(w, "", http.StatusInternalServerError)
-		return
-	}
-
-	if len(alertsToNotify) > 0 {
-		project, err := api.db.GetProject(db.ProjectId(projectId))
-		if err != nil {
-			klog.Errorln("failed to get project for notifications:", err)
-		} else {
-			rulesMap := make(map[string]*model.AlertingRule)
-			for _, alert := range alertsToNotify {
-				alert.ResolvedBy = suppressedBy
-				rule := rulesMap[alert.RuleId]
-				if rule == nil {
-					rule, _ = api.db.GetAlertingRule(db.ProjectId(projectId), model.AlertingRuleId(alert.RuleId))
-					rulesMap[alert.RuleId] = rule
-				}
-				if rule != nil {
-					notifications.EnqueueResolvedAlerts(api.db, project, []*model.Alert{alert}, rule)
-				}
-			}
+	rulesMap := make(map[string]*model.AlertingRule)
+	for _, alert := range alertsToNotify {
+		alert.ResolvedBy = suppressedBy
+		rule := rulesMap[alert.RuleId]
+		if rule == nil {
+			rule, _ = api.db.GetAlertingRule(project.Id, model.AlertingRuleId(alert.RuleId))
+			rulesMap[alert.RuleId] = rule
+		}
+		if rule != nil {
+			notifications.EnqueueResolvedAlerts(api.db, project, []*model.Alert{alert}, rule)
 		}
 	}
-
-	w.WriteHeader(http.StatusNoContent)
+	return len(alertsToNotify), nil
 }
 
 func (api *Api) ReopenAlerts(w http.ResponseWriter, r *http.Request, u *db.User) {
-	vars := mux.Vars(r)
-	projectId := vars["project"]
-
-	if !api.IsAllowed(u, rbac.Actions.Project(projectId).Alerts().Edit()) {
-		http.Error(w, "", http.StatusForbidden)
+	project, req := api.readAlertsAction(w, r, u)
+	if project == nil {
 		return
 	}
-
-	var req struct {
-		Ids []string `json:"ids"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-	if len(req.Ids) == 0 {
-		http.Error(w, "no alert ids provided", http.StatusBadRequest)
-		return
-	}
-
-	_, err := api.db.ReopenAlerts(db.ProjectId(projectId), req.Ids)
-	if err != nil {
+	if _, err := api.db.ReopenAlerts(project.Id, req.Ids); err != nil {
 		klog.Errorln(err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
-
+	api.recordAlertActions(newActor(u, viaUI), project.Id, req.Ids, actionAlertReopened, req.Comment)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1624,12 +1610,8 @@ func (api *Api) AlertingRules(w http.ResponseWriter, r *http.Request, u *db.User
 			http.Error(w, "invalid request body", http.StatusBadRequest)
 			return
 		}
-		rule.Id = model.AlertingRuleId(utils.NanoId(8))
-		rule.ProjectId = projectId
-		rule.Builtin = false
-		if err := api.db.CreateAlertingRule(db.ProjectId(projectId), &rule); err != nil {
-			klog.Errorln(err)
-			http.Error(w, "", http.StatusInternalServerError)
+		if err := api.createAlertingRule(db.ProjectId(projectId), &rule, newActor(u, viaUI)); err != nil {
+			writeTargetError(w, err)
 			return
 		}
 		utils.WriteJson(w, rule)
@@ -1674,20 +1656,16 @@ func (api *Api) AlertingRule(w http.ResponseWriter, r *http.Request, u *db.User)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
-		if existing.Readonly {
-			http.Error(w, "This rule is managed via config and cannot be edited", http.StatusForbidden)
-			return
-		}
 		var rule model.AlertingRule
 		if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
 			http.Error(w, "invalid request body", http.StatusBadRequest)
 			return
 		}
-		rule.Id = ruleId
-		rule.ProjectId = projectId
-		if err := api.db.UpdateAlertingRule(db.ProjectId(projectId), &rule); err != nil {
-			klog.Errorln(err)
-			http.Error(w, "", http.StatusInternalServerError)
+		if project := api.getProjectOrError(w, db.ProjectId(projectId)); project == nil || api.gateRuleUpdate(w, project, newActor(u, viaUI), existing, &rule, "") { // shards fork
+			return
+		}
+		if err := api.updateAlertingRule(db.ProjectId(projectId), existing, &rule, newActor(u, viaUI)); err != nil {
+			writeTargetError(w, err)
 			return
 		}
 		utils.WriteJson(w, rule)
@@ -1707,22 +1685,11 @@ func (api *Api) AlertingRule(w http.ResponseWriter, r *http.Request, u *db.User)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
-		if rule.Readonly {
-			http.Error(w, "This rule is managed via config and cannot be deleted", http.StatusForbidden)
+		if project := api.getProjectOrError(w, db.ProjectId(projectId)); project == nil || api.gateRuleDelete(w, project, newActor(u, viaUI), rule) { // shards fork
 			return
 		}
-		if resolvedAlerts, err := api.db.ResolveAlertsByRule(db.ProjectId(projectId), string(ruleId)); err != nil {
-			klog.Errorln(err)
-		} else if len(resolvedAlerts) > 0 {
-			if project, err := api.db.GetProject(db.ProjectId(projectId)); err != nil {
-				klog.Errorln(err)
-			} else {
-				notifications.EnqueueResolvedAlerts(api.db, project, resolvedAlerts, rule)
-			}
-		}
-		if err := api.db.DeleteAlertingRule(db.ProjectId(projectId), ruleId); err != nil {
-			klog.Errorln(err)
-			http.Error(w, "", http.StatusInternalServerError)
+		if err := api.deleteAlertingRule(db.ProjectId(projectId), rule, newActor(u, viaUI)); err != nil {
+			writeTargetError(w, err)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -1884,6 +1851,9 @@ func (api *Api) Inspection(w http.ResponseWriter, r *http.Request, u *db.User) {
 					}
 					if webhook := notificationSettings.Webhook; webhook != nil && webhook.Enabled {
 						res.Integrations = append(res.Integrations, Integration{Name: "Webhook"})
+					}
+					for _, d := range notificationSettings.ShardsNotificationDestinations.Enabled() { // shards fork
+						res.Integrations = append(res.Integrations, Integration{Name: shardsIntegrationTitle(d.IntegrationType)})
 					}
 				}
 			}

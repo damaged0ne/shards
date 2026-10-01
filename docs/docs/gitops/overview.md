@@ -5,7 +5,7 @@ hide_table_of_contents: true
 
 # Overview
 
-Coroot monitors your GitOps delivery tooling, [FluxCD](https://fluxcd.io/) and [ArgoCD](https://argo-cd.readthedocs.io/),
+shards monitors your GitOps delivery tooling, [FluxCD](https://fluxcd.io/) and [ArgoCD](https://argo-cd.readthedocs.io/),
 and shows the state of every application they manage right on the Kubernetes page.
 At a glance you can tell whether your desired state is actually reconciled in the cluster: what's synced, what's degraded,
 what's suspended, and which Git or Helm source each application comes from.
@@ -15,10 +15,10 @@ item in the main menu, so you don't have to open the page to know that a deliver
 
 ## How it works
 
-GitOps state is collected by the [coroot-cluster-agent](/metrics/cluster-agent). Its embedded kube-state-metrics reads the
-FluxCD and ArgoCD custom resources and exposes their status as metrics, which Coroot turns into the views below.
+GitOps state is collected by the [shards-cluster](/metrics/cluster-agent). Its embedded kube-state-metrics reads the
+FluxCD and ArgoCD custom resources and exposes their status as metrics, which shards turns into the views below.
 
-Nothing needs to be configured. Coroot is installed with the [Coroot Operator](/installation/k8s-operator), and GitOps
+Nothing needs to be configured. shards is installed with the [Coroot Operator](/installation/k8s-operator), and GitOps
 monitoring works out of the box. Just make sure the operator is upgraded to the latest version, since it grants the
 cluster-agent the read-only (`get`/`list`/`watch`) permissions it needs on the FluxCD (`*.toolkit.fluxcd.io`,
 `fluxcd.controlplane.io`) and ArgoCD (`argoproj.io`) API groups.
@@ -61,7 +61,7 @@ For each application you can see:
 * **Last sync**: the result and time of the most recent sync operation (`Succeeded`, `Failed`, ...), with a link to the related
   Kubernetes events.
 * **Source**: the Git or Helm source the application is deployed from (repository, path, or chart).
-* **Resources**: the Kubernetes objects managed by the application. Where Coroot already monitors a managed resource, it links
+* **Resources**: the Kubernetes objects managed by the application. Where shards already monitors a managed resource, it links
   straight to that application.
 
 Above the table, **Sync** and **Health** summaries show how many applications are in each state. Click any status to filter the

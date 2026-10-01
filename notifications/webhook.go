@@ -52,6 +52,20 @@ type AlertTemplateValues struct {
 	URL         string              `json:"url"`
 }
 
+// CommentTemplateValues are available to the webhook comment template ("comment" event).
+type CommentTemplateValues struct {
+	Event       string              `json:"event"`
+	ProjectName string              `json:"project_name"`
+	TargetType  string              `json:"target_type"`
+	TargetId    string              `json:"target_id"`
+	Application model.ApplicationId `json:"application"`
+	Title       string              `json:"title,omitempty"`
+	Author      string              `json:"author"`
+	AuthorKind  string              `json:"author_kind"`
+	Body        string              `json:"body"`
+	URL         string              `json:"url"`
+}
+
 func NewWebhook(cfg *db.IntegrationWebhook) *Webhook {
 	return &Webhook{cfg: cfg}
 }
@@ -158,6 +172,34 @@ func (wh *Webhook) SendAlert(ctx context.Context, baseUrl string, n *db.AlertNot
 	}
 
 	return wh.send(ctx, data.Bytes())
+}
+
+// SendComment forwards a timeline comment. It is a no-op when no comment template is configured.
+func (wh *Webhook) SendComment(ctx context.Context, values CommentTemplateValues) error {
+	if wh.cfg.CommentTemplate == "" {
+		return nil
+	}
+	tmpl, err := template.New("commentTemplate").Funcs(templateFunctions).Parse(wh.cfg.CommentTemplate)
+	if err != nil {
+		return fmt.Errorf("invalid comment template: %s", err)
+	}
+	values.Event = "comment"
+	var data bytes.Buffer
+	if err = tmpl.Execute(&data, mergeCustomFields(values, wh.cfg.CustomFields)); err != nil {
+		return fmt.Errorf("invalid comment template: %s", err)
+	}
+	return wh.send(ctx, data.Bytes())
+}
+
+// CommentUrl links to the incident or alert a comment was posted on.
+func CommentUrl(baseUrl string, projectId db.ProjectId, targetType db.CommentTargetType, targetId string) string {
+	switch targetType {
+	case db.CommentTargetIncident:
+		return fmt.Sprintf("%s/p/%s/incidents?incident=%s", baseUrl, projectId, targetId)
+	case db.CommentTargetAlert:
+		return fmt.Sprintf("%s/p/%s/alerts?alert=%s", baseUrl, projectId, targetId)
+	}
+	return fmt.Sprintf("%s/p/%s/alerts", baseUrl, projectId)
 }
 
 func (wh *Webhook) SendDeployment(ctx context.Context, project *db.Project, ds model.ApplicationDeploymentStatus) error {

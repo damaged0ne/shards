@@ -133,6 +133,8 @@ type Postgres struct {
 	TableSettings map[DbTableKey]map[string]float32
 
 	AutovacuumWorkers *timeseries.TimeSeries
+
+	Ext *PgExt // shards fork: cluster-agent extras, see dbext_shards.go
 }
 
 func NewPostgres() *Postgres {

@@ -131,6 +131,7 @@ func (w *Alerts) Check(project *db.Project, world *model.World, from, to timeser
 	}
 
 	w.cleanupPendingAlerts(now)
+	w.notifier.ReleaseMaintenance(project, world, now) // shards fork: notify alerts still firing after a maintenance window
 
 	klog.Infof("%s: evaluated %d alerts in %s", project.Id, alertsEvaluated, time.Since(start).Truncate(time.Millisecond))
 }
@@ -162,6 +163,7 @@ func (w *Alerts) evaluateCheckAlert(project *db.Project, rule *model.AlertingRul
 		if severity == model.UNKNOWN {
 			severity = model.WARNING
 		}
+		severity = checkAlertSeverity(severity, check) // shards fork
 		templateData := buildTemplateData(app, check)
 		summary := check.Message
 		description := renderTemplate(rule.Templates.Description, templateData)

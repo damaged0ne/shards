@@ -4,17 +4,17 @@ sidebar_position: 5
 
 # ClickHouse
 
-Coroot uses ClickHouse to store Logs, Traces, Profiles, and optionally Metrics. 
-To integrate Coroot with ClickHouse, go to the **Project Settings**, click on **Clickhouse**, and configure the ClickHouse 
+shards uses ClickHouse to store Logs, Traces, Profiles, and optionally Metrics. 
+To integrate shards with ClickHouse, go to the **Project Settings**, click on **Clickhouse**, and configure the ClickHouse 
 address and credentials as shown in the following example:
 
 <img alt="ClickHouse configuration" src="/img/docs/clickhouse_configuration.png" class="card w-1200"/>
 
-Coroot handles its own schema in ClickHouse, so you don't need to do anything manually.
+shards handles its own schema in ClickHouse, so you don't need to do anything manually.
 
 ## Metrics Storage
 
-In addition to logs, traces, and profiles, ClickHouse can be configured as an alternative storage backend for metrics instead of Prometheus. When both ClickHouse and Prometheus are configured, Coroot will prioritize ClickHouse for metrics storage.
+In addition to logs, traces, and profiles, ClickHouse can be configured as an alternative storage backend for metrics instead of Prometheus. When both ClickHouse and Prometheus are configured, shards will prioritize ClickHouse for metrics storage.
 
 **Benefits of using ClickHouse for metrics:**
 - **Unified storage**: Store all telemetry data (logs, traces, profiles, and metrics) in a single database system
@@ -22,30 +22,30 @@ In addition to logs, traces, and profiles, ClickHouse can be configured as an al
 - **Scalability**: Leverages ClickHouse's distributed architecture for handling large metric volumes
 - **Cost efficiency**: Reduced infrastructure complexity by consolidating storage systems
 
-When metrics storage is enabled in ClickHouse, Coroot creates dedicated tables for metrics and metadata, optimized for time-series workloads with appropriate indexing and TTL policies.
+When metrics storage is enabled in ClickHouse, shards creates dedicated tables for metrics and metadata, optimized for time-series workloads with appropriate indexing and TTL policies.
 
 ## Statistics
 
-Once ClickHouse is integrated, Coroot visualizes the cluster topology and breaks down storage usage by telemetry type. 
+Once ClickHouse is integrated, shards visualizes the cluster topology and breaks down storage usage by telemetry type. 
 You can see how much space is used by logs, traces, profiles, and metrics (when enabled), along with compression ratios and retention settings. 
-In clustered setups, Coroot also shows per-node disk usage and available space, making it easy to track storage health across the entire cluster.
+In clustered setups, shards also shows per-node disk usage and available space, making it easy to track storage health across the entire cluster.
 
 ## Clustered ClickHouse
-If Coroot is set up to work with a distributed ClickHouse cluster (sharded and/or replicated), 
+If shards is set up to work with a distributed ClickHouse cluster (sharded and/or replicated), 
 it automatically detects it using the `SHOW CLUSTERS` command.
 
-Here’s how Coroot chooses a cluster:
+Here’s how shards chooses a cluster:
 
 * If no clusters are set up, it creates the table on the connected ClickHouse instance (single-node mode)
 * If there’s only one cluster, it uses that
-* If there are multiple clusters, it chooses the coroot cluster, or default if coroot isn’t available
+* If there are multiple clusters, it chooses the shards cluster, or default if shards isn’t available
 
 ## Multi-tenancy mode
 
-Coroot supports a multi-tenancy mode, enabling a single ClickHouse instance to store logs, traces, profiles, and metrics for multiple projects (or clusters).
+shards supports a multi-tenancy mode, enabling a single ClickHouse instance to store logs, traces, profiles, and metrics for multiple projects (or clusters).
 
-In this mode, Coroot automatically creates a dedicated database for each project. 
-Telemetry data pushed by Coroot agents (coroot-node-agent and coroot-cluster-agent) are stored in their respective project databases, 
+In this mode, shards automatically creates a dedicated database for each project. 
+Telemetry data pushed by shards agents (shards-node-agent and shards-cluster) are stored in their respective project databases, 
 ensuring isolation and efficient querying for individual projects.
 
 ## S3 Storage
@@ -54,7 +54,7 @@ ClickHouse can be configured to use S3-compatible object storage for data, keepi
 
 ### Configuration
 
-To enable S3 storage, add the `s3` section to the ClickHouse configuration in your Coroot [Custom Resource](/installation/k8s-operator):
+To enable S3 storage, add the `s3` section to the ClickHouse configuration in your shards [Custom Resource](/installation/k8s-operator):
 
 ```yaml
 clickhouse:
@@ -82,7 +82,7 @@ Create the credentials secret:
 kubectl create secret generic clickhouse-s3-creds \
   --from-literal=access_key_id=YOUR_ACCESS_KEY \
   --from-literal=secret_access_key=YOUR_SECRET_KEY \
-  -n coroot
+  -n shards
 ```
 
 ### Storage Modes
@@ -172,7 +172,7 @@ CLICKHOUSE_SPACE_MANAGER_MIN_PARTITIONS=2       # Always keep at least 2 partiti
 
 ## ClickHouse Cloud
 
-To use Coroot with [ClickHouse Cloud](https://clickhouse.com/cloud), configure the external ClickHouse connection in your Coroot [Custom Resource](/installation/k8s-operator) (CR) specification:
+To use shards with [ClickHouse Cloud](https://clickhouse.com/cloud), configure the external ClickHouse connection in your shards [Custom Resource](/installation/k8s-operator) (CR) specification:
 
 ```yaml
 externalClickhouse:
@@ -194,9 +194,9 @@ To create the password secret using kubectl:
 ```bash
 kubectl create secret generic clickhouse-cloud \
   --from-literal=password=your-clickhouse-password \
-  -n coroot
+  -n shards
 ```
-- **Database**: Use `default` for initial connection - Coroot will automatically create dedicated databases like `coroot_xxxxx` for each project
+- **Database**: Use `default` for initial connection - shards will automatically create dedicated databases like `shards_xxxxx` for each project
 
 :::info
 The Space Manager is automatically disabled for ClickHouse Cloud connections.

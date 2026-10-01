@@ -25,7 +25,7 @@ import (
 	"k8s.io/klog"
 )
 
-const MCPInstructions = `Coroot is a production observability platform. Reach for it when the user asks about live behavior of a running system: why a service is slow or erroring, what changed, what alerts are firing, what depends on what, recent incidents, capacity, deploys. It is NOT for source-code questions, generic ML/ops advice, or anything that doesn't map to a running cluster.
+const MCPInstructions = `shards is a production observability and alerting center. Reach for it when the user asks about live behavior of a running system: why a service is slow or erroring, what changed, what alerts are firing, what depends on what, recent incidents, capacity, deploys. It is also where operators — humans and AI agents — coordinate on incidents and alerts: every incident, alert and alerting rule has a shared timeline of comments and recorded actions. It is NOT for source-code questions, generic ML/ops advice, or anything that doesn't map to a running cluster.
 
 Multiple projects (clusters) may be available. Always start with list_projects + select_project; the selection persists for the session. Application ids are 4-part 'cluster_id:namespace:Kind:name' — pass them through as returned (don't strip the cluster_id even if the project looks single-cluster). Node ids are 'cluster_id:name' (the name itself may contain ':', e.g. 'hwvop6p7:rds:db1'). Short forms are rejected.
 
@@ -42,9 +42,20 @@ Pick a tool by intent, cheapest first:
   • slow tail → traces_outliers (flamegraph diff: traces in [dur_from..dur_to] vs the rest; default dur_from=1s).
   • full trace → get_trace trace_id=… (full span tree with attributes/events; use trace_ids from traces_errors / traces_summary samples).
 - "Show me logs" → query_logs: app-scoped or project-wide, with severity / search / time range. Sorted newest-first.
-- "What does this metric look like?" / "Why is Coroot saying X?" → query_metrics for raw PromQL with labels and sparklines; list_metric_names to discover metric names.
-- Incident detail → get_incident_details.
-- Acting on alerts → resolve_alerts (only after the underlying cause is fixed; alerts whose conditions still hold will re-fire).
+- "What does this metric look like?" / "Why is shards saying X?" → query_metrics for raw PromQL with labels and sparklines; list_metric_names to discover metric names.
+- Incident / alert detail → get_incident_context (one compact call: incident + workflow status + timeline + firing alerts of the app and its dependencies + deployments in the last 24h + similar past incidents with their resolutions + active maintenance), get_incident_details (full RCA), get_alert (both include the timeline).
+- Incident workflow → update_incident (acknowledge / assign / mitigate / resolve with a summary / set_severity), get_incident_postmortem (markdown draft).
+- Maintenance windows (muting notifications for planned work) → list_maintenance_windows, create_maintenance_window, end_maintenance_window.
+- Alerting rules → list_alerting_rules, get_alerting_rule, create_alerting_rule, update_alerting_rule (partial: enabled, severity, promql_expression, for/keep_firing_for, selector, notification_category, description/runbook, ...), delete_alerting_rule. Builtin rules can be tuned or disabled but not deleted; readonly rules are managed by config and can't be changed.
+- Uptime / TLS checks → list_probes, get_probe_results (uptime %, latency, downtime periods, certificate expiry), create_probe, update_probe, delete_probe. Probes run from the shards server.
+
+Operator workflow for incidents and alerts (humans read the same timeline in the UI):
+1. Triage: list_alerts / list_incidents, then get_incident_context / get_alert. Read the timeline and the workflow status first — someone (human or agent) may already be on it; if not, update_incident action=acknowledge.
+2. Comment: add_comment with what you found (evidence, suspected root cause, links to traces/logs) and what you are going to do. Keep comments concise markdown.
+3. Fix: investigate with the read tools; apply the fix with whatever tools you have outside shards. If an alert is noise, tune its rule (update_alerting_rule) and say why in the comment argument.
+4. Resolve: resolve_alerts with a comment summarising the fix, only after confirming the underlying issue is gone — alerts whose conditions still hold will re-fire on the next evaluation. Use suppress_alerts for known/accepted issues that should not re-fire, reopen_alerts if a fix didn't hold.
+Every action (resolve / suppress / reopen, rule create / update / enable / disable / delete) is recorded in the timeline with your agent identity, so always explain non-obvious actions.
+Human approval: depending on the project's policy, some actions (by default: delete or disable an alerting rule, resolve an incident) are not executed right away. The tool then returns {status: 'pending', approval_id}; nothing changed yet. Tell the user, carry on with other work, and check get_approval_status(approval_id) later ('executed' | 'failed' | 'rejected' with the reviewer's comment). Never retry a pending action. 'denied' means the policy forbids it for agents.
 
 Time arguments accept epoch ms or relative strings like 'now-1h', 'now-15m'. Default windows are short (the server's configured default time range, 1h unless overridden) — widen explicitly when looking at historical patterns.`
 
@@ -62,17 +73,18 @@ type MCPHandler struct {
 }
 
 func (api *Api) SetupMCP(instructions string) *MCPHandler {
-	h := &MCPHandler{
-		Api: api,
-		Server: mcpserver.NewMCPServer(
-			"coroot",
-			"1.0.0",
+	h := &MCPHandler{Api: api}
+	h.Server = mcpserver.NewMCPServer(
+		"shards",
+		"1.0.0",
+		append([]mcpserver.ServerOption{ // shards fork: agent scopes, resources and prompts
 			mcpserver.WithToolCapabilities(false),
 			mcpserver.WithRecovery(),
-			mcpserver.WithInstructions(instructions),
-		),
-	}
+			mcpserver.WithInstructions(instructions + MCPAgentInstructions),
+		}, h.shardsServerOptions()...)...,
+	)
 	h.registerTools()
+	h.registerShards() // shards fork
 	return h
 }
 
@@ -90,7 +102,7 @@ func (h *MCPHandler) HTTPHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if h.Api.MCPUserFromBearer(r) == nil {
 			resourceMeta := h.Api.GetAbsoluteUrl(r, "/.well-known/oauth-protected-resource").String()
-			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer realm="coroot", resource_metadata="%s"`, resourceMeta))
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer realm="shards", resource_metadata="%s"`, resourceMeta))
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -121,6 +133,9 @@ func (h *MCPHandler) sessionState(ctx context.Context) *mcpSessionState {
 }
 
 func (h *MCPHandler) currentProject(ctx context.Context) (*db.Project, error) {
+	if p, ok := ctx.Value(mcpProjectCtxKey{}).(*db.Project); ok { // shards fork: resources address a project explicitly
+		return p, nil
+	}
 	st := h.sessionState(ctx)
 	if st == nil {
 		return nil, nil
@@ -136,16 +151,16 @@ func (h *MCPHandler) currentProject(ctx context.Context) (*db.Project, error) {
 
 func (h *MCPHandler) AddTool(tool mcp.Tool, handler mcpserver.ToolHandlerFunc) {
 	name := tool.Name
-	h.Server.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	h.Server.AddTool(tool, h.agentToolMiddleware(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) { // shards fork: agent scopes + audit
 		h.Api.stats.RegisterMCPCall(name)
 		return handler(ctx, req)
-	})
+	}))
 }
 
 func (h *MCPHandler) registerTools() {
 	h.AddTool(
 		mcp.NewTool("list_projects",
-			mcp.WithDescription("List Coroot projects (clusters) the current user can access. Returns a {name: id} map. Call before select_project (which takes the id)."),
+			mcp.WithDescription("List shards projects (clusters) the current user can access. Returns a {name: id} map. Call before select_project (which takes the id)."),
 			mcp.WithReadOnlyHintAnnotation(true),
 			mcp.WithDestructiveHintAnnotation(false),
 			mcp.WithIdempotentHintAnnotation(true),
@@ -209,12 +224,13 @@ func (h *MCPHandler) registerTools() {
 	)
 	h.AddTool(
 		mcp.NewTool("resolve_alerts",
-			mcp.WithDescription("Manually resolve one or more alerts. Triggers configured downstream notifications (Slack, PagerDuty, ...). Use only after confirming the underlying issue is fixed — alerts whose conditions still hold will re-fire on the next evaluation cycle."),
+			mcp.WithDescription("Manually resolve one or more alerts. Triggers configured downstream notifications (Slack, PagerDuty, ...). Use only after confirming the underlying issue is fixed — alerts whose conditions still hold will re-fire on the next evaluation cycle. The action is recorded in each alert's timeline; pass a comment explaining the fix."),
 			mcp.WithArray("ids",
 				mcp.Required(),
 				mcp.Description("Alert ids from list_alerts."),
 				mcp.WithStringItems(),
 			),
+			mcp.WithString("comment", mcp.Description("Optional markdown note (what was wrong, what was fixed) recorded with the action in each alert's timeline.")),
 			mcp.WithReadOnlyHintAnnotation(false),
 			mcp.WithDestructiveHintAnnotation(false),
 			mcp.WithIdempotentHintAnnotation(true),
@@ -224,7 +240,7 @@ func (h *MCPHandler) registerTools() {
 	)
 	h.AddTool(
 		mcp.NewTool("get_incident_details",
-			mcp.WithDescription("Get full incident: summary + RCA (root cause, fixes) + propagation map showing how the failure spread across applications."),
+			mcp.WithDescription("Get full incident: summary + RCA (root cause, fixes) + propagation map showing how the failure spread across applications + the timeline (comments and actions by humans and agents)."),
 			mcp.WithString("key", mcp.Required(), mcp.Description("Incident key from list_incidents.")),
 			mcp.WithReadOnlyHintAnnotation(true),
 			mcp.WithDestructiveHintAnnotation(false),
@@ -340,7 +356,7 @@ func (h *MCPHandler) registerTools() {
 	)
 	h.AddTool(
 		mcp.NewTool("query_metrics",
-			mcp.WithDescription("Run a PromQL range query against the project's metrics backend. Returns time series with their labels and a value summary (last/min/max/avg + sparkline). Use this to inspect raw metric values, label distributions, or to verify Coroot's detection/aggregation logic. Discover metric names with list_metric_names first."),
+			mcp.WithDescription("Run a PromQL range query against the project's metrics backend. Returns time series with their labels and a value summary (last/min/max/avg + sparkline). Use this to inspect raw metric values, label distributions, or to verify shards' detection/aggregation logic. Discover metric names with list_metric_names first."),
 			mcp.WithString("query", mcp.Required(), mcp.Description("PromQL expression. Examples: 'up', 'rate(container_net_tcp_active_connections[1m])', 'group by (instance) ({__name__=\"redis_up\"})'.")),
 			mcp.WithString("from", mcp.Description("Start time. Either epoch milliseconds, or a relative string like 'now-1h', 'now-15m'. Default: the server's configured default time range (1h unless overridden).")),
 			mcp.WithString("to", mcp.Description("End time, same format as `from`. Default: 'now'.")),
@@ -375,6 +391,9 @@ func (h *MCPHandler) registerTools() {
 		),
 		h.toolQueryLogs,
 	)
+	h.registerAgentTools()
+	h.registerProbeTools()  // shards fork
+	h.registerStatusTools() // shards fork
 }
 
 func (h *MCPHandler) toolListProjects(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -534,10 +553,11 @@ func (h *MCPHandler) toolListApplications(ctx context.Context, req mcp.CallToolR
 }
 
 type mcpIssue struct {
-	Id      string `json:"id"`
-	Title   string `json:"title"`
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
+	Id      string   `json:"id"`
+	Title   string   `json:"title"`
+	Status  string   `json:"status"`
+	Message string   `json:"message,omitempty"`
+	Details []string `json:"details,omitempty"` // shards fork: per-item findings, e.g. which consumer group is stalled
 }
 
 type MCPSeriesValue struct {
@@ -557,10 +577,10 @@ type mcpChart struct {
 }
 
 type mcpLogPattern struct {
-	Hash     string `json:"hash"`
-	Severity string `json:"severity"`
-	Sample   string `json:"sample"`
-	Messages int    `json:"messages"`
+	Hash     string       `json:"hash"`
+	Severity string       `json:"severity"`
+	Sample   MCPUntrusted `json:"sample"`
+	Messages int          `json:"messages"`
 }
 
 type mcpReportStatus struct {
@@ -652,6 +672,7 @@ func (h *MCPHandler) toolGetApplicationStatus(ctx context.Context, req mcp.CallT
 				Title:   c.Title,
 				Status:  c.Status.String(),
 				Message: c.Message,
+				Details: mcpCheckDetails(c),
 			})
 		}
 		if r.Status >= model.WARNING {
@@ -927,7 +948,7 @@ func mcpExtractLogPatterns(app *model.Application, n int) []mcpLogPattern {
 		out = append(out, mcpLogPattern{
 			Hash:     r.hash,
 			Severity: r.severity.String(),
-			Sample:   utils.Truncate(r.pattern.Sample, mcpLogSampleMaxLength),
+			Sample:   MCPUntrusted(utils.Truncate(r.pattern.Sample, mcpLogSampleMaxLength)),
 			Messages: int(r.total),
 		})
 	}
@@ -996,7 +1017,7 @@ func (h *MCPHandler) toolListAlerts(ctx context.Context, req mcp.CallToolRequest
 		}
 		out = append(out, a)
 	}
-	return mcpJSONList(out, "only the first alerts are returned, narrow with app_id or state, or lower the limit")
+	return mcpJSONList(mcpWrapAlerts(out), "only the first alerts are returned, narrow with app_id or state, or lower the limit")
 }
 
 func (h *MCPHandler) toolListIncidents(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1093,31 +1114,11 @@ func (h *MCPHandler) fetchIncidents(projectId db.ProjectId, hours int, state str
 }
 
 func (h *MCPHandler) toolResolveAlerts(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	user, project, errResult := h.RequireUserAndProject(ctx)
+	user, project, _, _, errResult := h.alertIdsAndComment(ctx, req)
 	if errResult != nil {
 		return errResult, nil
 	}
-	if !h.Api.IsAllowed(user, rbac.Actions.Project(string(project.Id)).Alerts().Edit()) {
-		return mcp.NewToolResultError("forbidden: no permission to edit alerts in this project"), nil
-	}
-	ids, err := req.RequireStringSlice("ids")
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-	if len(ids) == 0 {
-		return mcp.NewToolResultError("ids must be a non-empty array"), nil
-	}
-	resolvedBy := user.Name
-	if resolvedBy == "" {
-		resolvedBy = user.Email
-	}
-	resolvedBy += " (via MCP)"
-	notified, err := h.Api.resolveAlerts(project, ids, resolvedBy)
-	if err != nil {
-		klog.Errorln("mcp: resolve_alerts:", err)
-		return mcp.NewToolResultError("failed to resolve alerts"), nil
-	}
-	return MCPJSON(map[string]any{"resolved": len(ids), "notified": notified})
+	return h.mcpToolGated(user, project, "resolve_alerts", req) // shards fork: subject to the agent approval policy
 }
 
 func (h *MCPHandler) toolGetIncidentDetails(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1152,7 +1153,14 @@ func (h *MCPHandler) toolGetIncidentDetails(ctx context.Context, req mcp.CallToo
 		ic.RCA = &rca
 		i = &ic
 	}
-	return MCPJSON(i)
+	comments, err := h.Api.getTimeline(user, &commentTarget{typ: db.CommentTargetIncident, id: i.Key}, project.Id)
+	if err != nil {
+		klog.Errorln("mcp: get_incident_details:", err)
+	}
+	return MCPJSON(struct {
+		*model.ApplicationIncident
+		Timeline []mcpTimelineEntry `json:"timeline"`
+	}{ApplicationIncident: i, Timeline: mcpTimeline(comments)})
 }
 
 const (
@@ -1440,7 +1448,7 @@ func (h *MCPHandler) toolTracesErrors(ctx context.Context, req mcp.CallToolReque
 	}
 	errs := res.Errors
 	sort.Slice(errs, func(i, j int) bool { return errs[i].Count > errs[j].Count })
-	return mcpJSONList(errs, "only the most frequent errors are returned, narrow with service and span")
+	return mcpJSONList(mcpWrapTraceErrors(errs), "only the most frequent errors are returned, narrow with service and span")
 }
 
 func (h *MCPHandler) toolTracesOutliers(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1467,7 +1475,7 @@ func (h *MCPHandler) toolGetTrace(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	spans := res.Trace
 	sort.SliceStable(spans, func(i, j int) bool { return spans[i].Timestamp < spans[j].Timestamp })
-	return mcpJSONList(spans, "only the earliest spans of the trace are returned")
+	return mcpJSONList(mcpWrapSpans(spans), "only the earliest spans of the trace are returned")
 }
 
 func (h *MCPHandler) toolListMetricNames(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1650,7 +1658,7 @@ func (h *MCPHandler) toolQueryLogs(ctx context.Context, req mcp.CallToolRequest)
 	for _, e := range entries {
 		e.Body = mcpTruncate(e.Body, maxBodyLength)
 	}
-	fitted, err := mcpFitToBudget(entries, "only the newest entries are returned, narrow the time range, add severity/search filters, or lower max_body_length")
+	fitted, err := mcpFitToBudget(mcpWrapLogEntries(entries), "only the newest entries are returned, narrow the time range, add severity/search filters, or lower max_body_length")
 	if err != nil {
 		return nil, err
 	}

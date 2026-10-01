@@ -30,9 +30,15 @@ type World struct {
 	GCP GCP
 	OCI OCI
 
+	// shards fork
+	Azure        Azure
+	ClusterAgent ClusterAgentStatus
+
 	IntegrationStatus IntegrationStatus
 
 	ProjectNamesById map[string]string
+
+	Probes []*Probe // shards fork: synthetic probes, see probe_shards.go
 }
 
 func NewWorld(from, to timeseries.Time, step, rawStep timeseries.Duration) *World {
@@ -42,6 +48,7 @@ func NewWorld(from, to timeseries.Time, step, rawStep timeseries.Duration) *Worl
 		AWS:              AWS{DiscoveryErrors: map[string]bool{}},
 		GCP:              GCP{DiscoveryErrors: map[string]bool{}},
 		OCI:              OCI{DiscoveryErrors: map[string]bool{}},
+		Azure:            Azure{DiscoveryErrors: map[string]bool{}},
 		ProjectNamesById: map[string]string{},
 	}
 }
@@ -62,7 +69,7 @@ func (w *World) GetOrCreateApplication(id ApplicationId, custom bool) *Applicati
 
 func (w *World) GetNode(name string) *Node {
 	for _, n := range w.Nodes {
-		if n.Name.Value() == name || n.K8sName.Value() == name {
+		if n.Name.Value() == name || n.K8sName.Value() == name || (n.Shards != nil && n.Shards.Hostname == name && name != "") { // shards fork: + original hostname
 			return n
 		}
 	}

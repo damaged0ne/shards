@@ -27,13 +27,13 @@ For example, when a container is terminated, all its in-progress requests will f
 In the worst cases of node-level OOMs, a node becomes unresponsive due to the low-memory condition.
 This means that every application on the node 'freezes', so not only the OOM Killer victim's SLI can be affected.
 
-Coroot utilizes the `container_oom_kills_total` metric to identify which containers have been terminated.
+shards utilizes the `container_oom_kills_total` metric to identify which containers have been terminated.
 
 ### Memory leak
 
 Memory leaks typically occur when a program allocates memory dynamically during its execution but forgets to release it when it's no longer needed.
 
-Coroot analyzes the `container_resources_memory_rss_bytes` metric per container to decide whether memory consumption is trending upward. The detection is deliberately conservative so it stays quiet on noisy, healthy applications:
+shards analyzes the `container_resources_memory_rss_bytes` metric per container to decide whether memory consumption is trending upward. The detection is deliberately conservative so it stays quiet on noisy, healthy applications:
 
 * The RSS series is split at sharp downward steps (>50% drops) — those are process restarts (OOM-kill, crash, rollout). The longest run between restarts is analyzed, so a container that keeps being restarted doesn't hide an ongoing leak.
 * A linear regression is fit over the analyzed run. The slope has to be positive, and the last ~25% of the run (or last 15 minutes, whichever is longer) must still be climbing at a comparable rate. This filters out one-time step-ups — e.g. an application that ramps up at startup and then plateaus.
@@ -65,7 +65,7 @@ The **profile** button opens the memory profiling data,
 allowing you to identify and analyze unexpected spikes in memory usage down to the precise line of code.
 
 :::info
-Learn more about [Continuous profiling](/profiling/) in Coroot.
+Learn more about [Continuous profiling](/profiling/) in shards.
 :::
 
 ### Out of memory events

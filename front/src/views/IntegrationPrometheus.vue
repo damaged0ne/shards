@@ -8,7 +8,7 @@
         <div class="caption mb-3">When enabled, ClickHouse will be used instead of Prometheus for metrics storage.</div>
 
         <div class="subtitle-1">Prometheus URL</div>
-        <div class="caption">Coroot works on top of the telemetry data stored in your Prometheus server.</div>
+        <div class="caption">shards works on top of the telemetry data stored in your Prometheus server.</div>
         <v-text-field
             outlined
             dense
@@ -76,7 +76,7 @@
 
         <div class="subtitle-1 mt-3">Refresh interval</div>
         <div class="caption">
-            How often Coroot retrieves telemetry data from a Prometheus. The value must be greater than the
+            How often shards retrieves telemetry data from a Prometheus. The value must be greater than the
             <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/" target="_blank" rel="noopener noreferrer"
                 ><var>scrape_interval</var></a
             >
@@ -98,7 +98,7 @@
         <div class="subtitle-1">Remote Write URL</div>
         <div class="caption">
             If you're using a drop-in Prometheus replacement like VictoriaMetrics in cluster mode, you may need to configure a different Remote Write
-            URL. By default, Coroot appends <var>/api/v1/write</var> to the base URL configured above.
+            URL. By default, shards appends <var>/api/v1/write</var> to the base URL configured above.
         </div>
         <v-text-field
             outlined

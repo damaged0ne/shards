@@ -160,6 +160,7 @@ type ApplicationCategoryForm struct {
 	Test *struct {
 		Incident   *db.ApplicationCategoryNotificationDestinations `json:"incident,omitempty"`
 		Deployment *db.ApplicationCategoryNotificationDestinations `json:"deployment,omitempty"`
+		Alert      *db.ApplicationCategoryNotificationDestinations `json:"alert,omitempty"` // shards fork
 	} `json:"test,omitempty"`
 }
 
@@ -205,9 +206,14 @@ func (f *ApplicationCategoryForm) SendTestNotification(ctx context.Context, proj
 		if webhook := f.Test.Incident.Webhook; webhook != nil && integrations.Webhook != nil {
 			client = notifications.NewWebhook(integrations.Webhook)
 		}
+		if client == nil { // shards fork
+			client = testClientShards(f.Test.Incident, integrations)
+		}
 		if client != nil {
 			return client.SendIncident(ctx, integrations.BaseUrl, testIncidentNotification(project))
 		}
+	case f.Test.Alert != nil: // shards fork
+		return sendCategoryTestAlert(ctx, project, f.Test.Alert)
 	case f.Test.Deployment != nil:
 		if slack := f.Test.Deployment.Slack; slack != nil && integrations.Slack != nil {
 			client = notifications.NewSlack(integrations.Slack.Token, cmp.Or(slack.Channel, integrations.Slack.DefaultChannel))
@@ -335,7 +341,7 @@ func NewIntegrationForm(t db.IntegrationType, globalClickHouse *db.IntegrationCl
 	case db.IntegrationTypeWebhook:
 		return &IntegrationFormWebhook{}
 	}
-	return nil
+	return newIntegrationFormShards(t) // shards fork
 }
 
 type IntegrationFormPrometheus struct {

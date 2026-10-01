@@ -4,13 +4,13 @@ sidebar_position: 3
 
 # Java profiling
 
-Coroot can profile Java applications using [async-profiler](https://github.com/async-profiler/async-profiler),
+shards can profile Java applications using [async-profiler](https://github.com/async-profiler/async-profiler),
 a low-overhead profiler for HotSpot JVMs. When enabled, it captures CPU, memory allocation, and lock contention
 profiles without requiring any changes to the Java application.
 
 ## How it works
 
-Coroot's node agent dynamically loads async-profiler into running Java processes using the JVM Attach API.
+shards' node agent dynamically loads async-profiler into running Java processes using the JVM Attach API.
 No JVM flags, no application restarts, and no Java agent JARs are needed.
 
 The profiling lifecycle:
@@ -20,7 +20,7 @@ The profiling lifecycle:
 3. **Start**: The agent loads the native library into the JVM via the attach protocol, starting CPU, allocation, and lock profiling.
 4. **Collection**: Every 60 seconds, the agent stops the profiler (finalizing the JFR output file), reads the data, 
    parses it, and immediately starts a new session. The gap is ~4ms.
-5. **Upload**: Parsed profiles are uploaded to Coroot in pprof format.
+5. **Upload**: Parsed profiles are uploaded to shards in pprof format.
 
 ## Supported profile types
 
@@ -73,7 +73,7 @@ and lock contention. Use them alongside the flamegraph profiles to spot anomalie
 ## Conflict detection
 
 If another tool (e.g., Pyroscope Java agent, Datadog) has already loaded async-profiler into a JVM,
-Coroot's agent detects this by scanning `/proc/<pid>/maps` and skips that process to avoid conflicts.
+shards' agent detects this by scanning `/proc/<pid>/maps` and skips that process to avoid conflicts.
 
 ## Overhead
 

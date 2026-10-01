@@ -88,25 +88,6 @@
                                 hide-details="auto"
                             />
                         </div>
-
-                        <v-checkbox
-                            v-model="logPatternEvaluateWithAI"
-                            :disabled="$coroot.edition !== 'Enterprise'"
-                            color="primary"
-                            hide-details
-                            class="mt-0 pt-0 mb-1"
-                        >
-                            <template #label>
-                                <span>Evaluate with AI</span>
-                            </template>
-                        </v-checkbox>
-                        <div class="caption grey--text mb-4">
-                            Every log pattern will be analyzed by AI to determine whether it's worth notifying the team, and important errors will
-                            include a brief explanation.
-                            <template v-if="$coroot.edition !== 'Enterprise'">
-                                Available in <a href="https://coroot.com/editions" target="_blank">Coroot Enterprise</a>.
-                            </template>
-                        </div>
                     </template>
 
                     <template v-if="sourceType === 'kubernetes_events'">
@@ -134,24 +115,6 @@
                                 dense
                                 hide-details="auto"
                             />
-                        </div>
-
-                        <v-checkbox
-                            v-model="k8sEventEvaluateWithAI"
-                            :disabled="$coroot.edition !== 'Enterprise'"
-                            color="primary"
-                            hide-details
-                            class="mt-0 pt-0 mb-1"
-                        >
-                            <template #label>
-                                <span>Evaluate with AI</span>
-                            </template>
-                        </v-checkbox>
-                        <div class="caption grey--text mb-4">
-                            Every Kubernetes event will be analyzed by AI to determine whether it's worth notifying the team.
-                            <template v-if="$coroot.edition !== 'Enterprise'">
-                                Available in <a href="https://coroot.com/editions" target="_blank">Coroot Enterprise</a>.
-                            </template>
                         </div>
                     </template>
 
@@ -253,6 +216,8 @@
                     <div class="subtitle-1">Description template</div>
                     <div class="caption grey--text">Optional detailed description of the alert and suggested actions.</div>
                     <v-textarea v-model="templateDescription" outlined dense hide-details="auto" rows="3" class="mb-4" />
+                    <!-- shards fork: agent playbook (saved separately) -->
+                    <PlaybookEditor v-if="ruleId" target-type="alerting_rule" :target-id="ruleId" class="mb-4" />
 
                     <v-checkbox v-model="enabled" color="primary" hide-details class="mt-0 pt-0 mb-1">
                         <template #label>
@@ -291,9 +256,10 @@
 <script>
 import MetricSelector from '@/components/MetricSelector.vue';
 import Panel from '@/views/dashboards/Panel.vue';
+import PlaybookEditor from '@/components/PlaybookEditor.vue';
 
 export default {
-    components: { MetricSelector, Panel },
+    components: { MetricSelector, Panel, PlaybookEditor },
 
     props: {
         ruleId: {

@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Anonymous usage statistics
 
-To improve Coroot we collect anonymous usage statistics. The collection of statistics is enabled by default, but you can opt out at any time.
+shards inherits the anonymous usage statistics reporter from the upstream Coroot code base. Unless disabled, it is enabled by default, and you can opt out at any time.
 
 ## What exactly is being collected
 
@@ -14,13 +14,13 @@ The following is an example of the reported payload:
 {
     "instance": {
         "uuid": "4423595b-9d97-4e01-a19f-8e3d60c83b2a", // generated upon the first startup and stored in `data-dir/instance.uuid`
-        "version": "0.20.0", // Coroot version
+        "version": "0.20.0", // shards version
         "database_type": "sqlite" // the type of database being used
     },
     "integration": {
         "prometheus": true, // shows whether a Prometheus integration has been configured or not
-        "node_agent": true, // shows whether Coroot has seen the metrics gathered by `node-agent` or not
-        "kube_state_metrics": true, // shows whether Coroot has seen the metrics gathered by `kube-state-metrics` or not
+        "node_agent": true, // shows whether shards has seen the metrics gathered by `node-agent` or not
+        "kube_state_metrics": true, // shows whether shards has seen the metrics gathered by `kube-state-metrics` or not
         "inspection_overrides": { // the number of overridden inspection thresholds
             "CPUNode": {"project_level": 1, "application_level": 2},
             "NetworkRTT": {"project_level": 0, "application_level": 1}
@@ -32,8 +32,8 @@ The following is an example of the reported payload:
         "tracing": true, // whether Distributed Tracing is enabled
         "logs": true, // whether Logs Monitoring is enabled
         "profiles": true, // whether Continuous Profiling is enabled
-        "fluxcd": true, // whether Coroot has seen FluxCD resources
-        "argocd": true // whether Coroot has seen ArgoCD applications
+        "fluxcd": true, // whether shards has seen FluxCD resources
+        "argocd": true // whether shards has seen ArgoCD applications
     },
     "stack": {
         "clouds": ["aws", "hetzner", "ovh"], // based on the `node_cloud_info` metric
@@ -91,8 +91,8 @@ The following is an example of the reported payload:
                 }
             }
         },
-        "cpu_usage": [0.079, 0,071, ...], // CPU usage of the Coroot process
-        "memory_usage": [27086848, 27086848, ...], // memory usage of the Coroot process
+        "cpu_usage": [0.079, 0,071, ...], // CPU usage of the shards process
+        "memory_usage": [27086848, 27086848, ...], // memory usage of the shards process
     },
     "profile": {
         "from": 1678113877,
@@ -107,8 +107,8 @@ As you can see, the data is absolutely anonymous.
 
 ## How we process the data
 
-Anonymous usage statistics are reported to our collector at https://coroot.com/ce/usage-statistics. 
-Coroot Inc uses the described statistics for its own purposes (improving the product) and does not share the data with any third parties.
+The reporter sends the data to `https://coroot.com/ce/usage-statistics`, a collector operated by Coroot, Inc., not by the shards project.
+The shards project does not receive or process this data. If you do not want any data to leave your installation, disable the reporter as shown below.
 
 ## Disable usage statistics
 You can disable the collecting of usage statistics by using the `--disable-usage-statistics` command line argument.
@@ -116,7 +116,7 @@ You can disable the collecting of usage statistics by using the `--disable-usage
 Docker:
 
 ```bash
-docker run ... ghcr.io/coroot/coroot --disable-usage-statistics
+docker run ... ghcr.io/damaged0ne/shards --disable-usage-statistics
 ```
 
 Kubernetes operator:
@@ -125,8 +125,8 @@ Kubernetes operator:
 apiVersion: coroot.com/v1
 kind: Coroot
 metadata:
-  name: coroot
-  namespace: coroot
+  name: shards
+  namespace: shards
 spec:
   env:
     - name: DISABLE_USAGE_STATISTICS

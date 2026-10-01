@@ -83,9 +83,16 @@ func (api *Api) isConfigServiceAccount(u *db.User) bool {
 	return false
 }
 
+// GetUserByApiKey authenticates a request with a per-user API key, passed either as
+// "Authorization: Bearer <key>" or as "X-Api-Key: <key>". This is how operator agents
+// authenticate against the REST API and the MCP endpoint; the returned user has ApiKey set
+// to the key's description, which is recorded as the agent name in timelines.
 func (api *Api) GetUserByApiKey(r *http.Request) *db.User {
 	key, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if !ok || key == "" {
+		key = r.Header.Get(collector.ApiKeyHeader)
+	}
+	if key == "" {
 		return nil
 	}
 	user, err := api.db.GetUserByApiKey(key)
@@ -95,12 +102,19 @@ func (api *Api) GetUserByApiKey(r *http.Request) *db.User {
 		}
 		return nil
 	}
+	if !api.attachAgent(user) { // shards fork: disabled/expired agents
+		return nil
+	}
 	return user
 }
 
 func (api *Api) Auth(h func(http.ResponseWriter, *http.Request, *db.User)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if user := api.GetUser(r); user != nil {
+			if user.Agent != nil { // shards fork: agent scope enforcement + audit
+				api.serveAgentREST(w, r, user, h)
+				return
+			}
 			h(w, r, user)
 			return
 		}
@@ -289,6 +303,9 @@ func (api *Api) GetUser(r *http.Request) *db.User {
 }
 
 func (api *Api) IsAllowed(u *db.User, actions ...rbac.Action) bool {
+	if actions = agentFilterActions(u, actions); len(actions) == 0 { // shards fork: agent scopes
+		return false
+	}
 	roles, err := api.roles.GetRoles()
 	if err != nil {
 		klog.Errorln(err)

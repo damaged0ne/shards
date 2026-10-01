@@ -51,29 +51,11 @@
                         <span class="field-name">Cluster</span>:
                         <span>{{ incident.cluster }}</span>
                     </div>
-
-                    <div>
-                        <span class="field-name"> Root Cause Analysis: </span>
-                        <template v-if="incident.rca">
-                            <span v-if="incident.rca.status === 'OK'" class="green--text">Done</span>
-                            <v-tooltip v-else-if="incident.rca.status === 'Failed'" bottom>
-                                <template #activator="{ on }">
-                                    <span v-on="on" class="red--text">Failed</span>
-                                </template>
-                                <v-card class="pa-2"> Failed: {{ incident.rca.error }} </v-card>
-                            </v-tooltip>
-                            <span v-else class="grey--text">{{ incident.rca.status }}</span>
-                        </template>
-                        <span v-else class="grey--text">&mdash;</span>
-                        <v-btn icon small @click="refresh_rca()" :loading="loading"><v-icon small>mdi-refresh</v-icon></v-btn>
-
-                        <a href="https://docs.coroot.com/ai/overview" target="_blank" class="ml-1">
-                            <v-icon small>mdi-information-outline</v-icon>
-                        </a>
-                    </div>
                 </div>
 
-                <v-simple-table dense class="mt-5 table">
+                <IncidentWorkflow :incident-key="$route.query.incident" class="mt-4 pt-3 workflow" @changed="changed" />
+
+                <v-simple-table v-if="incident.availability_slo || incident.latency_slo" dense class="mt-5 table">
                     <thead>
                         <tr>
                             <th>Service Level Objective (SLO)</th>
@@ -81,7 +63,7 @@
                             <th>Compliance</th>
                             <th>
                                 Error budget burn rate
-                                <a href="https://docs.coroot.com/alerting/slo-monitoring" target="_blank" class="ml-1"
+                                <a :href="$utils.docsUrl('alerting/slo-monitoring')" target="_blank" class="ml-1"
                                     ><v-icon small>mdi-information-outline</v-icon></a
                                 >
                             </th>
@@ -156,36 +138,6 @@
             </v-tabs>
 
             <template v-if="view === 'overview'">
-                <div v-if="incident.rca">
-                    <template v-if="incident.rca.root_cause">
-                        <div class="mt-5 mb-3 text-h6"><v-icon color="red">mdi-fire</v-icon> Root Cause</div>
-                        <Markdown :src="incident.rca.root_cause" :widgets="[]" />
-
-                        <template v-if="incident.rca.detailed_root_cause_analysis">
-                            <div>
-                                <a @click="toggle_rca_details">
-                                    Show {{ show_details ? 'less' : 'more' }} details
-                                    <v-icon v-if="show_details">mdi-chevron-up</v-icon>
-                                    <v-icon v-else>mdi-chevron-down</v-icon>
-                                </a>
-                            </div>
-
-                            <v-card outlined v-if="show_details" class="pa-5 mt-5">
-                                <PropagationMap
-                                    v-if="incident.rca.propagation_map"
-                                    :applications="incident.rca.propagation_map.applications"
-                                    class="mb-5"
-                                />
-                                <Markdown :src="incident.rca.detailed_root_cause_analysis" :widgets="incident.rca.widgets || []" />
-                            </v-card>
-                        </template>
-                    </template>
-
-                    <template v-if="incident.rca.immediate_fixes">
-                        <div class="mt-5 mb-3 text-h6"><v-icon color="red">mdi-fire-extinguisher</v-icon> Immediate Fixes</div>
-                        <Markdown :src="incident.rca.immediate_fixes" :widgets="[]" />
-                    </template>
-                </div>
                 <template v-if="incident.widgets">
                     <div class="mt-5 mb-3 text-h6"><v-icon color="red">mdi-chart-bar</v-icon> Service Level Indicators (SLIs)</div>
                     <div class="d-flex flex-wrap mt-5">
@@ -197,6 +149,9 @@
                         />
                     </div>
                 </template>
+                <v-card v-if="$route.query.incident" outlined class="my-5 pa-4">
+                    <Timeline ref="timeline" target-type="incident" :target-id="$route.query.incident" :show-approvals="false" />
+                </v-card>
             </template>
 
             <template v-else-if="view === 'traces'">
@@ -213,11 +168,11 @@ import NoData from '@/components/NoData';
 import Widget from '@/components/Widget.vue';
 import CheckForm from '@/components/CheckForm.vue';
 import AppTraces from '@/views/AppTraces.vue';
-import Markdown from '@/components/Markdown.vue';
-import PropagationMap from '@/components/PropagationMap.vue';
+import Timeline from '@/components/Timeline.vue';
+import IncidentWorkflow from '@/components/IncidentWorkflow.vue';
 
 export default {
-    components: { PropagationMap, Markdown, Views, AppTraces, CheckForm, Widget, NoData },
+    components: { Views, AppTraces, CheckForm, Widget, NoData, Timeline, IncidentWorkflow },
 
     computed: {
         availabilityBurnRate() {
@@ -253,7 +208,6 @@ export default {
             editing: {
                 active: false,
             },
-            show_details: false,
         };
     },
 
@@ -274,19 +228,11 @@ export default {
                 this.incident = data;
             });
         },
-        toggle_rca_details() {
-            this.show_details = !this.show_details;
-        },
-        refresh_rca() {
-            this.loading = true;
-            this.$api.getRCA(this.incident.application_id, true, (data, error) => {
-                this.loading = false;
-                if (error) {
-                    // this.error = error;
-                    return;
-                }
-                this.get();
-            });
+        changed() {
+            this.get();
+            if (this.$refs.timeline) {
+                this.$refs.timeline.load();
+            }
         },
         edit(check_id, check_title) {
             this.editing = { active: true, appId: this.incident.application_id, check: { id: check_id, title: check_title } };
@@ -326,6 +272,10 @@ export default {
     opacity: 100%;
     border-bottom: 2px solid red !important;
     background-color: unset !important;
+}
+
+.workflow {
+    border-top: 1px solid var(--border-soft);
 }
 
 .field-name {

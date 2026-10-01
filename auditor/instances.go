@@ -92,9 +92,16 @@ func (a *appAuditor) instances() {
 			default:
 				status.SetStatus(model.OK, i.OCICache.Status.Value())
 			}
+		} else if i.Cloud != nil { // shards fork
+			status = cloudServiceStatus(i.Cloud)
 		} else if i.Pod == nil {
 			if i.IsUp() {
 				status.SetStatus(model.OK, "ok")
+				if st, msg, ok := dockerUpInstanceStatus(i); ok { // shards fork
+					status.SetStatus(st, msg)
+				}
+			} else if st, msg, ok := dockerInstanceStatus(i); ok { // shards fork
+				status.SetStatus(st, msg)
 			} else {
 				if a.app.Id.Kind != model.ApplicationKindExternalService {
 					status.SetStatus(model.WARNING, "down (no metrics)")
@@ -207,6 +214,9 @@ func (a *appAuditor) instances() {
 	if a.app.Id.Kind == model.ApplicationKindUnknown {
 		desired = float32(len(a.app.Instances))
 	}
+	if d, ok := dockerDesiredInstances(a.app); ok { // shards fork
+		desired = d
+	}
 	if periodicJob {
 		availabilityCheck.SetStatus(model.OK, "not checked for periodic jobs")
 		restartsCheck.SetStatus(model.OK, "not checked for periodic jobs")
@@ -241,6 +251,8 @@ func (a *appAuditor) instances() {
 		availabilityCheck.SetStatus(model.UNKNOWN, "no data")
 		restartsCheck.SetStatus(model.UNKNOWN, "no data")
 	}
+
+	a.dockerContainers(report) // shards fork
 
 	if instancesChart != nil {
 		instancesChart.AddSeries("up", up)

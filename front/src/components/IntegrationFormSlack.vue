@@ -2,7 +2,7 @@
     <div>
         <div class="subtitle-1">Slack app</div>
         <div class="caption">
-            Click the button below to create your Slack App using the Coroot configuration. <br />
+            Click the button below to create your Slack App using the shards configuration. <br />
             Once created, click <b>Install to workspace</b> to authorize it.
         </div>
         <v-btn :href="href" target="_blank" color="primary" class="mt-3 mb-5">
@@ -11,9 +11,7 @@
         </v-btn>
 
         <div class="subtitle-1">Slack app icon</div>
-        <div class="caption mb-4">
-            Customize the image (you can use the <a href="https://coroot.com/static/img/coroot_512.png" target="_blank">Coroot logo</a>)
-        </div>
+        <div class="caption mb-4">Customize the image</div>
 
         <div class="subtitle-1">Slack Bot User OAuth Token</div>
         <div class="caption">Click on <b>OAuth and Permissions</b> in the sidebar, copy the <b>Bot User OAuth Token</b> and paste it here.</div>
@@ -40,11 +38,11 @@
 <script>
 const manifest = `
 display_information:
-  name: Coroot
+  name: shards
   description: Track SLOs of your services
 features:
   bot_user:
-    display_name: Coroot
+    display_name: shards
 oauth_config:
   scopes:
     bot:

@@ -4,9 +4,9 @@ sidebar_position: 1
 
 # Overview
 
-Coroot's Logs monitoring enables you to effortlessly analyze your application logs and correlate them with traces, metrics, and profiles.
+shards' Logs monitoring enables you to effortlessly analyze your application logs and correlate them with traces, metrics, and profiles.
 
-Coroot's node-agent automatically discovers and gathers logs from all containers on a node, then transmits them to Coroot.
+shards' node-agent automatically discovers and gathers logs from all containers on a node, then transmits them to shards.
 Additionally, it performs low-overhead log analysis right on the node to identify message severities and recurring patterns.
 This process is seamless and compatible with a wide range of log formats, providing valuable meta-information for quick and easy log analysis.
 
@@ -20,7 +20,7 @@ values are grouped into the same pattern.
 
 This behavior is enabled by default and can be turned off with the `--disable-json-log-parsing` agent flag.
 
-<img alt="Coroot Log Monitoring" src="/img/docs/logs/overview.png" class="card w-1200"/>
+<img alt="shards Log Monitoring" src="/img/docs/logs/overview.png" class="card w-1200"/>
 
 ## Event details
 Clicking on a specific event from the list allows you to access its details, including the full message text, severity, and OpenTelemetry attributes. 
@@ -36,7 +36,7 @@ Clicking the application name allows you to filter log entries for that applicat
 
 ## Correlating logs and traces
 
-If you instrument your apps with the OpenTelemetry SDK to send logs to Coroot's OpenTelemetry collector along with the tracing context, 
+If you instrument your apps with the OpenTelemetry SDK to send logs to shards' OpenTelemetry collector along with the tracing context, 
 you can instantly navigate to the corresponding trace with just one click.
 
 <img alt="Correlating logs and traces" src="/img/docs/logs/logs-to-trace.png" class="card w-1200"/>

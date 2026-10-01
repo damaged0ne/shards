@@ -7,7 +7,7 @@ sidebar_position: 1
 Every developer understands that in order to optimize something, you must first measure it.
 The same principle applies to you cloud costs - measuring them is crucial for optimization.
 
-Now you can easily monitor you cloud costs with Coroot.
+Now you can easily monitor you cloud costs with shards.
 
 <img alt="Cloud cost monitoring" src="/img/docs/cloud_cost/overview.png" class="card w-1200"/>
 
@@ -24,11 +24,11 @@ understand the usage of each node based on actual CPU/memory usage and requests,
 
 ## Applications
 
-Coroot simplifies the monitoring of large infrastructures by introducing the concept of application categories.
-By default, Coroot automatically categorizes apps related to `control-plane` and `monitoring`,
+shards simplifies the monitoring of large infrastructures by introducing the concept of application categories.
+By default, shards automatically categorizes apps related to `control-plane` and `monitoring`,
 but you can customize your categories easily by defining masks for application names and namespaces.
 
-Coroot breaks down costs by categories, but you can easily drill down to any category and view cost allocations by application.
+shards breaks down costs by categories, but you can easily drill down to any category and view cost allocations by application.
 
 
 * **Usage Costs**: actual CPU/Memory usage of the application multiplied by the resource cost on a specific node.
@@ -46,17 +46,17 @@ If a service starts consuming significantly more CPU time than the previous vers
 
 ## How it works
 
-Coroot's node-agent [gathers](https://coroot.com/blog/cloud-metadata) cloud instance metadata of every node and exports it as the `node_cloud_info` metric.
-With this metric, Coroot can determine the cloud provider, region, type, and purchase options (on-demand/spot/reserved) for each instance.
+shards' node-agent [gathers](https://coroot.com/blog/cloud-metadata) cloud instance metadata of every node and exports it as the `node_cloud_info` metric.
+With this metric, shards can determine the cloud provider, region, type, and purchase options (on-demand/spot/reserved) for each instance.
 By leveraging this information, it can quickly determine the price of each node.
 
-To calculate the cost of each resource separately, Coroot assumes that 1 CPU core costs the same as 1GB of memory.
+To calculate the cost of each resource separately, shards assumes that 1 CPU core costs the same as 1GB of memory.
 By doing so, the CPU and memory usage of every application can be easily translated into $$$.
 
 ## Custom cloud pricing
 
-Out of the box, Coroot supports pricing models for AWS, GCP, and Azure. For nodes not running in these clouds, 
-Coroot uses predefined prices based on GCP’s C4 machine family in the us-central1 region. 
+Out of the box, shards supports pricing models for AWS, GCP, and Azure. For nodes not running in these clouds, 
+shards uses predefined prices based on GCP’s C4 machine family in the us-central1 region. 
 These prices can be adjusted in the UI.
 
 <img alt="Custom Cloud Pricing" src="/img/docs/cloud_cost/custom_pricing.png" class="card w-1200"/>
@@ -70,7 +70,7 @@ The prices are defined per hour, based on a single vCPU and 1 GB of memory.
 
 ## Limitations
 
-Coroot has some limitations that are important to note.
+shards has some limitations that are important to note.
 
 * Standard pricing (without discounts)
 * The cost calculation considers only CPU, Memory usage and Traffic (egress, cross-AZ) (support for GPUs and volumes will be added later)

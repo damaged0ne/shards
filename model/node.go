@@ -98,6 +98,8 @@ type Node struct {
 	Fargate           bool
 	Price             *NodePrice
 	DataTransferPrice *DataTransferPrice
+
+	Shards *NodeShards // shards fork: see shards.go
 }
 
 type NodePrice struct {
@@ -136,6 +138,7 @@ func NewNode(clusterId string, id NodeId) *Node {
 		Disks:          map[string]*DiskStats{},
 		CpuUsageByMode: map[string]*timeseries.TimeSeries{},
 		GPUs:           map[string]*GPU{},
+		Shards:         NewNodeShards(),
 	}
 }
 
@@ -178,6 +181,9 @@ func (n *Node) IsUp() bool {
 	}
 	if len(n.Instances) == 1 && n.Instances[0].Owner.Id.Kind == ApplicationKindOCICache {
 		return n.Instances[0].OCICache.IsUp()
+	}
+	if len(n.Instances) == 1 && n.Instances[0].Cloud != nil && n.CpuUsagePercent.IsEmpty() { // shards fork: serverless services report no CPU
+		return n.Instances[0].Cloud.IsUp()
 	}
 
 	return !n.CpuUsagePercent.TailIsEmpty()

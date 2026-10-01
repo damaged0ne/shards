@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Overview
 
-Coroot's Continuous Profiling allows you easily identify and analyze any unexpected spikes in CPU and memory usage down to the precise line of code.
+shards' Continuous Profiling allows you easily identify and analyze any unexpected spikes in CPU and memory usage down to the precise line of code.
 This allows you to quickly pinpoint and resolve performance bottlenecks, optimize your application's resource utilization,
 and deliver a faster and more reliable user experience.
 
@@ -21,31 +21,31 @@ These profilers operate at the user-space level and provide insights into the be
 eBPF-based profiling relies on the ability to attach eBPF programs to various events in the kernel,
 allowing for the collection of performance-related data without modifying the source code of the applications being profiled.
 
-Coroot's profiling stack consists of several components:
+shards' profiling stack consists of several components:
 
-* `Coroot-node-agent` monitors running processes, gathers their profiles, and sends the profiles to the Coroot.
-* `coroot-cluster-agent` gathers profiles from applications and sends them to Coroot.
+* `shards-node-agent` monitors running processes, gathers their profiles, and sends the profiles to shards.
+* `shards-cluster` gathers profiles from applications and sends them to shards.
 * ClickHouse is used as a database for storing profiling data.
-* Coroot queries profiles of a given application and visualizes them as FlameGraphs for analysis.
+* shards queries profiles of a given application and visualizes them as FlameGraphs for analysis.
 
 <img alt="ebpf-based profiling" src="/img/docs/profiling/ebpf-based-profiling.png" class="card w-1200"/>
 
-When you use Helm to install Coroot, all these components are automatically installed and seamlessly integrated with each other.
+When you use Helm to install shards, all these components are automatically installed and seamlessly integrated with each other.
 
 The eBPF-based approach can only gather CPU profiles.
 To collect other profile types, such as memory or lock contention, language-specific profilers are used.
 
-To reduce network traffic and the memory Coroot needs for profile ingestion, `coroot-node-agent` prunes insignificant
+To reduce network traffic and the memory shards needs for profile ingestion, `shards-node-agent` prunes insignificant
 code paths before uploading a profile: stacks are truncated at frames accounting for less than 0.25% of the profile total
 (configurable via `--profiles-prune-fraction`). Since the flame graph hides such frames anyway, and the value of a truncated
 stack is preserved on its parent frames, this doesn't affect what you see in the UI.
 
 ## Language-specific profiling
 
-* **[Go profiling](/profiling/go-profiling)**: `coroot-node-agent` automatically collects heap profiles from all Go
+* **[Go profiling](/profiling/go-profiling)**: `shards-node-agent` automatically collects heap profiles from all Go
   processes by reading runtime memory profiling data directly from process memory. No application changes needed.
-  For additional profile types (CPU, blocking, mutex), `coroot-cluster-agent` can scrape pprof endpoints from annotated pods.
-* **[Java profiling](/profiling/java-profiling)**: `coroot-node-agent` dynamically loads async-profiler into HotSpot JVMs.
+  For additional profile types (CPU, blocking, mutex), `shards-cluster` can scrape pprof endpoints from annotated pods.
+* **[Java profiling](/profiling/java-profiling)**: `shards-node-agent` dynamically loads async-profiler into HotSpot JVMs.
   No application changes needed. Supports CPU, memory allocation, and lock contention profiles.
 
 ## Using profiles

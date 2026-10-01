@@ -4,7 +4,7 @@ sidebar_position: 6.1
 
 # Multi-cluster
 
-Coroot multi-cluster projects let you combine several existing projects into a single, aggregated view. Use them to monitor the same application that runs across multiple Kubernetes clusters, regions, or data centers without duplicating ingestion pipelines.
+shards multi-cluster projects let you combine several existing projects into a single, aggregated view. Use them to monitor the same application that runs across multiple Kubernetes clusters, regions, or data centers without duplicating ingestion pipelines.
 
 <img alt="Prometheus Configuration" src="/img/docs/multi-cluster-settings.png" class="card w-1200"/>
 
@@ -21,7 +21,7 @@ Coroot multi-cluster projects let you combine several existing projects into a s
 3. In **Member projects**, select the projects you want to aggregate.
 4. Save the changes. The new multi-cluster project appears in the project selector and renders a combined view of its members.
 
-When you return to the configuration screen, Coroot shows a banner confirming that the project aggregates telemetry from its members. Because the project no longer receives data directly, the **Project API keys**, **Prometheus**, and **ClickHouse** tabs remain disabled.
+When you return to the configuration screen, shards shows a banner confirming that the project aggregates telemetry from its members. Because the project no longer receives data directly, the **Project API keys**, **Prometheus**, and **ClickHouse** tabs remain disabled.
 
 ## Configure via `configuration.yaml`
 
@@ -39,17 +39,17 @@ projects:
       - prod-us
 ```
 
-During startup Coroot creates (or updates) the `prod-global` project and links it to the `prod-eu` and `prod-us` projects. Each member must already exist either in the database or earlier in the same configuration file.
+During startup shards creates (or updates) the `prod-global` project and links it to the `prod-eu` and `prod-us` projects. Each member must already exist either in the database or earlier in the same configuration file.
 
 ## Configure via Coroot Operator
 
-When you manage Coroot with the Coroot Operator, declare multi-cluster projects in the `spec.projects` section of the `Coroot` custom resource. Set `memberProjects` on the project and omit API keys—the operator recognises it as an aggregated project.
+When you manage shards with the Coroot Operator, declare multi-cluster projects in the `spec.projects` section of the `Coroot` custom resource. Set `memberProjects` on the project and omit API keys—the operator recognises it as an aggregated project.
 
 ```yaml
 apiVersion: coroot.com/v1
 kind: Coroot
 metadata:
-  name: coroot
+  name: shards
 spec:
   projects:
     - name: prod-eu
@@ -64,7 +64,7 @@ spec:
         - prod-us
 ```
 
-When the configuration is applied, Coroot automatically creates the multi-cluster view on startup.
+When the configuration is applied, shards automatically creates the multi-cluster view on startup.
 
 ## Limitations
 

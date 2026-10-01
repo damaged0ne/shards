@@ -27,6 +27,10 @@ func NewAlertNotifier(database *db.DB) *AlertNotifier {
 }
 
 func (n *AlertNotifier) Enqueue(project *db.Project, app *model.Application, alert *model.Alert, rule *model.AlertingRule, now timeseries.Time) {
+	if muteAlertNotification(n.db, project, app, alert, now) { // shards fork: maintenance windows
+		return
+	}
+	notifyAgentsAlert(project, app, alert, rule) // shards fork
 	category := model.ApplicationCategoryApplication
 	if app != nil {
 		category = app.Category
@@ -55,6 +59,9 @@ func (n *AlertNotifier) Enqueue(project *db.Project, app *model.Application, ale
 	}
 	if webhook := notificationSettings.Webhook; webhook != nil && webhook.Enabled {
 		n.enqueue(now, project, alert, rule, db.IncidentNotificationDestination{IntegrationType: db.IntegrationTypeWebhook})
+	}
+	for _, d := range notificationSettings.ShardsNotificationDestinations.Enabled() { // shards fork
+		n.enqueue(now, project, alert, rule, d)
 	}
 	n.sendAlerts()
 }
@@ -144,7 +151,8 @@ func (n *AlertNotifier) enqueue(now timeseries.Time, project *db.Project, alert 
 		details.Duration = utils.FormatDurationShort(alert.ResolvedAt.Sub(alert.OpenedAt), 2)
 	}
 	switch destination.IntegrationType {
-	case db.IntegrationTypeSlack, db.IntegrationTypeTeams, db.IntegrationTypeWebhook:
+	case db.IntegrationTypeSlack, db.IntegrationTypeTeams, db.IntegrationTypeWebhook,
+		db.IntegrationTypeTelegram, db.IntegrationTypeDiscord, db.IntegrationTypeMattermost, db.IntegrationTypeEmail: // shards fork
 		if alert.ResolvedAt > 0 {
 			n.onResolve("", notification, details)
 		} else {
@@ -219,6 +227,9 @@ func EnqueueResolvedAlerts(database *db.DB, project *db.Project, alerts []*model
 	now := timeseries.Now()
 	for _, alert := range alerts {
 		alert.ResolvedAt = now
+		if muteAlertNotification(database, project, nil, alert, now) { // shards fork: maintenance windows
+			continue
+		}
 		category := alert.ApplicationCategory
 		if category == "" {
 			if rule.NotificationCategory != "" {
@@ -319,4 +330,5 @@ func enqueueResolvedAlert(database *db.DB, now timeseries.Time, project *db.Proj
 		}
 		database.PutAlertNotification(notification)
 	}
+	enqueueResolvedAlertShards(database, now, project, alert, settings, details) // shards fork
 }

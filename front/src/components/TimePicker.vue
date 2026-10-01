@@ -1,8 +1,8 @@
 <template>
     <v-menu v-model="menu" :close-on-content-click="false" left offset-y attach=".v-app-bar">
         <template #activator="{ on, attrs }">
-            <v-btn v-on="on" plain outlined height="40" class="px-2">
-                <v-icon>mdi-clock-outline</v-icon>
+            <v-btn v-on="on" plain outlined height="32" class="px-2 time-picker-btn">
+                <v-icon size="17">mdi-clock-outline</v-icon>
                 <span v-if="!small" class="ml-2">{{ intervals.find((i) => i.active).text }}</span>
                 <v-icon v-if="!small" small class="ml-2"> mdi-chevron-{{ attrs['aria-expanded'] === 'true' ? 'up' : 'down' }} </v-icon>
             </v-btn>
@@ -41,7 +41,7 @@
                     <v-btn small color="primary" :disabled="!valid" type="submit" @click="apply">Apply</v-btn>
                 </div>
             </v-form>
-            <v-date-picker v-if="picker" v-model="dates" @change="change" no-title range dark color="currentColor" class="picker" />
+            <v-date-picker v-if="picker" v-model="dates" @change="change" no-title range color="primary" class="picker" />
         </v-list>
     </v-menu>
 </template>
@@ -174,12 +174,21 @@ export default {
 </script>
 
 <style scoped>
+.time-picker-btn {
+    font-size: 13px !important;
+    color: var(--text-1) !important;
+    opacity: 1 !important;
+    background: var(--surface);
+}
+.time-picker-btn .v-icon {
+    color: var(--text-2);
+}
 .list:deep(.v-list-item) {
     min-height: 36px;
 }
 .picker:deep(.v-picker__body) {
-    background-color: var(--background-dark);
+    background-color: var(--surface-sunk);
     border-radius: 0 !important;
-    border-right: 1px solid var(--border-dark);
+    border-right: 1px solid var(--border);
 }
 </style>

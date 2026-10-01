@@ -25,6 +25,7 @@ var (
 			NewPermission(ScopeDashboards, ActionEdit, nil),
 			NewPermission(ScopeProjectAlertingRules, ActionEdit, nil),
 			NewPermission(ScopeProjectAlerts, ActionEdit, nil),
+			NewPermission(ScopeProjectProbes, ActionEdit, nil), // shards fork
 		),
 		NewRole(RoleViewer,
 			NewPermission(ScopeAll, ActionView, nil),

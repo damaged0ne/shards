@@ -1,6 +1,9 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import vuetify from '@/plugins/vuetify';
+import '@/styles/tokens.css';
+import '@/app.css';
+import { init as initTheme } from '@/utils/theme';
 import '@/plugins/resize';
 import '@/plugins/highlight';
 import pluralize from 'pluralize';
@@ -15,8 +18,9 @@ import Project from '@/views/Project';
 import Overview from '@/views/Overview';
 import Login from '@/views/auth/Login.vue';
 import Logout from '@/views/auth/Logout.vue';
-import Saml from '@/views/auth/Saml.vue';
 import MCPConsent from '@/views/auth/MCPConsent.vue';
+
+initTheme(vuetify);
 
 Vue.config.productionTip = false;
 Vue.config.devtools = false;
@@ -30,7 +34,6 @@ const router = new VueRouter({
     routes: [
         { path: '/login', name: 'login', component: Login, meta: { anonymous: true } },
         { path: '/logout', name: 'logout', component: Logout, meta: { anonymous: true } },
-        { path: '/sso/saml', name: 'saml', component: Saml, meta: { anonymous: true } },
         { path: '/auth/mcp-consent', name: 'mcp-consent', component: MCPConsent },
         { path: '/p/settings/:tab?', name: 'project_new', component: Project, props: true },
         { path: '/p/:projectId/settings/:tab?', name: 'project_settings', component: Project, props: true, meta: { stats: { params: ['tab'] } } },

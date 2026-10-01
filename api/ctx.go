@@ -25,9 +25,9 @@ type Context struct {
 	Alerts         map[string]int                    `json:"alerts"`
 	Fluxcd         *GitOpsStatus                     `json:"fluxcd"`
 	Argocd         *GitOpsStatus                     `json:"argocd"`
-	License        *License                          `json:"license,omitempty"`
 	Multicluster   bool                              `json:"multicluster"`
 	MemberProjects []string                          `json:"member_projects,omitempty"`
+	Attention      *AttentionCounts                  `json:"attention,omitempty"` // shards fork
 }
 
 type GitOpsStatus struct {
@@ -41,6 +41,7 @@ type Status struct {
 	NodeAgent        NodeAgent         `json:"node_agent"`
 	KubeStateMetrics *KubeStateMetrics `json:"kube_state_metrics"`
 	Clouds           []CloudStatus     `json:"clouds"`
+	ClusterAgent     *ClusterAgent     `json:"cluster_agent,omitempty"` // shards fork
 }
 
 type CloudStatus struct {
@@ -81,15 +82,6 @@ type Node struct {
 	ClusterId string `json:"cluster_id"`
 }
 
-type License struct {
-	Invalid bool   `json:"invalid"`
-	Message string `json:"message"`
-}
-
-type LicenseManager interface {
-	CheckLicense() *License
-}
-
 func (api *Api) WithContext(p *db.Project, cacheStatus *cache.Status, w *model.World, data any) DataWithContext {
 	if p == nil {
 		return DataWithContext{}
@@ -108,16 +100,9 @@ func (api *Api) WithContext(p *db.Project, cacheStatus *cache.Status, w *model.W
 			Argocd:         gitOpsStatus(w, w != nil && w.ArgoCD != nil, overview.CountArgoCDIssues),
 			Multicluster:   p.Multicluster(),
 			MemberProjects: p.Settings.MemberProjects,
+			Attention:      api.attentionCounts(p.Id), // shards fork
 		},
 		Data: data,
-	}
-	if lm := api.licenseMgr; lm != nil {
-		if l := lm.CheckLicense(); l != nil {
-			res.Context.License = l
-			if l.Invalid {
-				res.Data = nil
-			}
-		}
 	}
 	return res
 }
@@ -215,6 +200,7 @@ func renderStatus(p *db.Project, cacheStatus *cache.Status, w *model.World, glob
 		{"aws", "AWS", views.AWS(w, p.Settings.Integrations.AWS != nil)},
 		{"gcp", "GCP", views.GCP(w)},
 		{"oci", "OCI", views.OCI(w)},
+		{"azure", "Azure", views.Azure(w)}, // shards fork
 	} {
 		cs := CloudStatus{Id: c.id, Name: c.name}
 		switch {
@@ -232,6 +218,11 @@ func renderStatus(p *db.Project, cacheStatus *cache.Status, w *model.World, glob
 			cs.Message = english.Plural(len(c.view.Instances), "instance", "") + " discovered"
 		}
 		res.Clouds = append(res.Clouds, cs)
+	}
+
+	res.ClusterAgent = renderClusterAgentStatus(w) // shards fork
+	if res.ClusterAgent != nil && res.ClusterAgent.Status >= model.WARNING {
+		res.Status = model.WARNING
 	}
 
 	return res

@@ -14,16 +14,16 @@ To configure an **Events API V2** integration in your Pagerduty account:
   <img alt="Pagerduty add integration" src="/img/docs/pagerduty-integration-step2.png" class="card w-800"/>
 * Choose the **Events API V2** integration
   <img alt="Pagerduty Events API v2" src="/img/docs/pagerduty-integration-step3.png" class="card w-800"/>
-* Change the **Integration Name**, if necessary (e.g. Coroot)
+* Change the **Integration Name**, if necessary (e.g. shards)
 * Copy the **Integration Key**
   <img alt="Pagerduty Integration Key" src="/img/docs/pagerduty-integration-step4.png" class="card w-800"/>
 
 
-## Configure Coroot
+## Configure shards
 
 * Go to the **Project Settings** → **Integrations**
 * Create a Pagerduty integration
 * Paste the Integration Key to the form
-  <img alt="Coroot Pagerduty Integration" src="/img/docs/pagerduty-integration.png" class="card w-800"/>
+  <img alt="shards Pagerduty Integration" src="/img/docs/pagerduty-integration.png" class="card w-800"/>
 * You can also send a test alert to check the integration
-  <img alt="Coroot Pagerduty Test Alert" src="/img/docs/pagerduty-integration-test.png" class="card w-800"/>
+  <img alt="shards Pagerduty Test Alert" src="/img/docs/pagerduty-integration-test.png" class="card w-800"/>

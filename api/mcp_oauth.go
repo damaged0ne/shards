@@ -113,7 +113,8 @@ func (api *Api) mcpIssueToken(audience string, userId int, clientId string, ttl 
 func (api *Api) MCPUserFromBearer(r *http.Request) *db.User {
 	auth := r.Header.Get("Authorization")
 	if !strings.HasPrefix(auth, mcpBearerPrefix) {
-		return nil
+		// agents may also pass a user API key via X-Api-Key
+		return api.GetUserByApiKey(r)
 	}
 	token := strings.TrimPrefix(auth, mcpBearerPrefix)
 	var claims mcpTokenClaims

@@ -12,17 +12,17 @@
                 <v-btn icon @click="dialog = false"><v-icon>mdi-close</v-icon></v-btn>
             </div>
             <p>
-                <a href="https://github.com/coroot/coroot-node-agent" target="_blank">Coroot-node-agent</a> gathers metrics, traces, logs, and
-                profiles, and sends them to Coroot. To ingest telemetry data, the agent must have the address of the Coroot instance and the
-                capability to establish TCP connections with it.
+                <a href="https://github.com/coroot/coroot-node-agent" target="_blank">The node agent</a> gathers metrics, traces, logs, and profiles,
+                and sends them to shards. To ingest telemetry data, the agent must have the address of the shards instance and the capability to
+                establish TCP connections with it.
             </p>
 
             <v-form v-model="valid">
-                <div class="subtitle-1">Coroot URL:</div>
+                <div class="subtitle-1">shards URL:</div>
                 <v-text-field
                     v-model="coroot_url"
                     :rules="[$validators.notEmpty, $validators.isUrl]"
-                    placeholder="http://coroot:8080"
+                    placeholder="http://shards:8080"
                     outlined
                     dense
                 />
@@ -57,7 +57,7 @@
                     <Code :disabled="!valid">
                         <pre>
 curl -sfL https://raw.githubusercontent.com/coroot/coroot-node-agent/main/install.sh | \
-  COLLECTOR_ENDPOINT={{ coroot_url || '&lt;COROOT_URL_HERE&gt;' }} \
+  COLLECTOR_ENDPOINT={{ coroot_url || '&lt;SHARDS_URL_HERE&gt;' }} \
   API_KEY={{ api_key || '&lt;API_KEY_HERE&gt;' }} \
   SCRAPE_INTERVAL={{ scrape_interval }} \
   sh -
@@ -84,7 +84,7 @@ sudo journalctl -u coroot-node-agent
                     </p>
                     <Code :disabled="!valid">
                         <pre>
-$env:COROOT_COLLECTOR_ENDPOINT = '{{ coroot_url || '&lt;COROOT_URL_HERE&gt;' }}'
+$env:COROOT_COLLECTOR_ENDPOINT = '{{ coroot_url || '&lt;SHARDS_URL_HERE&gt;' }}'
 $env:COROOT_API_KEY = '{{ api_key || '&lt;API_KEY_HERE&gt;' }}'
 $env:COROOT_SCRAPE_INTERVAL = '{{ scrape_interval }}'
 iwr -useb https://raw.githubusercontent.com/coroot/coroot-node-agent/main/install.ps1 | iex
@@ -123,7 +123,7 @@ docker run --detach --name coroot-node-agent \
   -v /sys/fs/cgroup:/host/sys/fs/cgroup:ro \
   ghcr.io/coroot/coroot-node-agent:latest \
   --cgroupfs-root=/host/sys/fs/cgroup \
-  --collector-endpoint={{ coroot_url || '&lt;COROOT_URL_HERE&gt;' }} \
+  --collector-endpoint={{ coroot_url || '&lt;SHARDS_URL_HERE&gt;' }} \
   --api-key={{ api_key }} \
   --scrape-interval={{ scrape_interval }}
                         </pre>
@@ -142,7 +142,7 @@ docker rm -f coroot-node-agent
                     </Code>
                 </v-tab-item>
                 <v-tab-item transition="none">
-                    <p>Add the Coroot helm chart repo:</p>
+                    <p>Add the helm chart repo:</p>
 
                     <Code>
                         <pre>
@@ -151,7 +151,7 @@ helm repo update coroot
                         </pre>
                     </Code>
 
-                    <p>Next, install the Coroot Operator:</p>
+                    <p>Next, install the operator:</p>
 
                     <Code>
                         <pre>
@@ -159,11 +159,11 @@ helm install -n coroot --create-namespace coroot-operator coroot/coroot-operator
                         </pre>
                     </Code>
 
-                    <p>Install Coroot's agents (node-agent and cluster-agent):</p>
+                    <p>Install the agents (node-agent and cluster-agent):</p>
 
                     <Code :disabled="!valid">
                         <pre>
-helm install -n coroot coroot coroot/{{ helm_chart }} --set "apiKey={{ api_key }},agentsOnly.corootURL={{ coroot_url || '&lt;COROOT_URL_HERE&gt;' }}"
+helm install -n coroot coroot coroot/{{ helm_chart }} --set "apiKey={{ api_key }},agentsOnly.corootURL={{ coroot_url || '&lt;SHARDS_URL_HERE&gt;' }}"
                         </pre>
                     </Code>
                 </v-tab-item>
@@ -191,7 +191,7 @@ export default {
             dialog: false,
             tab: null,
             coroot_url: !local ? location.origin : '',
-            helm_chart: window.coroot.edition === 'Enterprise' ? 'coroot-ee' : 'coroot-ce',
+            helm_chart: 'coroot-ce',
             api_keys: [],
             api_key: '',
             scrape_interval: '15s',

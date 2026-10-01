@@ -60,7 +60,7 @@ Memory, latency and network traffic with every request traced:
 
 ## The alternative: eBPF
 
-Coroot's [eBPF-based tracing](/tracing/ebpf-based-tracing) sees the same requests and Valkey calls from the kernel, with no code in the application.
-The app spends no CPU or memory on it, sampling can be changed without a redeploy, and the cost is paid once per node by coroot-node-agent instead of once per process.
+shards' [eBPF-based tracing](/tracing/ebpf-based-tracing) sees the same requests and Valkey calls from the kernel, with no code in the application.
+The app spends no CPU or memory on it, sampling can be changed without a redeploy, and the cost is paid once per node by shards-node-agent instead of once per process.
 It doesn't replace OpenTelemetry where you need in-process context, like custom spans, business attributes or async work.
 But for the request/response protocols it understands, it gives you the same request-level visibility for free from the application's point of view.

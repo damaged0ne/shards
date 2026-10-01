@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Authentication
 
-After installation, Coroot will prompt you to set a password for the admin user:
+After installation, shards will prompt you to set a password for the admin user:
 
 <img alt="Setting Admin Password" src="/img/docs/admin_password.png" class="card w-1200"/>
 
@@ -22,7 +22,7 @@ setting it to one of the following roles: `Admin`, `Editor`, or `Viewer`.
 To reset admin password, use the following command:
 
 ```bash
-$ coroot set-admin-password
+$ shards set-admin-password
 Enter new password:
 Confirm new password:
 Admin password set successfully.
@@ -30,7 +30,7 @@ Admin password set successfully.
 
 ## Manage users
 
-To manage Coroot users, go to the **Project Settings**, click on **Organization**:
+To manage shards users, go to the **Project Settings**, click on **Organization**:
 
 <img alt="Manage Users" src="/img/docs/users.png" class="card w-1200"/>
 
@@ -38,16 +38,15 @@ To add a new user, click "Add user", fill out the form, and select a role.
 
 <img alt="Add user" src="/img/docs/add_user.png"  class="card w-600"/>
 
-The Coroot Community Edition includes three predefined roles: `Admin`, `Editor`, and `Viewer`. 
-The Enterprise Edition allows you to create custom roles with granular permissions.
+shards includes three predefined roles: `Admin`, `Editor`, and `Viewer`.
 
 ## Service accounts and API keys
 
 A service account is a user meant for programmatic access: it has no password and cannot log in, and it authenticates with an API key instead.
-Use it for anything that talks to Coroot without a person behind it, such as an autonomous AI agent using the [MCP endpoint](/mcp/overview#authentication) or a script calling the HTTP API.
+Use it for anything that talks to shards without a person behind it, such as an autonomous AI agent using the [MCP endpoint](/mcp/overview#authentication) or a script calling the HTTP API.
 
 A service account has a regular role, so RBAC applies to it exactly as to a human user: a `Viewer` can read everything but cannot resolve alerts,
-an `Editor` can, and an Enterprise Edition custom role can be limited to specific projects.
+and an `Editor` can.
 
 To create a service account, click **Add user**, check **Service account**, enter a name, and select a role.
 
@@ -61,8 +60,8 @@ Every user can manage their own API keys through **API keys** in the user menu (
 
 <img alt="API keys in the user menu" src="/img/docs/user_menu_api_keys.png" class="card w-400"/>
 
-Users with the permission to manage users (`Admin` in the Community Edition) can also manage the keys of any user, including service accounts, by clicking the key icon next to the user.
-A newly created key is shown only once, so copy it right away. Coroot stores only its hash.
+Users with the permission to manage users (`Admin`) can also manage the keys of any user, including service accounts, by clicking the key icon next to the user.
+A newly created key is shown only once, so copy it right away. shards stores only its hash.
 
 <img alt="API keys of a service account" src="/img/docs/service_account_api_keys.png" class="card w-600"/>
 
@@ -77,7 +76,7 @@ Authorization: Bearer <api key>
 ### Defining service accounts in the config file
 
 For infrastructure-as-code setups, service accounts and their keys can be defined in the [config file](/configuration/configuration).
-Coroot creates such accounts on startup and keeps their keys in sync with the config: keys listed here are added, keys no longer listed are removed, and unchanged keys are left untouched,
+shards creates such accounts on startup and keeps their keys in sync with the config: keys listed here are added, keys no longer listed are removed, and unchanged keys are left untouched,
 so a config change never interrupts an agent whose key is unchanged. Descriptions are required and must be unique within an account. Accounts defined this way are locked in the UI, and their keys are managed only through the config.
 
 ```yaml
@@ -103,201 +102,6 @@ spec:
       apiKeys:
         - description: production investigation agent
           keySecret:
-            name: coroot-claude-agent
+            name: shards-claude-agent
             key: api-key
 ```
-
-Service accounts are independent of SSO: they never log in, so they keep working when [Force SSO](#force-sso) is enabled.
-
-## Single Sign-On (SSO)
-
-:::info
-Single Sign-On is available only in Coroot Enterprise (from $1 per CPU core/month). [Start](https://coroot.com/account) your free trial today.
-:::
-
-Single Sign-On (SSO) feature streamlines user authentication by allowing team members to access the Coroot platform using
-a single set of credentials linked to an identity provider, such as Google Workspace, Okta, or other SSO solutions.
-With SSO, users no longer need to manage separate passwords for Coroot, enhancing both security and user experience.
-
-Coroot supports two SSO protocols:
-* **SAML 2.0** - Coroot acts as the service provider (SP) and communicates with your identity provider (IdP) using SAML assertions.
-* **OIDC (OpenID Connect)** - A protocol built on OAuth 2.0, commonly used by Google, Azure AD, Okta, and other providers.
-
-### Setup SAML with Okta
-
-* Log in to the [Okta portal](https://login.okta.com/).
-* Go to the Admin Console in your Okta organization.
-* Navigate to **Applications** > **Applications**.
-* Click **Create App Integration**.
-* Select **SAML 2.0** as the Sign-in method.
-* Click Next.
-* On the General Settings tab, enter a name for your Coroot integration. You can also upload the [logo](https://coroot.com/static/img/coroot_512.png).
-  <img alt="Okta app" src="/img/docs/saml_okta_app.png" class="card w-600"/>
-* On the Configure SAML tab:
-  * For both Single sign on URL and Audience URI (SP Entity ID) fields use the https://COROOT_ADDRESS/sso/saml URL.  
-    <img alt="SAML Okta params" src="/img/docs/saml_okta_params.png"  class="card w-600"/>
-  * In the Attribute Statements section, configure `Email`, `FirstName`, and `LastName` attributes.
-    <img alt="Okta SAML attributes" src="/img/docs/saml_okta_attributes.png" class="card w-600"/>
-* Click Next.
-* On the final Feedback tab, fill out the form and then click Finish.
-* Download **Identity Provider Metadata XML** using the `Metadata URL`:
-  <img alt="Okta SAML metadata" src="/img/docs/saml_okta_metadata.png" class="card w-600"/>
-* [Configure and enable](#configure-saml-for-coroot) SAML authentication for Coroot.
-
-### Setup SAML with Keycloak
-
-* Log in to Keycloak as an administrator.
-* Select **Clients**, then click **Create client**.
-  <img alt="Keycloak client general settings" src="/img/docs/saml_keycloak_client_general_settings.png" class="card w-600"/>
-* Click **Next** and configure the **Home URL** and **Valid redirect URIs** fields.
-  <img alt="Keycloak client login settings" src="/img/docs/saml_keycloak_client_login_settings.png" class="card w-600"/>
-* **Save** the client.
-* Under the **Keys** tab, set **Client signature required** to **Off**.
-  <img alt="Keycloak client keys settings" src="/img/docs/saml_keycloak_client_keys_settings.png" class="card w-600"/>
-* Navigate to the **Client scopes** tab and click **http://&lt;COROOT ADDRESS&gt;/sso/saml-dedicated**.
-  <img alt="Keycloak client scopes" src="/img/docs/saml_keycloak_client_scopes.png" class="card w-600"/>
-* Click **Add predefined mapper**, select the **X500 email**, **X500 givenName**, and **X500 surname** attributes, and click **Add**.
-  <img alt="Keycloak client mappers" src="/img/docs/saml_keycloak_client_mappers.png" class="card w-600"/>
-* Configure attributes mapping.
-  :::info
-  Coroot expects to receive the following attributes: <b>Email</b>, <b>FirstName</b>, and <b>LastName</b>
-  :::
-  <img alt="Keycloak client mappers" src="/img/docs/saml_keycloak_client_attributes.png" class="card w-600"/>
-  * Click **X500 email** and set **SAML Attribute Name** to _Email_, and **SAML Attribute NameFormat** to _Basic_.
-    <img alt="Keycloak client mappers Email" src="/img/docs/saml_keycloak_client_attributes_email.png" class="card w-600"/>
-  * Click **X500 givenName** and set **SAML Attribute Name** to _FirstName_, and **SAML Attribute NameFormat** to _Basic_.
-    <img alt="Keycloak client mappers Email" src="/img/docs/saml_keycloak_client_attributes_firstname.png" class="card w-600"/>
-  * Click **X500 surname** and set **SAML Attribute Name** to _LastName_, and **SAML Attribute NameFormat** to _Basic_.
-    <img alt="Keycloak client mappers Email" src="/img/docs/saml_keycloak_client_attributes_lastname.png" class="card w-600"/>
-* Within you realm, select **Realm settings** and download **SAML 2.0 Identity Provider Metadata**
-  <img alt="Keycloak SAML metadata" src="/img/docs/saml_keycloak_metadata.png" class="card w-600"/>
-* [Configure and enable](#configure-saml-for-coroot) SAML authentication for Coroot.
-
-### Setup SAML with OneLogin
-
-* Log in to the [OneLogin Admin portal](https://app.onelogin.com/).
-* Navigate to **Applications** > **Applications**, then click **Add App**.
-* Search for **SAML Custom Connector (Advanced)** and select it.
-* Enter a name for your Coroot integration (you can also upload the [logo](https://coroot.com/static/img/coroot_512.png)), then click **Save**.
-* On the **Configuration** tab, set the following fields, all using the `https://COROOT_ADDRESS/sso/saml` URL:
-  * **Audience (EntityID)**
-  * **Recipient**
-  * **ACS (Consumer) URL Validator**
-  * **ACS (Consumer) URL**
-
-  Leave **RelayState** empty — Coroot manages it automatically.
-  <img alt="OneLogin SAML configuration" src="/img/docs/saml_onelogin_params.png" class="card w-800"/>
-* On the **Parameters** tab, configure the attribute mappings.
-  :::info
-  Coroot expects to receive the following attributes: <b>Email</b>, <b>FirstName</b>, and <b>LastName</b>
-  :::
-  Add the `Email`, `FirstName`, and `LastName` fields, and set the **NameID value** to **Email**.
-  <img alt="OneLogin SAML attributes" src="/img/docs/saml_onelogin_attributes.png" class="card w-800"/>
-  For each field, make sure the **Include in SAML assertion** flag is enabled, otherwise the attribute won't be sent to Coroot.
-  <img alt="OneLogin SAML attribute - include in assertion" src="/img/docs/saml_onelogin_attribute_email.png" class="card w-600"/>
-* Click **Save**.
-* On the **Access** tab (or **Users**), assign the app to the users who should be able to log in to Coroot.
-* On the **SSO** tab, copy the **Issuer URL** / download the **Identity Provider Metadata XML**.
-* [Configure and enable](#configure-saml-for-coroot) SAML authentication for Coroot.
-
-### Configure SAML for Coroot
-
-* Navigate to the **Project Settings** > **Organization** > **Single Sign-On (SAML)** section.
-  <img alt="SSO" src="/img/docs/saml_upload_metadata.png" class="card w-800"/>
-  
-* Use the **Upload Identity Provider Metadata XML** button to upload the IDP metadata file that was previously downloaded.
-
-* Click Save and Enable.
-  <img alt="SSO Enabled" src="/img/docs/saml_enabled.png"  class="card w-800"/>
-
-* Once Single Sign-On is enabled, users can click the "Login with SSO" button on the login page to authenticate through the Identity Provider.
-
-Each team member authenticated through the Identity Provider will be displayed in the Users list in Coroot, allowing you to manually change their roles.
-
-### Setup OIDC with Google Workspace
-
-* Go to the [Google Cloud Console](https://console.cloud.google.com/).
-* Select your project or create a new one.
-* Navigate to **APIs & Services** > **Credentials**.
-* Click **Create Credentials** > **OAuth client ID**.
-* Select **Web application** as the application type.
-* Enter a name for your OAuth client (e.g., "Coroot SSO").
-* Under **Authorized redirect URIs**, add: `https://COROOT_ADDRESS/sso/oidc`
-  <img alt="Google OAuth redirect URI" src="/img/docs/google_oidc.png" class="card w-600"/>
-* Click **Create**.
-* Copy the **Client ID** and **Client Secret**.
-* [Configure and enable](#configure-oidc-for-coroot) OIDC authentication for Coroot using:
-  * Issuer URL: `https://accounts.google.com`
-  * Client ID and Client Secret from the previous step
-
-### Setup OIDC with Azure AD (Entra ID)
-
-* Log in to the [Azure Portal](https://portal.azure.com/).
-* Navigate to **Microsoft Entra ID** (formerly Azure Active Directory).
-* Go to **App registrations** > **New registration**.
-* Enter a name for your application (e.g., "Coroot SSO").
-* Under **Redirect URI**, select **Web** and enter: `https://COROOT_ADDRESS/sso/oidc`
-* Click **Register**.
-* On the application overview page, copy the **Application (client) ID** and **Directory (tenant) ID**.
-* Navigate to **Certificates & secrets** > **New client secret**.
-* Add a description and select an expiration period.
-* Copy the **Value** of the new secret (this is your Client Secret).
-* [Configure and enable](#configure-oidc-for-coroot) OIDC authentication for Coroot using:
-  * Issuer URL: `https://login.microsoftonline.com/{tenant-id}/v2.0` (replace `{tenant-id}` with your Directory ID)
-  * Client ID and Client Secret from the previous steps
-
-### Configure OIDC for Coroot
-
-* Navigate to the **Project Settings** > **Organization** > **Single Sign-On** section.
-* Select **OIDC** as the provider.
-  <img alt="OIDC Configuration" src="/img/docs/oidc_form.png" class="card w-800"/>
-
-* Enter the following:
-  * **Issuer URL**: The URL of your identity provider (e.g., `https://accounts.google.com`)
-  * **Client ID**: The client ID from your identity provider
-  * **Client Secret**: The client secret from your identity provider
-  * **Default Role**: The role assigned to new users authenticated through SSO
-
-* Copy the **Redirect URI** displayed and ensure it matches the redirect URI configured in your identity provider.
-
-* Click **Save and Enable**.
-
-* Once OIDC is enabled, users can click the "Login with SSO" button on the login page to authenticate.
-
-<img alt="Login with SSO" src="/img/docs/login_with_sso.png" class="card w-800"/>
-
-:::info
-Coroot expects to receive the **email**, **given_name**, and **family_name** claims from the ID token.
-Most OIDC providers include these claims by default when the `openid`, `profile`, and `email` scopes are requested.
-:::
-
-### Force SSO
-
-You can enforce SSO-only authentication by enabling the **Force SSO** option. When enabled:
-* The login page will only show the "Login with SSO" button — the email/password form is hidden.
-* Password-based login via the API is rejected.
-* The initial admin password setup prompt is skipped.
-
-This can be configured through the UI (on the SSO settings page) or via the config file:
-
-```yaml
-sso:
-  enabled: true
-  forceSSO: true
-  provider: oidc
-  oidc:
-    issuerURL: "https://accounts.google.com"
-    clientID: "your-client-id"
-    clientSecret: "your-client-secret"
-  defaultRole: Viewer
-```
-
-:::warning
-Coroot will refuse to start if `forceSSO` is set to `true` but SSO is not properly configured.
-:::
-
-### Troubleshooting
-
-Use http://&lt;COROOT_ADDRESS&gt;/login page and the **admin** user credentials to log in to your Coroot instance if you encounter any issues with SSO.
-If Force SSO is enabled, you must first disable it in the config file and restart Coroot to be able to log in with email and password.
-

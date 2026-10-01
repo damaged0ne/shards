@@ -39,7 +39,7 @@ server->End();
 One thing the C++ SDK doesn't do: it ignores `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG`. The app reads them itself and builds a `ParentBasedSampler(TraceIdRatioBasedSampler(ratio))`.
 The exporter's endpoint, headers and the service name do come from the standard environment variables.
 
-The binary is built with `-O2 -g -fno-omit-frame-pointer` and left unstripped, so that Coroot's profiler can walk and name its stacks.
+The binary is built with `-O2 -g -fno-omit-frame-pointer` and left unstripped, so that shards' profiler can walk and name its stacks.
 
 ## Results
 
@@ -49,7 +49,7 @@ Each shaded area on the charts is a 4-minute measurement in one mode (the second
 
 | Mode                                   | off    | 100%          | 50%           | 20%           | 0%            |
 |----------------------------------------|--------|---------------|---------------|---------------|---------------|
-| Spans received by Coroot, per second   | 0      | 1,994         | 996           | 400           | 0             |
+| Spans received by shards, per second   | 0      | 1,994         | 996           | 400           | 0             |
 | CPU usage, cores                       | 0.067  | 0.095 (+42%)  | 0.089 (+33%)  | 0.071 (+5%)   | 0.074 (+10%)  |
 | Memory (RSS), MB                       | 4.0    | 5.7           | 5.7           | 5.7           | 4.1           |
 | Trace export traffic, Mbit/s           | -      | 2.9           | 1.4           | 0.6           | 0             |

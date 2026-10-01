@@ -19,27 +19,30 @@ COPY . .
 WORKDIR /tmp/src/static
 COPY --from=frontend-builder /tmp/src/static /tmp/src/static
 WORKDIR /tmp/src
-RUN go build -mod=readonly -ldflags "-X main.version=$VERSION" -o coroot .
+RUN go build -mod=readonly -ldflags "-X main.version=$VERSION" -o shards .
 
 
 FROM registry.access.redhat.com/ubi9/ubi
 
 ARG VERSION=unknown
-LABEL name="coroot" \
-      vendor="Coroot, Inc." \
-      maintainer="Coroot, Inc." \
+LABEL name="shards" \
+      vendor="shards contributors" \
+      maintainer="shards contributors" \
+      org.opencontainers.image.source="https://github.com/damaged0ne/shards" \
+      org.opencontainers.image.licenses="Apache-2.0" \
       version=${VERSION} \
       release="1" \
-      summary="Coroot Community Edition." \
-      description="Coroot Community Edition container image."
+      summary="shards: open-source observability, alerting and incident center." \
+      description="shards container image (a derivative of Coroot, Apache-2.0)."
 
 COPY LICENSE /licenses/LICENSE
+COPY NOTICE /licenses/NOTICE
 
-COPY --from=backend-builder /tmp/src/coroot /usr/bin/coroot
+COPY --from=backend-builder /tmp/src/shards /usr/bin/shards
 RUN mkdir /data && chown 65534:65534 /data
 
 USER 65534:65534
 VOLUME /data
 EXPOSE 8080
 
-ENTRYPOINT ["/usr/bin/coroot"]
+ENTRYPOINT ["/usr/bin/shards"]

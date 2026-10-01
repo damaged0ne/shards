@@ -5,7 +5,7 @@ sidebar_position: 2
 # Service Level Objectives (SLOs)
 
 These inspections allow you to monitor the _Availability_ and _Latency_ SLOs (Service Level Objectives) for every application. 
-By default, Coroot tracks the application layer metrics gathered by coroot-node-gent, but you can replace them with your custom Prometheus metrics.
+By default, shards tracks the application layer metrics gathered by shards-node-gent, but you can replace them with your custom Prometheus metrics.
 
 <img alt="SLO" src="/img/docs/inspections_slo.png" class="card w-1200"/>
 
@@ -16,7 +16,7 @@ You can easily adjust the objective:
 
 <img alt="Availability SLO" src="/img/docs/inspections_slo_availability.png" class="card w-600"/>
 
-...or configure Coroot to rack your custom Prometheus metrics:
+...or configure shards to rack your custom Prometheus metrics:
 
 <img alt="Custom Availability SLO" src="/img/docs/inspections_slo_availability_custom.png" class="card w-600"/>
 
@@ -34,10 +34,10 @@ You can also define any Prometheus [histogram](https://prometheus.io/docs/practi
 ## Kubernetes annotations
 
 You can define Service Level Objectives (SLOs) using annotations on Kubernetes objects such as Deployment, StatefulSet, DaemonSet, or CronJob.
-Only SLO thresholds are defined via annotations — Coroot uses its eBPF-based metrics to calculate the corresponding Service Level Indicators (SLIs).
+Only SLO thresholds are defined via annotations — shards uses its eBPF-based metrics to calculate the corresponding Service Level Indicators (SLIs).
 
-Application latency in Coroot is represented as a histogram with a fixed set of buckets: `5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s`.
-When evaluating SLO compliance, Coroot compares the number of requests that meet the latency objective to the total number of requests.
+Application latency in shards is represented as a histogram with a fixed set of buckets: `5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s`.
+When evaluating SLO compliance, shards compares the number of requests that meet the latency objective to the total number of requests.
 Therefore, the `slo-latency-threshold` value must match one of the predefined buckets.
 
 ```yaml

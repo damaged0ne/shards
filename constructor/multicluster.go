@@ -21,6 +21,7 @@ func mergeWorlds(worlds []*model.World) *model.World {
 	for _, w := range worlds[1:] {
 		updateSocketToApplicationMapping(w, sock2app)
 		res.Nodes = append(res.Nodes, w.Nodes...)
+		res.Probes = append(res.Probes, w.Probes...) // shards fork
 		for appId, app := range w.Applications {
 			dest := res.Applications[appId]
 			if dest == nil {

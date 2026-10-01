@@ -23,8 +23,8 @@ func postgres(instance *model.Instance, queryName string, m *model.MetricValues,
 	case "pg_up":
 		pg.Up = merge(pg.Up, values, timeseries.Any)
 	case "pg_scrape_error":
-		pg.Error.Update(values, ls["error"])
-		pg.Warning.Update(values, ls["warning"])
+		pg.Error.Update(values, model.HumanizeScrapeError(ls["error"]))
+		pg.Warning.Update(values, model.HumanizeScrapeError(ls["warning"]))
 	case "pg_info":
 		pg.Version.Update(values, ls["server_version"])
 	case "pg_connections":
@@ -202,6 +202,8 @@ func postgres(instance *model.Instance, queryName string, m *model.MetricValues,
 		pg.TimeSinceLastCheckpoint = merge(pg.TimeSinceLastCheckpoint, values, timeseries.Any)
 	case "pg_wal_since_last_checkpoint_bytes":
 		pg.WalSinceLastCheckpoint = merge(pg.WalSinceLastCheckpoint, values, timeseries.Any)
+	default:
+		pgExt(pg, queryName, m) // shards fork
 	}
 }
 

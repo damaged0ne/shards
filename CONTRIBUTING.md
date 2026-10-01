@@ -1,12 +1,12 @@
 # Contributing
 
-Thank you for your interest in contributing to Coroot!
+Thank you for your interest in contributing to shards!
 Below are some basic guidelines.
 
 
 ## Requirements
-* Go v1.21
-* Node v21
+* Go 1.25
+* Node.js 24
 
 
 ## Running locally
@@ -29,12 +29,12 @@ Open http://127.0.0.1:8080 in your browser.
 
 Build:
 ```shell
-docker build -f dev.dockerfile -t coroot-dev .
+docker build -f dev.dockerfile -t shards-dev .
 ```
 
 Run:
 ```shell
-docker run --rm -p 8080:127.0.0.1:8080 -d coroot-dev
+docker run --rm -p 127.0.0.1:8080:8080 -d shards-dev
 ```
 
 Open http://127.0.0.1:8080 in your browser.
@@ -59,13 +59,13 @@ Run backend:
 ```shell
 go mod tidy
 
-go build -gcflags "all=-N -l" -o coroot
+go build -gcflags "all=-N -l" -o shards
 
 dlv --headless \
     --api-version=2 \
     --log \
     --listen=:12345 \
-    exec ./coroot -- \
+    exec ./shards -- \
     --listen=0.0.0.0:8888 \
     --bootstrap-clickhouse-address=$CLICKHOUSE-ADDRESS \
     --bootstrap-clickhouse-user=$CLICKHOUSE-USER \
@@ -85,10 +85,10 @@ Replace the values in the above environment variables before execution:
 
 Configure GoLand： Run -> EditConfigurations -> Go Remote, Set host to the server address where the backend is located above, and port to 12345.
 
-Then, start goland and you will see the following coroot log.
+Then, start GoLand and you will see the shards log, for example:
 ```shell
 2024-06-12T16:53:26+08:00 warning layer=debugger reading debug_info: concrete subprogram without address range at 0x9c4b90
-2024-06-12T16:53:26+08:00 debug layer=debugger Adding target 10436 "/root/mark/coroot/coroot --listen=0.0.0.0:8888 --bootstrap-clickhouse-address=10.31.0.220:13124 --bootstrap-clickhouse-user=default --bootstrap-clickhouse-database=default --bootstrap-clickhouse-password=SH9eDMx3e0 --bootstrap-prometheus-url=http://10.31.0.220:58021 --bootstrap-refresh-interval=15s"
+2024-06-12T16:53:26+08:00 debug layer=debugger Adding target 10436 "/root/src/shards/shards --listen=0.0.0.0:8888 --bootstrap-clickhouse-address=10.31.0.220:13124 --bootstrap-clickhouse-user=default --bootstrap-clickhouse-database=default --bootstrap-clickhouse-password=SH9eDMx3e0 --bootstrap-prometheus-url=http://10.31.0.220:58021 --bootstrap-refresh-interval=15s"
 2024-06-12T16:53:46+08:00 debug layer=debugger continuing
 2024-06-12T16:53:46+08:00 debug layer=debugger ContinueOnce
 I0612 16:53:46.238961   10436 main.go:63] version: unknown, url-base-path: /, read-only: false
@@ -107,7 +107,7 @@ I0612 16:53:50.151023   10436 auditor.go:67] trdbha8u: audited 214 apps in 76ms
 I0612 16:53:50.153154   10436 incidents.go:46] trdbha8u: checked 46 apps in 78ms
 I0612 16:53:56.258937   10436 compaction.go:93] compaction iteration started
 ```
-Access coroot and then you can debug the code in goland.
+Open shards in the browser and debug the code in GoLand.
 
 ## Pull Request Checklist
 
@@ -121,8 +121,7 @@ Access coroot and then you can debug the code in goland.
 ## IDE configuration
 
 ### Goland
-Enable the following "Actions on Save" for automatic formatting:
-![image](https://github.com/coroot/coroot/assets/199054/ca32b935-1bf6-42d6-ad5a-dccfc04aa673)
+Enable the following "Actions on Save" for automatic formatting: "Reformat code", "Optimize imports", "Run gofmt" and "Run goimports".
 
 ### VS Code
 _TODO_...

@@ -111,7 +111,7 @@ func (a *appAuditor) jvm() {
 	if !profilingEnabled {
 		report.ConfigurationHint = &model.ConfigurationHint{
 			Message:      "Enable async-profiler to get Java CPU, memory allocation, and lock contention profiles and metrics.",
-			ReadMoreLink: "https://docs.coroot.com/profiling/java-profiling",
+			ReadMoreLink: "https://damaged0ne.github.io/shards/profiling/java-profiling",
 		}
 	}
 }

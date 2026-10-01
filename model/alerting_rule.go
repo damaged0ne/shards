@@ -117,7 +117,7 @@ func (r *AlertingRule) MatchesAlert(a *Alert) bool {
 }
 
 func BuiltinAlertingRules() []AlertingRule {
-	return []AlertingRule{
+	return append([]AlertingRule{
 		{
 			Id:   "storage-space",
 			Name: "Low disk space",
@@ -1039,5 +1039,5 @@ func BuiltinAlertingRules() []AlertingRule {
 			Enabled: true,
 			Builtin: true,
 		},
-	}
+	}, shardsBuiltinAlertingRules()...)
 }

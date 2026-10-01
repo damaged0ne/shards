@@ -16,8 +16,8 @@ func mysql(instance *model.Instance, queryName string, m *model.MetricValues) {
 	case "mysql_up":
 		instance.Mysql.Up = merge(instance.Mysql.Up, m.Values, timeseries.Any)
 	case "mysql_scrape_error":
-		instance.Mysql.Error.Update(m.Values, m.Labels["error"])
-		instance.Mysql.Warning.Update(m.Values, m.Labels["warning"])
+		instance.Mysql.Error.Update(m.Values, model.HumanizeScrapeError(m.Labels["error"]))
+		instance.Mysql.Warning.Update(m.Values, model.HumanizeScrapeError(m.Labels["warning"]))
 	case "mysql_info":
 		instance.Mysql.ServerUUID.Update(m.Values, m.Labels["server_uuid"])
 		instance.Mysql.Version.Update(m.Values, m.Labels["server_version"])
@@ -263,6 +263,8 @@ func mysql(instance *model.Instance, queryName string, m *model.MetricValues) {
 	case "mysql_table_size_growth_bytes_per_second":
 		key := model.DbTableKey{Db: m.Labels["db"], Table: m.Labels["table"]}
 		instance.Mysql.TableSizeGrowth[key] = merge(instance.Mysql.TableSizeGrowth[key], m.Values, timeseries.Any)
+	default:
+		mysqlExt(instance.Mysql, queryName, m) // shards fork
 	}
 }
 

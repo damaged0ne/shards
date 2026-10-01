@@ -14,17 +14,17 @@
             <p>
                 <a href="https://opentelemetry.io/" target="_blank">OpenTelemetry</a> is a vendor-neutral, open-source project that provides a set of
                 APIs, SDKs, and tooling for collecting and exporting telemetry data. OpenTelemetry provides SDKs for many popular programming
-                languages and a collector that allows you to export telemetry data into to one or more open-source or commercial back-ends. Coroot can
-                serve as an OpenTelemetry backend for traces and logs. Telemetry data can be ingested directly into Coroot or through the
+                languages and a collector that allows you to export telemetry data into to one or more open-source or commercial back-ends. shards can
+                serve as an OpenTelemetry backend for traces and logs. Telemetry data can be ingested directly into shards or through the
                 OpenTelemetry collector.
             </p>
 
             <v-form v-model="valid">
-                <div class="subtitle-2 mt-2">Coroot URL (must be accessible by instrumented applications or the OpenTelemetry collector):</div>
+                <div class="subtitle-2 mt-2">shards URL (must be accessible by instrumented applications or the OpenTelemetry collector):</div>
                 <v-text-field
                     v-model="coroot_url"
                     :rules="[$validators.notEmpty, $validators.isUrl]"
-                    placeholder="http://coroot:8080"
+                    placeholder="http://shards:8080"
                     outlined
                     dense
                     hide-details
@@ -61,9 +61,9 @@
                     <p>Instrument your apps with the relevant OpenTelemetry SDK:</p>
 
                     <ul class="my-2">
-                        <li><a href="https://docs.coroot.com/tracing/opentelemetry-go" target="_blank">Go</a></li>
-                        <li><a href="https://docs.coroot.com/tracing/opentelemetry-java" target="_blank">Java</a></li>
-                        <li><a href="https://docs.coroot.com/tracing/opentelemetry-python" target="_blank">Python</a></li>
+                        <li><a :href="$utils.docsUrl('tracing/opentelemetry-go')" target="_blank">Go</a></li>
+                        <li><a :href="$utils.docsUrl('tracing/opentelemetry-java')" target="_blank">Java</a></li>
+                        <li><a :href="$utils.docsUrl('tracing/opentelemetry-python')" target="_blank">Python</a></li>
                         <li><a href="https://opentelemetry.io/docs/languages/cpp/getting-started/" target="_blank">C++</a></li>
                         <li><a href="https://opentelemetry.io/docs/languages/net/getting-started/" target="_blank">.NET</a></li>
                         <li><a href="https://opentelemetry.io/docs/languages/js/getting-started/" target="_blank">JavaScript</a></li>
@@ -72,7 +72,7 @@
                         <li><a href="https://opentelemetry.io/docs/languages/rust/getting-started/" target="_blank">Rust</a></li>
                     </ul>
 
-                    <p>Use the following environment variables to configure the SDKs to send traces and logs directly to Coroot:</p>
+                    <p>Use the following environment variables to configure the SDKs to send traces and logs directly to shards:</p>
 
                     <Code :disabled="!valid">
                         <pre>
@@ -89,7 +89,7 @@ OTEL_EXPORTER_OTLP_HEADERS="x-api-key={{ api_key }}"
                 <v-tab-item transition="none">
                     <p>
                         If your apps are already configured to send logs and traces to the OpenTelemetry collector, you can simply add an additional
-                        exporter to send data to Coroot using the OTLP protocol:
+                        exporter to send data to shards using the OTLP protocol:
                     </p>
 
                     <Code :disabled="!valid">

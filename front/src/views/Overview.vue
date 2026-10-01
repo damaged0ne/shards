@@ -1,5 +1,9 @@
 <template>
     <div>
+        <template v-if="view === 'home'">
+            <Home />
+        </template>
+
         <template v-if="view === 'applications'">
             <Application v-if="id" :id="id" :report="report" />
             <Applications v-else />
@@ -39,18 +43,22 @@
             <Costs />
         </template>
 
-        <template v-if="view === 'anomalies'">
-            <RCA v-if="id" :appId="id" />
-            <Anomalies v-else />
-        </template>
-
         <template v-if="view === 'risks'">
             <Risks />
+        </template>
+
+        <template v-if="view === 'uptime'">
+            <Probes />
         </template>
 
         <template v-if="view === 'dashboards'">
             <Dashboard v-if="id" :id="id" />
             <Dashboards v-else />
+        </template>
+
+        <template v-if="view === 'agents'">
+            <Agent v-if="id" :id="id" />
+            <Agents v-else />
         </template>
     </div>
 </template>
@@ -67,15 +75,18 @@ import Logs from '@/views/Logs.vue';
 import Nodes from '@/views/Nodes.vue';
 import Node from '@/views/Node.vue';
 import Costs from '@/views/Costs.vue';
-import Anomalies from '@/views/Anomalies.vue';
-import RCA from '@/views/RCA.vue';
 import Risks from '@/views/Risks.vue';
 import Dashboards from '@/views/dashboards/Dashboards.vue';
 import Dashboard from '@/views/dashboards/Dashboard.vue';
 import Kubernetes from '@/views/Kubernetes.vue';
+import Probes from '@/views/Probes.vue';
+import Home from '@/views/Home.vue';
+import Agents from '@/views/agents/Agents.vue';
+import Agent from '@/views/agents/Agent.vue';
 
 export default {
     components: {
+        Home,
         Kubernetes,
         Applications,
         Application,
@@ -88,11 +99,12 @@ export default {
         Nodes,
         Node,
         Costs,
-        Anomalies,
-        RCA,
         Risks,
         Dashboards,
         Dashboard,
+        Probes,
+        Agents,
+        Agent,
     },
     props: {
         view: String,

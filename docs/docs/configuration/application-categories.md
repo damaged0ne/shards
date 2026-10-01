@@ -4,7 +4,7 @@ sidebar_position: 9
 
 # Application Categories
 
-Coroot allows you to organize your applications into custom groups called Application Categories. 
+shards allows you to organize your applications into custom groups called Application Categories. 
 These act like scopes, helping you either hide certain applications or focus on specific ones more easily.
 Additionally, Application Categories can be used for [notification routing](#notification-routing) — for example, to send alerts to different Slack channels based on category.
 
@@ -30,7 +30,7 @@ The application category can also be defined using Pod annotations.
 ## Pattern-based configuration
 
 For non-Kubernetes applications, or in cases where setting annotations is not possible, 
-Coroot allows you to configure Application Categories manually by matching applications using patterns.
+shards allows you to configure Application Categories manually by matching applications using patterns.
 
 :::info
 Application categories defined via annotations take precedence over those configured manually.
@@ -40,13 +40,17 @@ To configure Application Categories, go to the **Project Settings**, click on **
 built-in categories or create your own custom ones. 
 Each category is defined by a set of [glob patterns](https://en.wikipedia.org/wiki/Glob_(programming)) in the `<namespace>/<application_name>` format.
 
-Coroot also includes several pre-defined categories, such as `monitoring` and `control-plane`.
+shards also includes several pre-defined categories, such as `monitoring`, `control-plane` and `system`.
+`system` holds well-known host infrastructure units (`docker`, `containerd`, `ssh`, `chrony`, `cron`, `rsyslog`, …)
+and is checked before the other built-ins; custom patterns always take precedence over built-in ones.
+How each category is drawn on the service map (expanded, collapsed, muted or hidden) is configured separately,
+see [Service Map](./service-map#map-modes).
 
 <img alt="Configuring Application Categories" src="/img/docs/categories_configuration.png" class="card w-1200"/>
 
 ## Quick links
 
-To make organizing your apps easier, Coroot allows you to define the category for an app directly on the service map:
+To make organizing your apps easier, shards allows you to define the category for an app directly on the service map:
 
 <img alt="Categories on Service Map" src="/img/docs/category_service_map.png" class="card w-1200"/>
 
@@ -63,6 +67,6 @@ For Slack and Microsoft Teams, you can also override the default channel on a pe
 
 <img alt="Setting Categories from the Application page" src="/img/docs/category_configuration.png" class="card w-600"/>
 
-When an alert fires for an application, Coroot looks up the application's category and checks whether notifications are enabled for that category. If disabled, the notification is silently skipped.
+When an alert fires for an application, shards looks up the application's category and checks whether notifications are enabled for that category. If disabled, the notification is silently skipped.
 
 See [Alerts — Notification routing](/alerting/alerts#notification-routing) for more details.

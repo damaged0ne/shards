@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -37,6 +38,7 @@ type DB struct {
 	db  *sql.DB
 
 	primaryLockConn *sql.Conn
+	primaryLockMu   sync.Mutex // shards fork
 }
 
 func NewSqlite(dataDir string) (*DB, error) {

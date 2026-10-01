@@ -48,6 +48,7 @@ type Scheduler struct {
 	lock       sync.Mutex
 	entries    map[string]*entry
 	lastReload time.Time
+	primary    bool
 	reload     chan struct{}
 	writeErrAt map[db.ProjectId]time.Time
 	wg         sync.WaitGroup
@@ -93,16 +94,20 @@ func (s *Scheduler) Start(ctx context.Context) {
 			case <-s.reload:
 				force = true
 			}
-			if !s.store.GetPrimaryLock(ctx) {
-				s.lock.Lock()
-				s.entries = map[string]*entry{}
-				s.lock.Unlock()
-				continue
-			}
 			if force || time.Since(s.lastReload) >= reloadInterval {
-				s.sync()
+				s.lastReload = time.Now()
+				s.primary = s.store.GetPrimaryLock(ctx)
+				if s.primary {
+					s.sync()
+				} else {
+					s.lock.Lock()
+					s.entries = map[string]*entry{}
+					s.lock.Unlock()
+				}
 			}
-			s.dispatch(ctx)
+			if s.primary {
+				s.dispatch(ctx)
+			}
 		}
 	}()
 }
@@ -110,23 +115,26 @@ func (s *Scheduler) Start(ctx context.Context) {
 // sync reconciles the schedule with the DB: new probes are spread across their interval (jitter),
 // changed probes are rescheduled to run soon, deleted probes and probes of deleted projects are dropped.
 func (s *Scheduler) sync() {
-	s.lastReload = time.Now()
 	probes, err := s.store.GetAllProbes()
 	if err != nil {
 		klog.Errorln("probes: failed to load:", err)
 		return
 	}
-	projects, err := s.store.GetProjects()
+	byName, err := s.store.GetProjects()
 	if err != nil {
 		klog.Errorln("probes: failed to load projects:", err)
 		return
+	}
+	projects := map[db.ProjectId]*db.Project{} // GetProjects is keyed by name
+	for _, p := range byName {
+		projects[p.Id] = p
 	}
 	n := time.Now()
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	seen := map[string]bool{}
 	for _, p := range probes {
-		project := projects[string(p.ProjectId)]
+		project := projects[p.ProjectId]
 		if project == nil || project.Multicluster() || p.Spec.Paused {
 			continue
 		}

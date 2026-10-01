@@ -414,7 +414,7 @@ func TestScheduler(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer srv.Close()
 	store := &fakeStore{
-		projects: map[string]*db.Project{"p1": {Id: "p1"}, "p2": {Id: "p2"}},
+		projects: map[string]*db.Project{"project-1": {Id: "p1", Name: "project-1"}, "project-2": {Id: "p2", Name: "project-2"}},
 		states:   map[string]db.ProbeState{},
 	}
 	mk := func(id string, project db.ProjectId) *db.Probe {
@@ -447,7 +447,7 @@ func TestScheduler(t *testing.T) {
 	}
 
 	// the project p2 is deleted: its probes are dropped
-	delete(store.projects, "p2")
+	delete(store.projects, "project-2")
 	s.sync()
 	require.Len(t, s.entries, 1)
 	_, ok := s.entries["p1/a"]

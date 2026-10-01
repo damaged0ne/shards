@@ -70,7 +70,7 @@ func (a *appAuditor) uptime() {
 		total := p.Durations["total"]
 		if last := lastValue(total); !timeseries.IsNaN(last) && last > latencyCheck.Threshold {
 			latencyCheck.AddItem("%s", p.Name)
-			latencyCheck.AddDetail("%s: %s", p.Name, utils.FormatLatency(last))
+			latencyCheck.AddDetail("%s: %s", p.Name, formatSeconds(last))
 		}
 
 		cert := model.NewTableCell()
@@ -104,11 +104,10 @@ func (a *appAuditor) uptime() {
 		uptime := model.NewTableCell()
 		if u := p.UptimePercent(); !timeseries.IsNaN(u) {
 			uptime.SetValue(utils.FormatPercentage(u))
-			uptime.SetChart(p.Up)
 		}
 		latency := model.NewTableCell()
 		if q := p.LatencyQuantile(0.95); !timeseries.IsNaN(q) {
-			latency.SetValue(utils.FormatLatency(q))
+			latency.SetValue(formatSeconds(q))
 		}
 		lastErr := model.NewTableCell(p.LastError).SetMaxWidth(320)
 
@@ -158,6 +157,14 @@ func lastValue(ts *timeseries.TimeSeries) float32 {
 		}
 	}
 	return res
+}
+
+// formatSeconds is like utils.FormatLatency but keeps two decimals for values above a second (2.5s, not 3s).
+func formatSeconds(v float32) string {
+	if v >= 1 {
+		return fmt.Sprintf("%.2fs", v)
+	}
+	return utils.FormatLatency(v)
 }
 
 func formatDaysLeft(days float32) string {

@@ -10,6 +10,8 @@ func (db *DB) GetPrimaryLock(ctx context.Context) bool {
 	if db.typ != TypePostgres {
 		return true
 	}
+	db.primaryLockMu.Lock() // shards fork: called by the watchers and the probes scheduler
+	defer db.primaryLockMu.Unlock()
 
 	if db.primaryLockConn == nil {
 		c, err := db.db.Conn(ctx)

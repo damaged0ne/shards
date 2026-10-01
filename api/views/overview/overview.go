@@ -21,6 +21,7 @@ type Overview struct {
 	FluxCD       []*FluxCDResource           `json:"fluxcd"`
 	ArgoCD       []*ArgoCDResource           `json:"argocd"`
 	Categories   []model.ApplicationCategory `json:"categories"`
+	ServiceMap   *ServiceMapView             `json:"service_map,omitempty"` // shards fork
 }
 
 func Render(ctx context.Context, chs clickhouse.Clients, project *db.Project, w *model.World, view, query string) *Overview {
@@ -37,6 +38,7 @@ func Render(ctx context.Context, chs clickhouse.Clients, project *db.Project, w 
 		v.Applications = renderApplications(w)
 	case "map":
 		v.Map = renderServiceMap(w)
+		v.ServiceMap = annotateServiceMap(v.Map, w, project) // shards fork: groups, category modes
 	case "nodes":
 		v.Nodes = RenderNodes(w, project)
 	case "deployments":

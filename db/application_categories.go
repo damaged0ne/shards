@@ -98,6 +98,10 @@ func (p *Project) CalcApplicationCategory(appId model.ApplicationId) model.Appli
 		}
 	}
 
+	if c := model.ShardsPriorityCategory(id); c != "" { // shards fork: host infrastructure units
+		return c
+	}
+
 	names = maps.Keys(model.BuiltinCategoryPatterns)
 	slices.Sort(names)
 	for _, name := range names {

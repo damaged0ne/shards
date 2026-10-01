@@ -97,6 +97,10 @@ func (s NodeAgentStats) IsEmpty() bool {
 }
 
 type NodeShards struct {
+	// Hostname is the hostname reported by node_info when a display name from the project settings replaced it
+	// (see db.ServiceMapSettings.NodeDisplayNames); empty otherwise.
+	Hostname string
+
 	Filesystems map[string]*NodeFilesystem // by mount point
 
 	Load1  *timeseries.TimeSeries

@@ -30,7 +30,7 @@ type mcpTimelineEntry struct {
 	Action     string            `json:"action,omitempty"`
 	Author     string            `json:"author"`
 	AuthorKind string            `json:"author_kind"`
-	Body       string            `json:"body,omitempty"`
+	Body       MCPUntrusted      `json:"body,omitempty"`
 	CreatedAt  string            `json:"created_at"`
 	EditedAt   string            `json:"edited_at,omitempty"`
 	Meta       map[string]string `json:"meta,omitempty"`
@@ -44,7 +44,7 @@ func mcpTimeline(comments []*db.Comment) []mcpTimelineEntry {
 			Kind:       string(c.Kind),
 			Author:     c.Author,
 			AuthorKind: string(c.AuthorKind),
-			Body:       c.Body,
+			Body:       MCPUntrusted(c.Body),
 			CreatedAt:  MCPFormatTime(c.CreatedAt),
 			EditedAt:   MCPFormatTime(c.EditedAt),
 		}
@@ -264,9 +264,9 @@ func (h *MCPHandler) toolGetAlert(ctx context.Context, req mcp.CallToolRequest) 
 		return mcpTargetError(err), nil
 	}
 	return MCPJSON(struct {
-		*model.Alert
+		mcpAlert
 		Timeline []mcpTimelineEntry `json:"timeline"`
-	}{Alert: t.alert, Timeline: mcpTimeline(comments)})
+	}{mcpAlert: mcpWrapAlert(t.alert), Timeline: mcpTimeline(comments)})
 }
 
 // alertIdsAndComment validates the common arguments of the alert lifecycle tools.
@@ -332,6 +332,7 @@ type mcpAlertingRuleInfo struct {
 	For           string `json:"for,omitempty"`
 	KeepFiringFor string `json:"keep_firing_for,omitempty"`
 	FiringAlerts  int    `json:"firing_alerts"`
+	Playbook      string `json:"playbook,omitempty"` // shards fork: agent playbook preview
 }
 
 func (h *MCPHandler) requireRules(ctx context.Context, edit bool) (*db.User, *db.Project, *mcp.CallToolResult) {
@@ -372,6 +373,7 @@ func (h *MCPHandler) toolListAlertingRules(ctx context.Context, req mcp.CallTool
 	}
 	search := strings.ToLower(req.GetString("search", ""))
 	sourceType := req.GetString("source_type", "")
+	playbooks := h.mcpRulePlaybooks(project.Id)
 	out := make([]mcpAlertingRuleInfo, 0, len(rules))
 	for _, r := range rules {
 		if search != "" && !strings.Contains(strings.ToLower(r.Name), search) && !strings.Contains(strings.ToLower(string(r.Id)), search) {
@@ -391,6 +393,7 @@ func (h *MCPHandler) toolListAlertingRules(ctx context.Context, req mcp.CallTool
 			For:           mcpShortDuration(r.For),
 			KeepFiringFor: mcpShortDuration(r.KeepFiringFor),
 			FiringAlerts:  counts[string(r.Id)],
+			Playbook:      mcpPlaybookPreview(playbooks[string(r.Id)]),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -423,10 +426,15 @@ func (h *MCPHandler) ruleWithTimeline(user *db.User, project *db.Project, rule *
 	if err != nil {
 		return mcpTargetError(err), nil
 	}
+	playbook := ""
+	if p := h.mcpRulePlaybooks(project.Id)[string(rule.Id)]; p != nil {
+		playbook = p.Body
+	}
 	return MCPJSON(struct {
 		*model.AlertingRule
+		Playbook string             `json:"playbook,omitempty"`
 		Timeline []mcpTimelineEntry `json:"timeline"`
-	}{AlertingRule: rule, Timeline: mcpTimeline(comments)})
+	}{AlertingRule: rule, Playbook: playbook, Timeline: mcpTimeline(comments)})
 }
 
 func (h *MCPHandler) toolGetAlertingRule(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

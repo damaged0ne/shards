@@ -27,6 +27,7 @@ func NewAlertNotifier(database *db.DB) *AlertNotifier {
 }
 
 func (n *AlertNotifier) Enqueue(project *db.Project, app *model.Application, alert *model.Alert, rule *model.AlertingRule, now timeseries.Time) {
+	notifyAgentsAlert(project, app, alert, rule) // shards fork
 	category := model.ApplicationCategoryApplication
 	if app != nil {
 		category = app.Category

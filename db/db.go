@@ -122,6 +122,7 @@ func (db *DB) Migrate(extraTables ...Table) error {
 		&AlertingRule{},
 		&Alert{},
 		&Comment{},
+		AgentTables{}, // shards fork
 	}
 	return db.Migrator().Migrate(append(defaultTables, extraTables...)...)
 }
